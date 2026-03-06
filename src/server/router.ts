@@ -1,0 +1,166 @@
+import type {
+  BugReport,
+  BugReportCreator,
+  BugReportMessage,
+  BugReportType,
+  DevNotesAppLinkStatus,
+  DevNotesCapabilities,
+  DevNotesLinkAppInput,
+  TaskList,
+  AiAssistResult,
+  AiConversationMessage,
+  BugCaptureContext,
+} from '../types';
+import type { BugReportCreateData } from '../adapters/types';
+
+export type DevNotesProxyRequest = {
+  method: string;
+  slug: string[];
+  request: Request;
+  authToken: string | null;
+  query: URLSearchParams;
+  body: any;
+};
+
+export type DevNotesProxyResponse = {
+  status?: number;
+  body?: unknown;
+};
+
+export interface DevNotesProxyBackend {
+  getCapabilities(req: DevNotesProxyRequest): Promise<DevNotesCapabilities>;
+  getAppLinkStatus(req: DevNotesProxyRequest): Promise<DevNotesAppLinkStatus>;
+  linkApp(input: DevNotesLinkAppInput, req: DevNotesProxyRequest): Promise<DevNotesAppLinkStatus>;
+  unlinkApp(req: DevNotesProxyRequest): Promise<void>;
+  listReports(req: DevNotesProxyRequest): Promise<BugReport[]>;
+  createReport(data: BugReportCreateData, req: DevNotesProxyRequest): Promise<BugReport>;
+  updateReport(id: string, data: Partial<BugReport>, req: DevNotesProxyRequest): Promise<BugReport>;
+  deleteReport(id: string, req: DevNotesProxyRequest): Promise<void>;
+  listReportTypes(req: DevNotesProxyRequest): Promise<BugReportType[]>;
+  createReportType(name: string, req: DevNotesProxyRequest): Promise<BugReportType>;
+  deleteReportType(id: string, req: DevNotesProxyRequest): Promise<void>;
+  listTaskLists(req: DevNotesProxyRequest): Promise<TaskList[]>;
+  createTaskList(name: string, req: DevNotesProxyRequest): Promise<TaskList>;
+  listMessages(reportId: string, req: DevNotesProxyRequest): Promise<BugReportMessage[]>;
+  createMessage(
+    reportId: string,
+    body: string,
+    req: DevNotesProxyRequest
+  ): Promise<BugReportMessage>;
+  updateMessage(id: string, body: string, req: DevNotesProxyRequest): Promise<BugReportMessage>;
+  deleteMessage(id: string, req: DevNotesProxyRequest): Promise<void>;
+  getUnreadCounts(req: DevNotesProxyRequest): Promise<Record<string, number>>;
+  markMessagesRead(messageIds: string[], req: DevNotesProxyRequest): Promise<void>;
+  listCollaborators(ids: string[] | null, req: DevNotesProxyRequest): Promise<BugReportCreator[]>;
+  refineDescription?: (
+    input: {
+      description: string;
+      conversationHistory: AiConversationMessage[];
+      context: {
+        title?: string;
+        page_url?: string;
+        route_label?: string;
+        severity?: string;
+        types?: string[];
+        target_selector?: string;
+        expected_behavior?: string;
+        actual_behavior?: string;
+        capture_context?: BugCaptureContext;
+      };
+    },
+    req: DevNotesProxyRequest
+  ) => Promise<AiAssistResult>;
+}
+
+const json = (body: unknown, status = 200): DevNotesProxyResponse => ({ status, body });
+
+const getId = (slug: string[], index: number) => decodeURIComponent(slug[index] || '');
+
+export async function routeDevNotesProxy(
+  backend: DevNotesProxyBackend,
+  req: DevNotesProxyRequest
+): Promise<DevNotesProxyResponse> {
+  const [resource, resourceId, nested] = req.slug;
+  const method = req.method.toUpperCase();
+
+  if (resource === 'capabilities' && method === 'GET') {
+    return json(await backend.getCapabilities(req));
+  }
+
+  if (resource === 'app-link') {
+    if (method === 'GET') return json(await backend.getAppLinkStatus(req));
+    if (method === 'POST') return json(await backend.linkApp(req.body, req));
+    if (method === 'DELETE') {
+      await backend.unlinkApp(req);
+      return json({ success: true });
+    }
+  }
+
+  if (resource === 'reports' && method === 'GET' && !resourceId) {
+    return json(await backend.listReports(req));
+  }
+  if (resource === 'reports' && method === 'POST' && !resourceId) {
+    return json(await backend.createReport(req.body, req));
+  }
+  if (resource === 'reports' && method === 'PATCH' && resourceId && !nested) {
+    return json(await backend.updateReport(getId(req.slug, 1), req.body, req));
+  }
+  if (resource === 'reports' && method === 'DELETE' && resourceId && !nested) {
+    await backend.deleteReport(getId(req.slug, 1), req);
+    return json({ success: true });
+  }
+  if (resource === 'reports' && resourceId && nested === 'messages') {
+    if (method === 'GET') return json(await backend.listMessages(getId(req.slug, 1), req));
+    if (method === 'POST') {
+      return json(await backend.createMessage(getId(req.slug, 1), String(req.body?.body || ''), req));
+    }
+  }
+
+  if (resource === 'report-types') {
+    if (method === 'GET' && !resourceId) return json(await backend.listReportTypes(req));
+    if (method === 'POST' && !resourceId) {
+      return json(await backend.createReportType(String(req.body?.name || ''), req));
+    }
+    if (method === 'DELETE' && resourceId) {
+      await backend.deleteReportType(getId(req.slug, 1), req);
+      return json({ success: true });
+    }
+  }
+
+  if (resource === 'task-lists') {
+    if (method === 'GET' && !resourceId) return json(await backend.listTaskLists(req));
+    if (method === 'POST' && !resourceId) {
+      return json(await backend.createTaskList(String(req.body?.name || ''), req));
+    }
+  }
+
+  if (resource === 'messages' && resourceId && method === 'PATCH') {
+    return json(await backend.updateMessage(getId(req.slug, 1), String(req.body?.body || ''), req));
+  }
+  if (resource === 'messages' && resourceId && method === 'DELETE') {
+    await backend.deleteMessage(getId(req.slug, 1), req);
+    return json({ success: true });
+  }
+  if (resource === 'messages' && resourceId === 'read' && method === 'POST') {
+    await backend.markMessagesRead(Array.isArray(req.body?.messageIds) ? req.body.messageIds : [], req);
+    return json({ success: true });
+  }
+
+  if (resource === 'unread-counts' && method === 'GET') {
+    return json(await backend.getUnreadCounts(req));
+  }
+
+  if (resource === 'collaborators' && method === 'GET') {
+    const ids = req.query.get('ids');
+    return json(await backend.listCollaborators(ids ? ids.split(',').filter(Boolean) : null, req));
+  }
+
+  if (resource === 'ai' && resourceId === 'refine-description' && method === 'POST') {
+    if (!backend.refineDescription) {
+      return json({ error: 'AI refinement is not configured.' }, 404);
+    }
+    return json(await backend.refineDescription(req.body, req));
+  }
+
+  return json({ error: 'Not found' }, 404);
+}
