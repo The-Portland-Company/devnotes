@@ -207,38 +207,8 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
     if (authorId === report.created_by) {
       return { label: 'Reporter', className: 'bg-purple-100 text-purple-800' };
     }
-    if (authorId === 'legacy') {
-      return { label: 'Legacy', className: 'bg-gray-100 text-gray-800' };
-    }
     return { label: 'Team', className: 'bg-blue-100 text-blue-800' };
   };
-
-  const derivedMessages = useMemo(() => {
-    if (!report?.response) {
-      return messages;
-    }
-
-    const hasPersistedLegacy = messages.some((message) => message.id === 'legacy-response');
-    if (hasPersistedLegacy) {
-      return messages;
-    }
-
-    const legacyMessage: BugReportMessage = {
-      id: 'legacy-response',
-      bug_report_id: report.id,
-      author_id: 'legacy',
-      body: report.response,
-      created_at: report.updated_at,
-      updated_at: report.updated_at,
-      author: {
-        id: 'legacy',
-        email: null,
-        full_name: 'Legacy Response',
-      },
-    };
-
-    return [legacyMessage, ...messages];
-  }, [messages, report?.id, report?.response, report?.updated_at]);
 
   const startEditing = (message: BugReportMessage) => {
     setEditingMessageId(message.id);
@@ -431,20 +401,20 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
           <div className="flex justify-center py-10">
             <div className="w-6 h-6 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" />
           </div>
-        ) : derivedMessages.length === 0 ? (
+        ) : messages.length === 0 ? (
           <div className="flex items-center bg-white rounded-md border border-dashed border-gray-200 p-4">
             <p className="text-sm text-gray-500">No notes yet. Start the conversation below.</p>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            {derivedMessages.map((message) => {
+              {messages.map((message) => {
               const badge = directionBadge(message.author_id);
               const authorLabel =
                 message.author?.full_name ||
                 message.author?.email ||
                 (message.author_id === report.created_by ? 'Reporter' : 'Team');
               const canManage =
-                user?.id && message.author_id === user.id && message.id !== 'legacy-response';
+                user?.id && message.author_id === user.id;
               const wasUpdated =
                 message.updated_at &&
                 new Date(message.updated_at).toISOString() !==

@@ -1073,34 +1073,8 @@ function DevNotesDiscussion({ report }) {
     if (authorId === report.created_by) {
       return { label: "Reporter", className: "bg-purple-100 text-purple-800" };
     }
-    if (authorId === "legacy") {
-      return { label: "Legacy", className: "bg-gray-100 text-gray-800" };
-    }
     return { label: "Team", className: "bg-blue-100 text-blue-800" };
   };
-  const derivedMessages = (0, import_react4.useMemo)(() => {
-    if (!report?.response) {
-      return messages;
-    }
-    const hasPersistedLegacy = messages.some((message) => message.id === "legacy-response");
-    if (hasPersistedLegacy) {
-      return messages;
-    }
-    const legacyMessage = {
-      id: "legacy-response",
-      bug_report_id: report.id,
-      author_id: "legacy",
-      body: report.response,
-      created_at: report.updated_at,
-      updated_at: report.updated_at,
-      author: {
-        id: "legacy",
-        email: null,
-        full_name: "Legacy Response"
-      }
-    };
-    return [legacyMessage, ...messages];
-  }, [messages, report?.id, report?.response, report?.updated_at]);
   const startEditing = (message) => {
     setEditingMessageId(message.id);
     setEditDraft(message.body);
@@ -1264,10 +1238,10 @@ Dev Notes`,
   };
   return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "flex flex-col gap-4 bg-gray-50 rounded-lg border border-gray-100 p-4 h-full", children: [
     /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "text-sm font-semibold", children: "Comments" }) }),
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "flex-1 min-h-[220px] max-h-[360px] overflow-y-auto pr-2", children: loadingMessages ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "flex justify-center py-10", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "w-6 h-6 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" }) }) : derivedMessages.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "flex items-center bg-white rounded-md border border-dashed border-gray-200 p-4", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "text-sm text-gray-500", children: "No notes yet. Start the conversation below." }) }) : /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "flex flex-col gap-3", children: derivedMessages.map((message) => {
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "flex-1 min-h-[220px] max-h-[360px] overflow-y-auto pr-2", children: loadingMessages ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "flex justify-center py-10", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "w-6 h-6 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" }) }) : messages.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "flex items-center bg-white rounded-md border border-dashed border-gray-200 p-4", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "text-sm text-gray-500", children: "No notes yet. Start the conversation below." }) }) : /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "flex flex-col gap-3", children: messages.map((message) => {
       const badge = directionBadge(message.author_id);
       const authorLabel = message.author?.full_name || message.author?.email || (message.author_id === report.created_by ? "Reporter" : "Team");
-      const canManage = user?.id && message.author_id === user.id && message.id !== "legacy-response";
+      const canManage = user?.id && message.author_id === user.id;
       const wasUpdated = message.updated_at && new Date(message.updated_at).toISOString() !== new Date(message.created_at).toISOString();
       return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(
         "div",
