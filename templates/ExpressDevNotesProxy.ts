@@ -31,7 +31,7 @@ const backend = {
     throw new Error('Implement Forge-backed report deletion.');
   },
   async listReportTypes() {
-    return [];
+    throw new Error('Implement Forge-backed report type listing.');
   },
   async createReportType() {
     throw new Error('Implement Forge-backed report type creation.');
@@ -40,13 +40,13 @@ const backend = {
     throw new Error('Implement Forge-backed report type deletion.');
   },
   async listTaskLists() {
-    return [];
+    throw new Error('Implement Forge-backed task list listing.');
   },
   async createTaskList() {
     throw new Error('Implement Forge-backed task list creation.');
   },
   async listMessages() {
-    return [];
+    throw new Error('Implement Forge-backed message listing.');
   },
   async createMessage() {
     throw new Error('Implement Forge-backed message creation.');
@@ -58,11 +58,13 @@ const backend = {
     throw new Error('Implement Forge-backed message deletion.');
   },
   async getUnreadCounts() {
-    return {};
+    throw new Error('Implement Forge-backed unread count lookup.');
   },
-  async markMessagesRead() {},
+  async markMessagesRead() {
+    throw new Error('Implement Forge-backed message read tracking.');
+  },
   async listCollaborators() {
-    return [];
+    throw new Error('Implement Forge-backed collaborator listing.');
   },
 };
 
