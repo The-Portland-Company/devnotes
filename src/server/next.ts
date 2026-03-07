@@ -1,5 +1,7 @@
+import type { DevNotesServerOptions } from '../types';
 import type { DevNotesProxyBackend, DevNotesProxyRequest } from './router';
-import { routeDevNotesProxy } from './router';
+import { createDevNotesServerHandler } from './forge';
+import { isDevNotesProxyBackend, routeDevNotesProxy } from './router';
 
 async function readBody(request: Request) {
   if (request.method === 'GET' || request.method === 'HEAD') return null;
@@ -12,7 +14,7 @@ async function readBody(request: Request) {
   }
 }
 
-export function createNextDevNotesProxy(backend: DevNotesProxyBackend) {
+function createLegacyNextProxy(backend: DevNotesProxyBackend) {
   return async function handler(
     request: Request,
     context: { params?: { slug?: string[] } } = {}
@@ -33,4 +35,17 @@ export function createNextDevNotesProxy(backend: DevNotesProxyBackend) {
       headers: { 'Content-Type': 'application/json' },
     });
   };
+}
+
+export function createNextDevNotesHandler(options: DevNotesServerOptions) {
+  return createDevNotesServerHandler(options);
+}
+
+export function createNextDevNotesProxy(
+  backendOrOptions: DevNotesProxyBackend | DevNotesServerOptions
+) {
+  if (isDevNotesProxyBackend(backendOrOptions)) {
+    return createLegacyNextProxy(backendOrOptions);
+  }
+  return createNextDevNotesHandler(backendOrOptions);
 }

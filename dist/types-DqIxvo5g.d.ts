@@ -1,3 +1,5 @@
+import { D as DevNotesCapabilities, a as DevNotesAppLinkStatus, c as DevNotesLinkAppInput } from './types-CrmObeqp.js';
+
 type BugReportCreator = {
     id: string;
     email: string | null;
@@ -137,26 +139,6 @@ type DevNotesConfig = {
     role?: DevNotesRole;
 };
 
-type DevNotesCapabilities = {
-    ai: boolean;
-    appLink: boolean;
-};
-type DevNotesAppLinkStatus = {
-    linked: boolean;
-    projectName: string | null;
-    tokenLast4: string | null;
-    linkedAt: string | null;
-};
-type DevNotesLinkAppInput = {
-    pat: string;
-    projectName?: string;
-};
-type DevNotesClientOptions = {
-    basePath?: string;
-    getAuthToken: () => Promise<string> | string;
-    fetch?: typeof globalThis.fetch;
-};
-
 type BugReportCreateData = Omit<BugReport, 'id' | 'created_at' | 'updated_at' | 'created_by' | 'resolved_at' | 'resolved_by' | 'creator'>;
 interface DevNotesClientAdapter {
     fetchBugReports(): Promise<BugReport[]>;
@@ -182,4 +164,4 @@ interface DevNotesClientAdapter {
     unlinkApp(): Promise<void>;
 }
 
-export type { AiProvider as A, BugReport as B, DevNotesClientAdapter as D, NotifyEvent as N, TaskList as T, DevNotesUser as a, DevNotesConfig as b, BugReportType as c, BugReportCreator as d, DevNotesCapabilities as e, DevNotesAppLinkStatus as f, DevNotesRole as g, DevNotesClientOptions as h, BugCaptureContext as i, AiAssistResult as j, AiConversationMessage as k, BugReportCreateData as l, BugReportMessage as m, DevNotesLinkAppInput as n };
+export type { AiProvider as A, BugReport as B, DevNotesClientAdapter as D, NotifyEvent as N, TaskList as T, DevNotesUser as a, DevNotesConfig as b, BugReportType as c, BugReportCreator as d, DevNotesRole as e, BugCaptureContext as f, AiAssistResult as g, AiConversationMessage as h, BugReportCreateData as i, BugReportMessage as j };

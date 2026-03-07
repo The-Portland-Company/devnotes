@@ -24,11 +24,57 @@ export type DevNotesAppLinkStatus = {
   projectName: string | null;
   tokenLast4: string | null;
   linkedAt: string | null;
+  projectMatched?: boolean;
+  availableProjects?: DevNotesProjectSummary[];
+  projectDiscovery?: DevNotesProjectDiscovery | null;
 };
 
 export type DevNotesLinkAppInput = {
   pat: string;
   projectName?: string;
+};
+
+export type DevNotesProjectSummary = {
+  id: string;
+  name: string;
+  organizationId?: string;
+};
+
+export type DevNotesProjectDiscovery = {
+  path: string | null;
+  baseUrl: string;
+};
+
+export type DevNotesServerUser = {
+  id: string;
+  email?: string | null;
+  fullName?: string | null;
+  role?: string | null;
+};
+
+export type DevNotesResolvedUser = {
+  id: string;
+  email?: string | null;
+  fullName?: string | null;
+};
+
+export type DevNotesForgeOptions = {
+  baseUrl: string;
+  pat: string;
+  projectName?: string | null;
+};
+
+export type DevNotesCorsHeaders =
+  | HeadersInit
+  | ((request: Request) => HeadersInit | Promise<HeadersInit>);
+
+export type DevNotesServerOptions = {
+  basePath?: string;
+  getCurrentUser: (request: Request) => Promise<DevNotesServerUser | null> | DevNotesServerUser | null;
+  forge: DevNotesForgeOptions;
+  resolveUsers?: (ids: string[]) => Promise<DevNotesResolvedUser[]> | DevNotesResolvedUser[];
+  fetch?: typeof globalThis.fetch;
+  corsHeaders?: DevNotesCorsHeaders;
 };
 
 export type DevNotesClientOptions = {

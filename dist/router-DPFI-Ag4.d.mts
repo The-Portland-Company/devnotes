@@ -1,4 +1,5 @@
-import { e as DevNotesCapabilities, f as DevNotesAppLinkStatus, n as DevNotesLinkAppInput, B as BugReport, l as BugReportCreateData, c as BugReportType, T as TaskList, m as BugReportMessage, d as BugReportCreator, k as AiConversationMessage, i as BugCaptureContext, j as AiAssistResult } from './types-xqGNcAbZ.mjs';
+import { D as DevNotesCapabilities, a as DevNotesAppLinkStatus, c as DevNotesLinkAppInput } from './types-CrmObeqp.mjs';
+import { B as BugReport, i as BugReportCreateData, c as BugReportType, T as TaskList, j as BugReportMessage, d as BugReportCreator, h as AiConversationMessage, f as BugCaptureContext, g as AiAssistResult } from './types-CBHExs2F.mjs';
 
 type DevNotesProxyRequest = {
     method: string;

@@ -4512,4 +4512,3 @@ function createDevNotesClient(options) {
   useBugReportPosition,
   useDevNotes
 });
-//# sourceMappingURL=index.js.map

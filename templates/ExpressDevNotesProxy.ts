@@ -1,71 +1,20 @@
-import { createExpressDevNotesProxy } from '@the-portland-company/devnotes/express';
+import { createExpressDevNotesHandler } from '@the-portland-company/devnotes/express';
 
-const backend = {
-  async getCapabilities() {
-    return { ai: false, appLink: true };
+export const devNotesProxy = createExpressDevNotesHandler({
+  forge: {
+    baseUrl: process.env.FOCUS_FORGE_BASE_URL || 'https://focusforge.theportlandcompany.com',
+    pat: process.env.FOCUS_FORGE_PAT || '',
+    projectName: process.env.FOCUS_FORGE_PROJECT_NAME || null,
   },
-  async getAppLinkStatus() {
+  async getCurrentUser(request) {
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader) return null;
+
+    // Replace this with your app's real auth lookup.
     return {
-      linked: Boolean(process.env.FOCUS_FORGE_PAT),
-      projectName: process.env.FOCUS_FORGE_PROJECT_NAME || null,
-      tokenLast4: process.env.FOCUS_FORGE_PAT?.slice(-4) || null,
-      linkedAt: null,
+      id: 'current-user-id',
+      email: 'user@example.com',
+      fullName: 'Current User',
     };
   },
-  async linkApp() {
-    throw new Error('Implement app-level Forge credential storage for your React server app.');
-  },
-  async unlinkApp() {
-    throw new Error('Implement app-level Forge credential removal for your React server app.');
-  },
-  async listReports() {
-    throw new Error('Implement Forge-backed report listing.');
-  },
-  async createReport() {
-    throw new Error('Implement Forge-backed report creation.');
-  },
-  async updateReport() {
-    throw new Error('Implement Forge-backed report updates.');
-  },
-  async deleteReport() {
-    throw new Error('Implement Forge-backed report deletion.');
-  },
-  async listReportTypes() {
-    throw new Error('Implement Forge-backed report type listing.');
-  },
-  async createReportType() {
-    throw new Error('Implement Forge-backed report type creation.');
-  },
-  async deleteReportType() {
-    throw new Error('Implement Forge-backed report type deletion.');
-  },
-  async listTaskLists() {
-    throw new Error('Implement Forge-backed task list listing.');
-  },
-  async createTaskList() {
-    throw new Error('Implement Forge-backed task list creation.');
-  },
-  async listMessages() {
-    throw new Error('Implement Forge-backed message listing.');
-  },
-  async createMessage() {
-    throw new Error('Implement Forge-backed message creation.');
-  },
-  async updateMessage() {
-    throw new Error('Implement Forge-backed message updates.');
-  },
-  async deleteMessage() {
-    throw new Error('Implement Forge-backed message deletion.');
-  },
-  async getUnreadCounts() {
-    throw new Error('Implement Forge-backed unread count lookup.');
-  },
-  async markMessagesRead() {
-    throw new Error('Implement Forge-backed message read tracking.');
-  },
-  async listCollaborators() {
-    throw new Error('Implement Forge-backed collaborator listing.');
-  },
-};
-
-export const devNotesProxy = createExpressDevNotesProxy(backend);
+});

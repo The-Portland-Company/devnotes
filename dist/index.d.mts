@@ -1,7 +1,9 @@
 import * as react_jsx_runtime from 'react/jsx-runtime';
 import { ReactNode } from 'react';
-import { D as DevNotesClientAdapter, a as DevNotesUser, b as DevNotesConfig, B as BugReport, c as BugReportType, T as TaskList, d as BugReportCreator, e as DevNotesCapabilities, f as DevNotesAppLinkStatus, N as NotifyEvent, A as AiProvider, g as DevNotesRole, h as DevNotesClientOptions, i as BugCaptureContext } from './types-xqGNcAbZ.mjs';
-export { j as AiAssistResult, k as AiConversationMessage, l as BugReportCreateData, m as BugReportMessage, n as DevNotesLinkAppInput } from './types-xqGNcAbZ.mjs';
+import { D as DevNotesClientAdapter, a as DevNotesUser, b as DevNotesConfig, B as BugReport, c as BugReportType, T as TaskList, d as BugReportCreator, N as NotifyEvent, A as AiProvider, e as DevNotesRole, f as BugCaptureContext } from './types-CBHExs2F.mjs';
+export { g as AiAssistResult, h as AiConversationMessage, i as BugReportCreateData, j as BugReportMessage } from './types-CBHExs2F.mjs';
+import { D as DevNotesCapabilities, a as DevNotesAppLinkStatus, b as DevNotesClientOptions } from './types-CrmObeqp.mjs';
+export { c as DevNotesLinkAppInput } from './types-CrmObeqp.mjs';
 
 type DevNotesContextValue = {
     isEnabled: boolean;

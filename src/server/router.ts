@@ -72,6 +72,17 @@ export interface DevNotesProxyBackend {
   ) => Promise<AiAssistResult>;
 }
 
+export function isDevNotesProxyBackend(value: unknown): value is DevNotesProxyBackend {
+  const candidate = value as Partial<DevNotesProxyBackend> | null;
+  return Boolean(
+    candidate &&
+      typeof candidate === 'object' &&
+      typeof candidate.getCapabilities === 'function' &&
+      typeof candidate.getAppLinkStatus === 'function' &&
+      typeof candidate.listReports === 'function'
+  );
+}
+
 const json = (body: unknown, status = 200): DevNotesProxyResponse => ({ status, body });
 
 const getId = (slug: string[], index: number) => decodeURIComponent(slug[index] || '');
