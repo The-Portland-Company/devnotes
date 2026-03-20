@@ -851,7 +851,7 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                     children: [
                       /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
                         /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_fi.FiList, { className: "flex-shrink-0" }),
-                        "See All Tasks"
+                        "View All Tasks"
                       ] }),
                       openBugCount > 0 && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "inline-flex min-w-[20px] items-center justify-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700", children: openBugCount })
                     ]
@@ -4035,7 +4035,10 @@ function DevNotesTaskList({
     loading,
     userProfiles,
     unreadCounts,
-    deleteBugReport
+    deleteBugReport,
+    updateBugReport,
+    adapter,
+    user
   } = useDevNotes();
   const [searchQuery, setSearchQuery] = (0, import_react10.useState)("");
   const [filterStatus, setFilterStatus] = (0, import_react10.useState)("all");
@@ -4044,6 +4047,57 @@ function DevNotesTaskList({
   const [selectedReport, setSelectedReport] = (0, import_react10.useState)(null);
   const [sortField, setSortField] = (0, import_react10.useState)("stale");
   const [sortDir, setSortDir] = (0, import_react10.useState)("desc");
+  const [visibleReportIds, setVisibleReportIds] = (0, import_react10.useState)(null);
+  (0, import_react10.useEffect)(() => {
+    let cancelled = false;
+    const normalize = (value) => value?.trim().toLowerCase() || null;
+    const mentionTargets = /* @__PURE__ */ new Set();
+    const fullName = normalize(user.fullName);
+    const email = normalize(user.email);
+    const emailLocalPart = email?.split("@")[0] || null;
+    const profile = userProfiles[user.id];
+    const profileName = normalize(profile?.full_name);
+    const profileEmail = normalize(profile?.email);
+    const profileEmailLocalPart = profileEmail?.split("@")[0] || null;
+    [fullName, email, emailLocalPart, profileName, profileEmail, profileEmailLocalPart].filter((value) => Boolean(value)).forEach((value) => mentionTargets.add(value));
+    const collectVisibleReports = async () => {
+      const baseVisibleIds = /* @__PURE__ */ new Set();
+      bugReports.forEach((report) => {
+        if (report.created_by === user.id || report.assigned_to === user.id) {
+          baseVisibleIds.add(report.id);
+        }
+      });
+      const messageResults = await Promise.all(
+        bugReports.map(async (report) => {
+          try {
+            const messages = await adapter.fetchMessages(report.id);
+            return { reportId: report.id, messages };
+          } catch (error) {
+            console.error("[DevNotesTaskList] Failed to load messages for report visibility", error);
+            return { reportId: report.id, messages: [] };
+          }
+        })
+      );
+      messageResults.forEach(({ reportId, messages }) => {
+        const involved = messages.some((message) => {
+          if (message.author_id === user.id) return true;
+          const normalizedBody = message.body.toLowerCase();
+          return Array.from(mentionTargets).some((target) => normalizedBody.includes(`@${target}`));
+        });
+        if (involved) {
+          baseVisibleIds.add(reportId);
+        }
+      });
+      if (!cancelled) {
+        setVisibleReportIds(baseVisibleIds);
+      }
+    };
+    setVisibleReportIds(null);
+    collectVisibleReports();
+    return () => {
+      cancelled = true;
+    };
+  }, [adapter, bugReports, user.id, user.email, user.fullName, userProfiles]);
   const getStaleMeta = (report) => {
     const updatedTs = new Date(report.updated_at || report.created_at).getTime();
     if (Number.isNaN(updatedTs)) {
@@ -4057,17 +4111,21 @@ function DevNotesTaskList({
     };
   };
   const stats = (0, import_react10.useMemo)(() => ({
-    total: bugReports.length,
-    open: bugReports.filter((r) => r.status === "Open").length,
-    inProgress: bugReports.filter((r) => r.status === "In Progress").length,
-    needsReview: bugReports.filter((r) => r.status === "Needs Review").length,
-    resolved: bugReports.filter((r) => r.status === "Resolved").length,
-    closed: bugReports.filter((r) => r.status === "Closed").length
-  }), [bugReports]);
+    total: (visibleReportIds ? bugReports.filter((r) => visibleReportIds.has(r.id)) : []).length,
+    open: (visibleReportIds ? bugReports.filter((r) => visibleReportIds.has(r.id) && r.status === "Open") : []).length,
+    inProgress: (visibleReportIds ? bugReports.filter((r) => visibleReportIds.has(r.id) && r.status === "In Progress") : []).length,
+    needsReview: (visibleReportIds ? bugReports.filter((r) => visibleReportIds.has(r.id) && r.status === "Needs Review") : []).length,
+    resolved: (visibleReportIds ? bugReports.filter((r) => visibleReportIds.has(r.id) && r.status === "Resolved") : []).length,
+    closed: (visibleReportIds ? bugReports.filter((r) => visibleReportIds.has(r.id) && r.status === "Closed") : []).length
+  }), [bugReports, visibleReportIds]);
+  const accessibleReports = (0, import_react10.useMemo)(
+    () => visibleReportIds ? bugReports.filter((report) => visibleReportIds.has(report.id)) : [],
+    [bugReports, visibleReportIds]
+  );
   const filteredReports = (0, import_react10.useMemo)(() => {
     const severityOrder = { Critical: 0, High: 1, Medium: 2, Low: 3 };
     const statusOrder = { Open: 0, "In Progress": 1, "Needs Review": 2, Resolved: 3, Closed: 4 };
-    return bugReports.filter((r) => {
+    return accessibleReports.filter((r) => {
       if (!showClosed && r.status === "Closed") return false;
       if (showClosed && r.status !== "Closed") return false;
       if (filterStatus !== "all" && r.status !== filterStatus) return false;
@@ -4099,7 +4157,7 @@ function DevNotesTaskList({
       }
       return sortDir === "desc" ? -cmp : cmp;
     });
-  }, [bugReports, searchQuery, filterStatus, filterSeverity, showClosed, sortField, sortDir]);
+  }, [accessibleReports, searchQuery, filterStatus, filterSeverity, showClosed, sortField, sortDir]);
   const getProfileName = (id) => {
     if (!id) return null;
     const p = userProfiles[id];
@@ -4138,6 +4196,13 @@ function DevNotesTaskList({
         existingReport: selectedReport,
         onSave: () => setSelectedReport(null),
         onCancel: () => setSelectedReport(null),
+        onArchive: async () => {
+          await updateBugReport(selectedReport.id, {
+            status: "Closed",
+            resolved_by: selectedReport.resolved_by || user.id
+          });
+          setSelectedReport(null);
+        },
         onDelete: async () => {
           await deleteBugReport(selectedReport.id);
           setSelectedReport(null);
@@ -4145,7 +4210,7 @@ function DevNotesTaskList({
       }
     ) });
   }
-  if (loading && bugReports.length === 0) {
+  if (loading && bugReports.length === 0 || visibleReportIds === null) {
     return /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "flex items-center justify-center py-12", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" }) });
   }
   return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "flex flex-col gap-4", children: [
@@ -4236,7 +4301,7 @@ function DevNotesTaskList({
     ] }),
     filteredReports.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "flex flex-col items-center py-12 text-gray-400", children: [
       /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(import_fi7.FiAlertTriangle, { size: 32, className: "mb-3" }),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { className: "text-sm", children: bugReports.length === 0 ? "No tasks yet. Use the Dev Notes menu to report issues." : "No tasks match your filters." })
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { className: "text-sm", children: accessibleReports.length === 0 ? "No visible tasks yet. You will only see tasks you own, are assigned to, commented on, or were mentioned in." : "No tasks match your filters." })
     ] }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "border border-gray-200 rounded-lg overflow-hidden", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("table", { className: "w-full text-sm", children: [
       /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("tr", { className: "bg-gray-50 text-left text-xs text-gray-500 uppercase tracking-wide", children: [
         /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("th", { className: "px-3 py-2 font-medium", children: "Title" }),
@@ -4407,23 +4472,38 @@ function DevNotesButton({
         )
       }
     ),
-    showTaskPanel && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { style: { position: "absolute", inset: 0, zIndex: 9998, display: "flex", justifyContent: "flex-end", pointerEvents: "auto" }, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
-        "div",
-        {
-          style: { position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)" },
-          onClick: () => setShowTaskPanel(false)
-        }
-      ),
-      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "relative w-full max-w-2xl bg-white shadow-2xl overflow-y-auto p-6 animate-[slideIn_0.2s_ease-out]", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
-        DevNotesTaskList,
-        {
-          title: taskPanelTitle,
-          onClose: () => setShowTaskPanel(false),
-          onNavigateToPage
-        }
-      ) })
-    ] })
+    showTaskPanel && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+      "div",
+      {
+        style: {
+          position: "absolute",
+          inset: 0,
+          zIndex: 9998,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          pointerEvents: "auto",
+          padding: 16
+        },
+        children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+            "div",
+            {
+              style: { position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)" },
+              onClick: () => setShowTaskPanel(false)
+            }
+          ),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "relative w-full max-w-5xl max-h-[calc(100vh-32px)] overflow-y-auto rounded-xl bg-white p-6 shadow-2xl animate-[slideIn_0.2s_ease-out]", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+            DevNotesTaskList,
+            {
+              title: taskPanelTitle,
+              onClose: () => setShowTaskPanel(false),
+              onNavigateToPage
+            }
+          ) })
+        ]
+      }
+    )
   ] });
   return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(import_jsx_runtime9.Fragment, { children: [
     dotContainer ? (0, import_react_dom2.createPortal)(buttonContent, dotContainer) : buttonContent,

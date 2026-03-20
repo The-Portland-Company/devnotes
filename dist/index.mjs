@@ -824,7 +824,7 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                     children: [
                       /* @__PURE__ */ jsxs("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
                         /* @__PURE__ */ jsx2(FiList, { className: "flex-shrink-0" }),
-                        "See All Tasks"
+                        "View All Tasks"
                       ] }),
                       openBugCount > 0 && /* @__PURE__ */ jsx2("span", { className: "inline-flex min-w-[20px] items-center justify-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700", children: openBugCount })
                     ]
@@ -4006,7 +4006,7 @@ function DevNotesOverlay({
 }
 
 // src/DevNotesTaskList.tsx
-import { useState as useState10, useMemo as useMemo5 } from "react";
+import { useState as useState10, useMemo as useMemo5, useEffect as useEffect10 } from "react";
 import {
   FiSearch,
   FiExternalLink as FiExternalLink2,
@@ -4043,7 +4043,10 @@ function DevNotesTaskList({
     loading,
     userProfiles,
     unreadCounts,
-    deleteBugReport
+    deleteBugReport,
+    updateBugReport,
+    adapter,
+    user
   } = useDevNotes();
   const [searchQuery, setSearchQuery] = useState10("");
   const [filterStatus, setFilterStatus] = useState10("all");
@@ -4052,6 +4055,57 @@ function DevNotesTaskList({
   const [selectedReport, setSelectedReport] = useState10(null);
   const [sortField, setSortField] = useState10("stale");
   const [sortDir, setSortDir] = useState10("desc");
+  const [visibleReportIds, setVisibleReportIds] = useState10(null);
+  useEffect10(() => {
+    let cancelled = false;
+    const normalize = (value) => value?.trim().toLowerCase() || null;
+    const mentionTargets = /* @__PURE__ */ new Set();
+    const fullName = normalize(user.fullName);
+    const email = normalize(user.email);
+    const emailLocalPart = email?.split("@")[0] || null;
+    const profile = userProfiles[user.id];
+    const profileName = normalize(profile?.full_name);
+    const profileEmail = normalize(profile?.email);
+    const profileEmailLocalPart = profileEmail?.split("@")[0] || null;
+    [fullName, email, emailLocalPart, profileName, profileEmail, profileEmailLocalPart].filter((value) => Boolean(value)).forEach((value) => mentionTargets.add(value));
+    const collectVisibleReports = async () => {
+      const baseVisibleIds = /* @__PURE__ */ new Set();
+      bugReports.forEach((report) => {
+        if (report.created_by === user.id || report.assigned_to === user.id) {
+          baseVisibleIds.add(report.id);
+        }
+      });
+      const messageResults = await Promise.all(
+        bugReports.map(async (report) => {
+          try {
+            const messages = await adapter.fetchMessages(report.id);
+            return { reportId: report.id, messages };
+          } catch (error) {
+            console.error("[DevNotesTaskList] Failed to load messages for report visibility", error);
+            return { reportId: report.id, messages: [] };
+          }
+        })
+      );
+      messageResults.forEach(({ reportId, messages }) => {
+        const involved = messages.some((message) => {
+          if (message.author_id === user.id) return true;
+          const normalizedBody = message.body.toLowerCase();
+          return Array.from(mentionTargets).some((target) => normalizedBody.includes(`@${target}`));
+        });
+        if (involved) {
+          baseVisibleIds.add(reportId);
+        }
+      });
+      if (!cancelled) {
+        setVisibleReportIds(baseVisibleIds);
+      }
+    };
+    setVisibleReportIds(null);
+    collectVisibleReports();
+    return () => {
+      cancelled = true;
+    };
+  }, [adapter, bugReports, user.id, user.email, user.fullName, userProfiles]);
   const getStaleMeta = (report) => {
     const updatedTs = new Date(report.updated_at || report.created_at).getTime();
     if (Number.isNaN(updatedTs)) {
@@ -4065,17 +4119,21 @@ function DevNotesTaskList({
     };
   };
   const stats = useMemo5(() => ({
-    total: bugReports.length,
-    open: bugReports.filter((r) => r.status === "Open").length,
-    inProgress: bugReports.filter((r) => r.status === "In Progress").length,
-    needsReview: bugReports.filter((r) => r.status === "Needs Review").length,
-    resolved: bugReports.filter((r) => r.status === "Resolved").length,
-    closed: bugReports.filter((r) => r.status === "Closed").length
-  }), [bugReports]);
+    total: (visibleReportIds ? bugReports.filter((r) => visibleReportIds.has(r.id)) : []).length,
+    open: (visibleReportIds ? bugReports.filter((r) => visibleReportIds.has(r.id) && r.status === "Open") : []).length,
+    inProgress: (visibleReportIds ? bugReports.filter((r) => visibleReportIds.has(r.id) && r.status === "In Progress") : []).length,
+    needsReview: (visibleReportIds ? bugReports.filter((r) => visibleReportIds.has(r.id) && r.status === "Needs Review") : []).length,
+    resolved: (visibleReportIds ? bugReports.filter((r) => visibleReportIds.has(r.id) && r.status === "Resolved") : []).length,
+    closed: (visibleReportIds ? bugReports.filter((r) => visibleReportIds.has(r.id) && r.status === "Closed") : []).length
+  }), [bugReports, visibleReportIds]);
+  const accessibleReports = useMemo5(
+    () => visibleReportIds ? bugReports.filter((report) => visibleReportIds.has(report.id)) : [],
+    [bugReports, visibleReportIds]
+  );
   const filteredReports = useMemo5(() => {
     const severityOrder = { Critical: 0, High: 1, Medium: 2, Low: 3 };
     const statusOrder = { Open: 0, "In Progress": 1, "Needs Review": 2, Resolved: 3, Closed: 4 };
-    return bugReports.filter((r) => {
+    return accessibleReports.filter((r) => {
       if (!showClosed && r.status === "Closed") return false;
       if (showClosed && r.status !== "Closed") return false;
       if (filterStatus !== "all" && r.status !== filterStatus) return false;
@@ -4107,7 +4165,7 @@ function DevNotesTaskList({
       }
       return sortDir === "desc" ? -cmp : cmp;
     });
-  }, [bugReports, searchQuery, filterStatus, filterSeverity, showClosed, sortField, sortDir]);
+  }, [accessibleReports, searchQuery, filterStatus, filterSeverity, showClosed, sortField, sortDir]);
   const getProfileName = (id) => {
     if (!id) return null;
     const p = userProfiles[id];
@@ -4146,6 +4204,13 @@ function DevNotesTaskList({
         existingReport: selectedReport,
         onSave: () => setSelectedReport(null),
         onCancel: () => setSelectedReport(null),
+        onArchive: async () => {
+          await updateBugReport(selectedReport.id, {
+            status: "Closed",
+            resolved_by: selectedReport.resolved_by || user.id
+          });
+          setSelectedReport(null);
+        },
         onDelete: async () => {
           await deleteBugReport(selectedReport.id);
           setSelectedReport(null);
@@ -4153,7 +4218,7 @@ function DevNotesTaskList({
       }
     ) });
   }
-  if (loading && bugReports.length === 0) {
+  if (loading && bugReports.length === 0 || visibleReportIds === null) {
     return /* @__PURE__ */ jsx8("div", { className: "flex items-center justify-center py-12", children: /* @__PURE__ */ jsx8("div", { className: "w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" }) });
   }
   return /* @__PURE__ */ jsxs7("div", { className: "flex flex-col gap-4", children: [
@@ -4244,7 +4309,7 @@ function DevNotesTaskList({
     ] }),
     filteredReports.length === 0 ? /* @__PURE__ */ jsxs7("div", { className: "flex flex-col items-center py-12 text-gray-400", children: [
       /* @__PURE__ */ jsx8(FiAlertTriangle2, { size: 32, className: "mb-3" }),
-      /* @__PURE__ */ jsx8("p", { className: "text-sm", children: bugReports.length === 0 ? "No tasks yet. Use the Dev Notes menu to report issues." : "No tasks match your filters." })
+      /* @__PURE__ */ jsx8("p", { className: "text-sm", children: accessibleReports.length === 0 ? "No visible tasks yet. You will only see tasks you own, are assigned to, commented on, or were mentioned in." : "No tasks match your filters." })
     ] }) : /* @__PURE__ */ jsx8("div", { className: "border border-gray-200 rounded-lg overflow-hidden", children: /* @__PURE__ */ jsxs7("table", { className: "w-full text-sm", children: [
       /* @__PURE__ */ jsx8("thead", { children: /* @__PURE__ */ jsxs7("tr", { className: "bg-gray-50 text-left text-xs text-gray-500 uppercase tracking-wide", children: [
         /* @__PURE__ */ jsx8("th", { className: "px-3 py-2 font-medium", children: "Title" }),
@@ -4415,23 +4480,38 @@ function DevNotesButton({
         )
       }
     ),
-    showTaskPanel && /* @__PURE__ */ jsxs8("div", { style: { position: "absolute", inset: 0, zIndex: 9998, display: "flex", justifyContent: "flex-end", pointerEvents: "auto" }, children: [
-      /* @__PURE__ */ jsx9(
-        "div",
-        {
-          style: { position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)" },
-          onClick: () => setShowTaskPanel(false)
-        }
-      ),
-      /* @__PURE__ */ jsx9("div", { className: "relative w-full max-w-2xl bg-white shadow-2xl overflow-y-auto p-6 animate-[slideIn_0.2s_ease-out]", children: /* @__PURE__ */ jsx9(
-        DevNotesTaskList,
-        {
-          title: taskPanelTitle,
-          onClose: () => setShowTaskPanel(false),
-          onNavigateToPage
-        }
-      ) })
-    ] })
+    showTaskPanel && /* @__PURE__ */ jsxs8(
+      "div",
+      {
+        style: {
+          position: "absolute",
+          inset: 0,
+          zIndex: 9998,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          pointerEvents: "auto",
+          padding: 16
+        },
+        children: [
+          /* @__PURE__ */ jsx9(
+            "div",
+            {
+              style: { position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)" },
+              onClick: () => setShowTaskPanel(false)
+            }
+          ),
+          /* @__PURE__ */ jsx9("div", { className: "relative w-full max-w-5xl max-h-[calc(100vh-32px)] overflow-y-auto rounded-xl bg-white p-6 shadow-2xl animate-[slideIn_0.2s_ease-out]", children: /* @__PURE__ */ jsx9(
+            DevNotesTaskList,
+            {
+              title: taskPanelTitle,
+              onClose: () => setShowTaskPanel(false),
+              onNavigateToPage
+            }
+          ) })
+        ]
+      }
+    )
   ] });
   return /* @__PURE__ */ jsxs8(Fragment6, { children: [
     dotContainer ? createPortal2(buttonContent, dotContainer) : buttonContent,

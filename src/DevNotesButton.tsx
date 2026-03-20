@@ -69,12 +69,23 @@ export default function DevNotesButton({
 
       {/* Built-in panel fallback (used when callbacks are not provided by host app) */}
       {showTaskPanel && (
-        <div style={{ position: 'absolute', inset: 0, zIndex: 9998, display: 'flex', justifyContent: 'flex-end', pointerEvents: 'auto' }}>
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 9998,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            pointerEvents: 'auto',
+            padding: 16,
+          }}
+        >
           <div
             style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.3)' }}
             onClick={() => setShowTaskPanel(false)}
           />
-          <div className="relative w-full max-w-2xl bg-white shadow-2xl overflow-y-auto p-6 animate-[slideIn_0.2s_ease-out]">
+          <div className="relative w-full max-w-5xl max-h-[calc(100vh-32px)] overflow-y-auto rounded-xl bg-white p-6 shadow-2xl animate-[slideIn_0.2s_ease-out]">
             <DevNotesTaskList
               title={taskPanelTitle}
               onClose={() => setShowTaskPanel(false)}

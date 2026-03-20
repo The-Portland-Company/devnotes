@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   FiSearch,
   FiExternalLink,
@@ -51,6 +51,9 @@ export default function DevNotesTaskList({
     userProfiles,
     unreadCounts,
     deleteBugReport,
+    updateBugReport,
+    adapter,
+    user,
   } = useDevNotes();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -60,6 +63,70 @@ export default function DevNotesTaskList({
   const [selectedReport, setSelectedReport] = useState<BugReport | null>(null);
   const [sortField, setSortField] = useState<'stale' | 'created_at' | 'severity' | 'status'>('stale');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [visibleReportIds, setVisibleReportIds] = useState<Set<string> | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const normalize = (value: string | null | undefined) => value?.trim().toLowerCase() || null;
+    const mentionTargets = new Set<string>();
+    const fullName = normalize(user.fullName);
+    const email = normalize(user.email);
+    const emailLocalPart = email?.split('@')[0] || null;
+    const profile = userProfiles[user.id];
+    const profileName = normalize(profile?.full_name);
+    const profileEmail = normalize(profile?.email);
+    const profileEmailLocalPart = profileEmail?.split('@')[0] || null;
+
+    [fullName, email, emailLocalPart, profileName, profileEmail, profileEmailLocalPart]
+      .filter((value): value is string => Boolean(value))
+      .forEach((value) => mentionTargets.add(value));
+
+    const collectVisibleReports = async () => {
+      const baseVisibleIds = new Set<string>();
+
+      bugReports.forEach((report) => {
+        if (report.created_by === user.id || report.assigned_to === user.id) {
+          baseVisibleIds.add(report.id);
+        }
+      });
+
+      const messageResults = await Promise.all(
+        bugReports.map(async (report) => {
+          try {
+            const messages = await adapter.fetchMessages(report.id);
+            return { reportId: report.id, messages };
+          } catch (error) {
+            console.error('[DevNotesTaskList] Failed to load messages for report visibility', error);
+            return { reportId: report.id, messages: [] };
+          }
+        })
+      );
+
+      messageResults.forEach(({ reportId, messages }) => {
+        const involved = messages.some((message) => {
+          if (message.author_id === user.id) return true;
+          const normalizedBody = message.body.toLowerCase();
+          return Array.from(mentionTargets).some((target) => normalizedBody.includes(`@${target}`));
+        });
+
+        if (involved) {
+          baseVisibleIds.add(reportId);
+        }
+      });
+
+      if (!cancelled) {
+        setVisibleReportIds(baseVisibleIds);
+      }
+    };
+
+    setVisibleReportIds(null);
+    collectVisibleReports();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [adapter, bugReports, user.id, user.email, user.fullName, userProfiles]);
 
   const getStaleMeta = (report: BugReport) => {
     const updatedTs = new Date(report.updated_at || report.created_at).getTime();
@@ -75,19 +142,24 @@ export default function DevNotesTaskList({
   };
 
   const stats = useMemo(() => ({
-    total: bugReports.length,
-    open: bugReports.filter((r) => r.status === 'Open').length,
-    inProgress: bugReports.filter((r) => r.status === 'In Progress').length,
-    needsReview: bugReports.filter((r) => r.status === 'Needs Review').length,
-    resolved: bugReports.filter((r) => r.status === 'Resolved').length,
-    closed: bugReports.filter((r) => r.status === 'Closed').length,
-  }), [bugReports]);
+    total: (visibleReportIds ? bugReports.filter((r) => visibleReportIds.has(r.id)) : []).length,
+    open: (visibleReportIds ? bugReports.filter((r) => visibleReportIds.has(r.id) && r.status === 'Open') : []).length,
+    inProgress: (visibleReportIds ? bugReports.filter((r) => visibleReportIds.has(r.id) && r.status === 'In Progress') : []).length,
+    needsReview: (visibleReportIds ? bugReports.filter((r) => visibleReportIds.has(r.id) && r.status === 'Needs Review') : []).length,
+    resolved: (visibleReportIds ? bugReports.filter((r) => visibleReportIds.has(r.id) && r.status === 'Resolved') : []).length,
+    closed: (visibleReportIds ? bugReports.filter((r) => visibleReportIds.has(r.id) && r.status === 'Closed') : []).length,
+  }), [bugReports, visibleReportIds]);
+
+  const accessibleReports = useMemo(
+    () => (visibleReportIds ? bugReports.filter((report) => visibleReportIds.has(report.id)) : []),
+    [bugReports, visibleReportIds]
+  );
 
   const filteredReports = useMemo(() => {
     const severityOrder: Record<string, number> = { Critical: 0, High: 1, Medium: 2, Low: 3 };
     const statusOrder: Record<string, number> = { Open: 0, 'In Progress': 1, 'Needs Review': 2, Resolved: 3, Closed: 4 };
 
-    return bugReports
+    return accessibleReports
       .filter((r) => {
         if (!showClosed && r.status === 'Closed') return false;
         if (showClosed && r.status !== 'Closed') return false;
@@ -125,7 +197,7 @@ export default function DevNotesTaskList({
         }
         return sortDir === 'desc' ? -cmp : cmp;
       });
-  }, [bugReports, searchQuery, filterStatus, filterSeverity, showClosed, sortField, sortDir]);
+  }, [accessibleReports, searchQuery, filterStatus, filterSeverity, showClosed, sortField, sortDir]);
 
   const getProfileName = (id: string | null) => {
     if (!id) return null;
@@ -172,6 +244,13 @@ export default function DevNotesTaskList({
           existingReport={selectedReport}
           onSave={() => setSelectedReport(null)}
           onCancel={() => setSelectedReport(null)}
+          onArchive={async () => {
+            await updateBugReport(selectedReport.id, {
+              status: 'Closed',
+              resolved_by: selectedReport.resolved_by || user.id,
+            });
+            setSelectedReport(null);
+          }}
           onDelete={async () => {
             await deleteBugReport(selectedReport.id);
             setSelectedReport(null);
@@ -181,7 +260,7 @@ export default function DevNotesTaskList({
     );
   }
 
-  if (loading && bugReports.length === 0) {
+  if ((loading && bugReports.length === 0) || visibleReportIds === null) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
@@ -280,8 +359,8 @@ export default function DevNotesTaskList({
         <div className="flex flex-col items-center py-12 text-gray-400">
           <FiAlertTriangle size={32} className="mb-3" />
           <p className="text-sm">
-            {bugReports.length === 0
-              ? 'No tasks yet. Use the Dev Notes menu to report issues.'
+            {accessibleReports.length === 0
+              ? 'No visible tasks yet. You will only see tasks you own, are assigned to, commented on, or were mentioned in.'
               : 'No tasks match your filters.'}
           </p>
         </div>
