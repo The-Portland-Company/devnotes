@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   FiX,
   FiTrash2,
-  FiCheck,
+  FiSave,
   FiExternalLink,
   FiLink2,
   FiCopy,
@@ -35,6 +35,7 @@ type DevNotesFormProps = {
   onSave: (report: BugReport) => void;
   onCancel: () => void;
   onDelete?: () => void;
+  onArchive?: () => void;
 };
 
 type SearchableOption = {
@@ -49,6 +50,8 @@ type SearchableSingleSelectProps = {
   onChange: (value: string | null) => void;
   placeholder: string;
   isSuperscript?: boolean;
+  wrapperClassName?: string;
+  minInputWidthClassName?: string;
 };
 
 const COMPACT_BEHAVIOR_HEIGHT = 56;
@@ -61,6 +64,8 @@ function SearchableSingleSelect({
   onChange,
   placeholder,
   isSuperscript = false,
+  wrapperClassName = '',
+  minInputWidthClassName = 'min-w-[120px]',
 }: SearchableSingleSelectProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
@@ -82,7 +87,7 @@ function SearchableSingleSelect({
   };
 
   return (
-    <div className={isSuperscript ? 'relative' : ''}>
+    <div className={`${isSuperscript ? 'relative' : ''} ${wrapperClassName}`.trim()}>
       <label
         className={
           isSuperscript
@@ -113,7 +118,7 @@ function SearchableSingleSelect({
             )}
             <input
               type="text"
-              className="flex-1 min-w-[120px] border-none outline-none text-sm bg-transparent"
+              className={`flex-1 ${minInputWidthClassName} border-none outline-none text-sm bg-transparent`}
               placeholder={selectedOption ? 'Type to search...' : placeholder}
               value={searchTerm}
               onChange={(e) => {
@@ -170,6 +175,7 @@ export default function DevNotesForm({
   onSave,
   onCancel,
   onDelete,
+  onArchive,
 }: DevNotesFormProps) {
   const {
     bugReportTypes,
@@ -184,9 +190,9 @@ export default function DevNotesForm({
     collaborators,
     user,
     aiProvider,
-    requireAi,
     error: bugReportingError,
     role,
+    appLinkStatus,
   } = useDevNotes();
 
   const isAdmin = role === 'admin' || role === 'contributor';
@@ -243,10 +249,9 @@ export default function DevNotesForm({
     existingReport?.expected_behavior || ''
   );
   const [actualBehavior, setActualBehavior] = useState(existingReport?.actual_behavior || '');
-  const [status, setStatus] = useState<BugReport['status']>(existingReport?.status || 'Open');
+  const [status, setStatus] = useState<BugReport['status'] | null>(existingReport?.status || null);
   const [assignedTo, setAssignedTo] = useState<string | null>(existingReport?.assigned_to || null);
   const [resolvedBy, setResolvedBy] = useState<string | null>(existingReport?.resolved_by || null);
-  const [approved, setApproved] = useState(existingReport?.approved || false);
   const [aiReady, setAiReady] = useState(existingReport?.ai_ready || false);
   const [aiDescription, setAiDescription] = useState<string | null>(
     existingReport?.ai_description || null
@@ -283,6 +288,7 @@ export default function DevNotesForm({
   );
   const [showAiChat, setShowAiChat] = useState(false);
   const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [pendingDestructiveAction, setPendingDestructiveAction] = useState<'delete' | 'archive' | null>(null);
   const capturedContext = useMemo(
     () => existingReport?.capture_context || buildCaptureContext(reportPageUrl),
     [existingReport?.capture_context, reportPageUrl]
@@ -377,6 +383,15 @@ export default function DevNotesForm({
   const composePageUrlWithTab = (value: string) => {
     return normalizePageUrl(value || '');
   };
+
+  const forgeTaskUrl = useMemo(() => {
+    if (!existingReport?.id) return null;
+
+    const baseUrl = appLinkStatus?.projectDiscovery?.baseUrl?.trim();
+    if (!baseUrl) return null;
+
+    return `${baseUrl.replace(/\/+$/, '')}/tasks/${encodeURIComponent(existingReport.id)}`;
+  }, [appLinkStatus?.projectDiscovery?.baseUrl, existingReport?.id]);
 
   useEffect(() => {
     setReportPageUrl(existingReport?.page_url || pageUrl);
@@ -524,12 +539,12 @@ export default function DevNotesForm({
       report: {
         id: existingReport?.id || null,
         title: title.trim() || null,
-        status,
+        status: statusValue,
         severity,
         taskListId: taskListId || null,
         types: selectedTypes,
         typeNames,
-        approved,
+        approved: existingReport?.approved || false,
         aiReady: aiReady,
       },
       narrative: {
@@ -580,14 +595,18 @@ export default function DevNotesForm({
   const trimmedDescription = description.trim();
   const trimmedExpectedBehavior = expectedBehavior.trim();
   const trimmedActualBehavior = actualBehavior.trim();
+  const statusValue = status || 'Open';
+  const statusRequired = !status;
   const hasDescription = trimmedDescription.length > 0;
   const hasBehavior =
     trimmedExpectedBehavior.length > 0 || trimmedActualBehavior.length > 0;
   const hasNarrative = hasDescription || hasBehavior;
-  const aiRequired = requireAi && !existingReport && !aiDescription;
-  const submitDisabled = loading || aiRequired || !hasNarrative;
-  const submitTitle = aiRequired
-    ? 'AI refinement is required before submitting'
+  const requiresAiBeforeCreate = Boolean(aiProvider && !existingReport && !aiDescription);
+  const submitDisabled = loading || !hasNarrative || statusRequired;
+  const submitTitle = requiresAiBeforeCreate
+    ? 'Save will start AI clarification before creating the task'
+    : statusRequired
+      ? 'Select a status before saving'
     : !hasNarrative
       ? 'Add a description, expected behavior, or actual behavior'
       : existingReport
@@ -599,11 +618,11 @@ export default function DevNotesForm({
       ? [trimmedExpectedBehavior, trimmedActualBehavior].filter(Boolean).join('\n')
       : title.trim();
 
-  const handleSubmit = async () => {
-    setSubmitAttempted(true);
-    if (!title.trim() || !taskListId || selectedTypes.length === 0 || !hasNarrative) return;
-    if (aiRequired) return;
-
+  const saveReport = async (overrides?: {
+    description?: string | null;
+    aiDescription?: string | null;
+    aiReady?: boolean;
+  }) => {
     const reportData = {
       task_list_id: taskListId,
       page_url: normalizePageUrl(composePageUrlWithTab(reportPageUrl)),
@@ -615,16 +634,16 @@ export default function DevNotesForm({
       types: selectedTypes,
       severity,
       title: title.trim(),
-      description: trimmedDescription || null,
+      description: overrides?.description ?? trimmedDescription ?? null,
       expected_behavior: trimmedExpectedBehavior || null,
       actual_behavior: trimmedActualBehavior || null,
       response: null,
-      status,
+      status: statusValue,
       assigned_to: assignedTo,
       resolved_by: resolvedBy,
-      approved,
-      ai_ready: aiReady,
-      ai_description: aiDescription,
+      approved: existingReport?.approved || false,
+      ai_ready: overrides?.aiReady ?? aiReady,
+      ai_description: overrides?.aiDescription ?? aiDescription,
     };
 
     let result: BugReport | null = null;
@@ -646,6 +665,19 @@ export default function DevNotesForm({
     if (result) {
       onSave(result);
     }
+  };
+
+  const handleSubmit = async () => {
+    setSubmitAttempted(true);
+    if (!title.trim() || !taskListId || selectedTypes.length === 0 || !hasNarrative) return;
+    if (!status) return;
+
+    if (requiresAiBeforeCreate) {
+      setShowAiChat(true);
+      return;
+    }
+
+    await saveReport();
   };
 
   const getTypeName = (typeId: string) => {
@@ -713,8 +745,37 @@ export default function DevNotesForm({
     }
   };
 
-  const StatusIcon = statusIcons[status]?.icon || FiAlertCircle;
-  const statusColorClass = statusIcons[status]?.colorClass || 'bg-red-100 text-red-800';
+  const StatusIcon = statusIcons[statusValue]?.icon || FiAlertCircle;
+  const statusColorClass = statusIcons[statusValue]?.colorClass || 'bg-red-100 text-red-800';
+
+  const renderStatusSaveActions = (position: 'header' | 'footer') => (
+    <div className="flex items-end gap-2">
+      <SearchableSingleSelect
+        label="Status"
+        options={statusOptions}
+        value={status}
+        onChange={(value) => setStatus((value as BugReport['status'] | null) ?? null)}
+        placeholder="Type to search..."
+        isSuperscript
+        wrapperClassName={position === 'header' ? 'w-[240px]' : 'w-[260px]'}
+        minInputWidthClassName="min-w-[84px]"
+      />
+      <button
+        type="button"
+        className="p-1.5 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:hover:bg-blue-600 self-center"
+        onClick={handleSubmit}
+        disabled={submitDisabled}
+        aria-label={existingReport ? 'Update' : 'Save'}
+        title={submitTitle}
+      >
+        {loading ? (
+          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+        ) : (
+          <FiSave size={16} />
+        )}
+      </button>
+    </div>
+  );
 
   return (
     <div className="bg-white rounded-xl p-4 md:p-6 min-w-[320px] w-full max-w-[960px] mx-auto relative shadow-sm">
@@ -743,20 +804,7 @@ export default function DevNotesForm({
           >
             <FiX size={16} />
           </button>
-          <button
-            type="button"
-            className="p-1.5 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
-            onClick={handleSubmit}
-            disabled={submitDisabled}
-            aria-label={existingReport ? 'Update' : 'Save'}
-            title={submitTitle}
-          >
-            {loading ? (
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
-              <FiCheck size={16} />
-            )}
-          </button>
+          {renderStatusSaveActions('header')}
         </div>
       </div>
 
@@ -782,6 +830,21 @@ export default function DevNotesForm({
           >
             {existingReport.id}
           </button>
+          {forgeTaskUrl && (
+            <>
+              <span className="text-gray-400">|</span>
+              <a
+                href={forgeTaskUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 text-blue-600 hover:underline"
+                title="Open task in Forge"
+              >
+                <FiExternalLink size={12} />
+                Open in Forge
+              </a>
+            </>
+          )}
           <span className="text-gray-400">|</span>
           <button
             type="button"
@@ -938,30 +1001,23 @@ export default function DevNotesForm({
             </p>
           )}
 
-          {/* AI Refinement Off indicator */}
-          {!aiProvider && !aiDescription && (
-            <p className="text-xs text-gray-400 italic">AI Refinement Off</p>
-          )}
-
           {/* AI Refine button */}
           {aiProvider && !aiDescription && !showAiChat && (
             <button
               type="button"
               className={`w-full py-3 rounded-xl border-2 bg-white text-purple-700 font-medium hover:bg-purple-50 flex items-center justify-center gap-2 transition-all ${
-                requireAi && !existingReport
+                !existingReport
                   ? 'border-purple-500 shadow-[0_0_0_3px_rgba(167,139,250,0.3)] hover:border-purple-600'
                   : 'border-purple-300 shadow-[0_0_0_3px_rgba(167,139,250,0.15)] hover:border-purple-400'
               }`}
               onClick={() => setShowAiChat(true)}
             >
               <FiZap size={18} />
-              Refine with AI
+              {existingReport ? 'Refine with AI' : 'Start AI Clarification'}
               <span className={`text-[0.65rem] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide ${
-                requireAi && !existingReport
-                  ? 'bg-red-100 text-red-700'
-                  : 'bg-purple-100 text-purple-700'
+                !existingReport ? 'bg-red-100 text-red-700' : 'bg-purple-100 text-purple-700'
               }`}>
-                {requireAi && !existingReport ? 'Required' : 'Recommended'}
+                {!existingReport ? 'Used On Save' : 'Optional'}
               </span>
             </button>
           )}
@@ -983,10 +1039,18 @@ export default function DevNotesForm({
                 capture_context: capturedContext || undefined,
               }}
               aiProvider={aiProvider}
-              onAccept={(refined) => {
+              onAccept={async (refined) => {
+                setDescription(refined);
                 setAiDescription(refined);
                 setAiReady(true);
                 setShowAiChat(false);
+                if (!existingReport) {
+                  await saveReport({
+                    description: refined,
+                    aiDescription: refined,
+                    aiReady: true,
+                  });
+                }
               }}
               onCancel={() => setShowAiChat(false)}
             />
@@ -1182,31 +1246,6 @@ export default function DevNotesForm({
                     placeholder="Search assignee..."
                     isSuperscript={isSuperscriptLabels}
                   />
-                  <div className="flex items-center gap-4 flex-wrap">
-                    <label className="inline-flex items-center gap-1.5 text-sm cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={approved}
-                        onChange={(e) => setApproved(e.target.checked)}
-                        className="rounded border-gray-300 text-yellow-500 focus:ring-yellow-500"
-                      />
-                      <span title="When a Senior Engineer has reviewed this task from the Submitter it should be marked as Approved for the development team to complete.">
-                        Approved
-                      </span>
-                    </label>
-                    <label className="inline-flex items-center gap-1.5 text-sm cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={aiReady}
-                        onChange={(e) => {
-                          setAiReady(e.target.checked);
-                          if (e.target.checked) setApproved(true);
-                        }}
-                        className="rounded border-gray-300 text-blue-500 focus:ring-blue-500"
-                      />
-                      AI Ready
-                    </label>
-                  </div>
                 </div>
               </div>
             )}
@@ -1331,23 +1370,8 @@ export default function DevNotesForm({
               </div>
             </div>
 
-            {/* Status (existing reports only, admin gets all options, reporter gets Open only) */}
-            {existingReport && isAdmin && (
-              <SearchableSingleSelect
-                label="Status"
-                options={statusOptions}
-                value={status}
-                onChange={(value) => {
-                  if (!value) return;
-                  setStatus(value as typeof status);
-                }}
-                placeholder="Search status..."
-                isSuperscript={isSuperscriptLabels}
-              />
-            )}
-
             {/* Resolved By (admin only) */}
-            {existingReport && isAdmin && (status === 'Closed' || status === 'Resolved') && (
+            {existingReport && isAdmin && (statusValue === 'Closed' || statusValue === 'Resolved') && (
               <SearchableSingleSelect
                 label="Resolved By"
                 options={[{ id: '', label: 'Not Set' }, ...collaboratorOptions]}
@@ -1398,20 +1422,82 @@ export default function DevNotesForm({
 
         {/* Action Buttons */}
         <div className="flex justify-between pt-2">
-          {existingReport && onDelete ? (
-            <button
-              type="button"
-              className="p-1.5 rounded text-red-500 hover:bg-red-50 disabled:opacity-50"
-              onClick={onDelete}
-              disabled={loading}
-              aria-label="Delete"
-              title="Delete"
-            >
-              <FiTrash2 size={16} />
-            </button>
-          ) : (
-            <div />
-          )}
+          <div className="relative flex items-center gap-4 flex-wrap">
+            {isAdmin && (
+              <>
+                <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
+                  aiReady ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-500'
+                }`}>
+                  {aiReady ? 'AI Ready' : 'AI Not Ready'}
+                </span>
+              </>
+            )}
+            {existingReport && (onDelete || onArchive) ? (
+              <>
+                {onArchive && (
+                  <button
+                    type="button"
+                    className="p-1.5 rounded text-gray-500 hover:bg-gray-100 disabled:opacity-50"
+                    onClick={() => setPendingDestructiveAction('archive')}
+                    disabled={loading}
+                    aria-label="Archive"
+                    title="Archive"
+                  >
+                    <FiArchive size={16} />
+                  </button>
+                )}
+                {onDelete && (
+                  <button
+                    type="button"
+                    className="p-1.5 rounded text-red-500 hover:bg-red-50 disabled:opacity-50"
+                    onClick={() => setPendingDestructiveAction('delete')}
+                    disabled={loading}
+                    aria-label="Delete"
+                    title="Delete"
+                  >
+                    <FiTrash2 size={16} />
+                  </button>
+                )}
+                {pendingDestructiveAction && (
+                  <div className="absolute bottom-[calc(100%+8px)] left-0 z-30 min-w-[240px] rounded-md border border-gray-200 bg-white p-3 shadow-lg">
+                    <p className="text-sm text-gray-800">
+                      {pendingDestructiveAction === 'delete'
+                        ? 'Delete this dev note permanently?'
+                        : 'Archive this dev note by setting its status to Closed?'}
+                    </p>
+                    <div className="mt-3 flex justify-end gap-2">
+                      <button
+                        type="button"
+                        className="rounded px-2 py-1 text-xs text-gray-600 hover:bg-gray-100"
+                        onClick={() => setPendingDestructiveAction(null)}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        className={`rounded px-2 py-1 text-xs text-white ${
+                          pendingDestructiveAction === 'delete'
+                            ? 'bg-red-500 hover:bg-red-600'
+                            : 'bg-gray-700 hover:bg-gray-800'
+                        }`}
+                        onClick={async () => {
+                          const action = pendingDestructiveAction;
+                          setPendingDestructiveAction(null);
+                          if (action === 'delete') {
+                            await onDelete?.();
+                            return;
+                          }
+                          await onArchive?.();
+                        }}
+                      >
+                        {pendingDestructiveAction === 'delete' ? 'Delete' : 'Archive'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : null}
+          </div>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -1422,20 +1508,7 @@ export default function DevNotesForm({
             >
               <FiX size={16} />
             </button>
-            <button
-              type="button"
-              className="p-1.5 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
-              onClick={handleSubmit}
-              disabled={submitDisabled}
-              aria-label={existingReport ? 'Update' : 'Save'}
-              title={submitTitle}
-            >
-              {loading ? (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
-                <FiCheck size={16} />
-              )}
-            </button>
+            {renderStatusSaveActions('footer')}
           </div>
         </div>
       </div>

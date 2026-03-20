@@ -8,7 +8,7 @@ import { useDevNotes } from './DevNotesProvider';
 type DevNotesButtonProps = {
   /** Position of the floating button */
   position?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
-  /** Called when user clicks "View Tasks" in the menu. If omitted, a built-in task panel opens. */
+  /** Called when user clicks "See All Tasks" in the menu. If omitted, a built-in task panel opens. */
   onViewTasks?: () => void;
   /** Called when user clicks "Settings" in the menu */
   onSettings?: () => void;
@@ -40,7 +40,7 @@ export default function DevNotesButton({
 }: DevNotesButtonProps) {
   const { dotContainer, role } = useDevNotes();
   const [showTaskPanel, setShowTaskPanel] = useState(false);
-  const [taskPanelTitle, setTaskPanelTitle] = useState('Dev Notes Tasks');
+  const [taskPanelTitle, setTaskPanelTitle] = useState('All Tasks');
 
   if (role === 'none') return null;
 
@@ -49,7 +49,7 @@ export default function DevNotesButton({
     setShowTaskPanel(true);
   };
 
-  const handleViewTasks = onViewTasks || (() => openBuiltInTaskPanel('Dev Notes Tasks'));
+  const handleViewTasks = onViewTasks || (() => openBuiltInTaskPanel('All Tasks'));
   const handleSettings = onSettings || (() => openBuiltInTaskPanel('Task Settings'));
 
   const buttonContent = (

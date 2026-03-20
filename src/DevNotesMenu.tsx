@@ -12,7 +12,7 @@ import {
 import { useDevNotes } from './DevNotesProvider';
 
 type DevNotesMenuProps = {
-  /** Called when user clicks "View Tasks" */
+  /** Called when user clicks "See All Tasks" */
   onViewTasks?: () => void;
   /** Called when user clicks "Settings" */
   onSettings?: () => void;
@@ -220,7 +220,7 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
                 >
                   <span className="inline-flex items-center gap-2 whitespace-nowrap">
                     <FiList className="flex-shrink-0" />
-                    View Tasks
+                    See All Tasks
                   </span>
                   {openBugCount > 0 && (
                     <span className="inline-flex min-w-[20px] items-center justify-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">

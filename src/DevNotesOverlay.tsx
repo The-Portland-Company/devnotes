@@ -26,9 +26,11 @@ export default function DevNotesOverlay({
     bugReports,
     currentPageBugReports,
     deleteBugReport,
+    updateBugReport,
     dotContainer,
     compensate,
     role,
+    user,
   } = useDevNotes();
 
   const [pendingDot, setPendingDot] = useState<{
@@ -111,6 +113,20 @@ export default function DevNotesOverlay({
       onOpenReportClose?.();
     }
   }, [openedReport, deleteBugReport, onOpenReportClose]);
+
+  const handleArchiveOpenedReport = useCallback(async () => {
+    if (!openedReport) return;
+
+    const archived = await updateBugReport(openedReport.id, {
+      status: 'Closed',
+      resolved_by: openedReport.resolved_by || user.id,
+    });
+
+    if (archived) {
+      setOpenedReport(null);
+      onOpenReportClose?.();
+    }
+  }, [openedReport, updateBugReport, onOpenReportClose, user.id]);
 
   // Document-level click handler for placing/repositioning bug dots
   useEffect(() => {
@@ -265,6 +281,7 @@ export default function DevNotesOverlay({
               onSave={handleCloseOpenedReport}
               onCancel={handleCloseOpenedReport}
               onDelete={handleDeleteOpenedReport}
+              onArchive={handleArchiveOpenedReport}
             />
           </div>
         </div>

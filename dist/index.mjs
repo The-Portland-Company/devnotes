@@ -824,7 +824,7 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                     children: [
                       /* @__PURE__ */ jsxs("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
                         /* @__PURE__ */ jsx2(FiList, { className: "flex-shrink-0" }),
-                        "View Tasks"
+                        "See All Tasks"
                       ] }),
                       openBugCount > 0 && /* @__PURE__ */ jsx2("span", { className: "inline-flex min-w-[20px] items-center justify-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700", children: openBugCount })
                     ]
@@ -865,7 +865,7 @@ import { useState as useState6, useEffect as useEffect6, useRef as useRef6, useM
 import {
   FiX as FiX2,
   FiTrash2 as FiTrash22,
-  FiCheck as FiCheck2,
+  FiSave,
   FiExternalLink,
   FiLink2,
   FiCopy,
@@ -2038,7 +2038,7 @@ function formatAiFixPayloadForCopy(payload) {
 }
 
 // src/DevNotesForm.tsx
-import { jsx as jsx5, jsxs as jsxs4 } from "react/jsx-runtime";
+import { Fragment as Fragment3, jsx as jsx5, jsxs as jsxs4 } from "react/jsx-runtime";
 var COMPACT_BEHAVIOR_HEIGHT = 56;
 var EXPANDED_BEHAVIOR_MIN_HEIGHT = 92;
 function SearchableSingleSelect({
@@ -2047,7 +2047,9 @@ function SearchableSingleSelect({
   value,
   onChange,
   placeholder,
-  isSuperscript = false
+  isSuperscript = false,
+  wrapperClassName = "",
+  minInputWidthClassName = "min-w-[120px]"
 }) {
   const [searchTerm, setSearchTerm] = useState6("");
   const [showDropdown, setShowDropdown] = useState6(false);
@@ -2064,7 +2066,7 @@ function SearchableSingleSelect({
     setSearchTerm("");
     setShowDropdown(false);
   };
-  return /* @__PURE__ */ jsxs4("div", { className: isSuperscript ? "relative" : "", children: [
+  return /* @__PURE__ */ jsxs4("div", { className: `${isSuperscript ? "relative" : ""} ${wrapperClassName}`.trim(), children: [
     /* @__PURE__ */ jsx5(
       "label",
       {
@@ -2094,7 +2096,7 @@ function SearchableSingleSelect({
           "input",
           {
             type: "text",
-            className: "flex-1 min-w-[120px] border-none outline-none text-sm bg-transparent",
+            className: `flex-1 ${minInputWidthClassName} border-none outline-none text-sm bg-transparent`,
             placeholder: selectedOption ? "Type to search..." : placeholder,
             value: searchTerm,
             onChange: (e) => {
@@ -2136,7 +2138,8 @@ function DevNotesForm({
   existingReport,
   onSave,
   onCancel,
-  onDelete
+  onDelete,
+  onArchive
 }) {
   const {
     bugReportTypes,
@@ -2151,9 +2154,9 @@ function DevNotesForm({
     collaborators,
     user,
     aiProvider,
-    requireAi,
     error: bugReportingError,
-    role
+    role,
+    appLinkStatus
   } = useDevNotes();
   const isAdmin = role === "admin" || role === "contributor";
   const getFirstName = (value) => {
@@ -2204,10 +2207,9 @@ function DevNotesForm({
     existingReport?.expected_behavior || ""
   );
   const [actualBehavior, setActualBehavior] = useState6(existingReport?.actual_behavior || "");
-  const [status, setStatus] = useState6(existingReport?.status || "Open");
+  const [status, setStatus] = useState6(existingReport?.status || null);
   const [assignedTo, setAssignedTo] = useState6(existingReport?.assigned_to || null);
   const [resolvedBy, setResolvedBy] = useState6(existingReport?.resolved_by || null);
-  const [approved, setApproved] = useState6(existingReport?.approved || false);
   const [aiReady, setAiReady] = useState6(existingReport?.ai_ready || false);
   const [aiDescription, setAiDescription] = useState6(
     existingReport?.ai_description || null
@@ -2244,6 +2246,7 @@ function DevNotesForm({
   );
   const [showAiChat, setShowAiChat] = useState6(false);
   const [submitAttempted, setSubmitAttempted] = useState6(false);
+  const [pendingDestructiveAction, setPendingDestructiveAction] = useState6(null);
   const capturedContext = useMemo3(
     () => existingReport?.capture_context || buildCaptureContext(reportPageUrl),
     [existingReport?.capture_context, reportPageUrl]
@@ -2325,6 +2328,12 @@ function DevNotesForm({
   const composePageUrlWithTab = (value) => {
     return normalizePageUrl(value || "");
   };
+  const forgeTaskUrl = useMemo3(() => {
+    if (!existingReport?.id) return null;
+    const baseUrl = appLinkStatus?.projectDiscovery?.baseUrl?.trim();
+    if (!baseUrl) return null;
+    return `${baseUrl.replace(/\/+$/, "")}/tasks/${encodeURIComponent(existingReport.id)}`;
+  }, [appLinkStatus?.projectDiscovery?.baseUrl, existingReport?.id]);
   useEffect6(() => {
     setReportPageUrl(existingReport?.page_url || pageUrl);
   }, [existingReport?.page_url, pageUrl]);
@@ -2448,12 +2457,12 @@ function DevNotesForm({
       report: {
         id: existingReport?.id || null,
         title: title.trim() || null,
-        status,
+        status: statusValue,
         severity,
         taskListId: taskListId || null,
         types: selectedTypes,
         typeNames,
-        approved,
+        approved: existingReport?.approved || false,
         aiReady
       },
       narrative: {
@@ -2499,17 +2508,16 @@ function DevNotesForm({
   const trimmedDescription = description.trim();
   const trimmedExpectedBehavior = expectedBehavior.trim();
   const trimmedActualBehavior = actualBehavior.trim();
+  const statusValue = status || "Open";
+  const statusRequired = !status;
   const hasDescription = trimmedDescription.length > 0;
   const hasBehavior = trimmedExpectedBehavior.length > 0 || trimmedActualBehavior.length > 0;
   const hasNarrative = hasDescription || hasBehavior;
-  const aiRequired = requireAi && !existingReport && !aiDescription;
-  const submitDisabled = loading || aiRequired || !hasNarrative;
-  const submitTitle = aiRequired ? "AI refinement is required before submitting" : !hasNarrative ? "Add a description, expected behavior, or actual behavior" : existingReport ? "Update" : "Save";
+  const requiresAiBeforeCreate = Boolean(aiProvider && !existingReport && !aiDescription);
+  const submitDisabled = loading || !hasNarrative || statusRequired;
+  const submitTitle = requiresAiBeforeCreate ? "Save will start AI clarification before creating the task" : statusRequired ? "Select a status before saving" : !hasNarrative ? "Add a description, expected behavior, or actual behavior" : existingReport ? "Update" : "Save";
   const aiSeedDescription = hasDescription ? trimmedDescription : hasBehavior ? [trimmedExpectedBehavior, trimmedActualBehavior].filter(Boolean).join("\n") : title.trim();
-  const handleSubmit = async () => {
-    setSubmitAttempted(true);
-    if (!title.trim() || !taskListId || selectedTypes.length === 0 || !hasNarrative) return;
-    if (aiRequired) return;
+  const saveReport = async (overrides) => {
     const reportData = {
       task_list_id: taskListId,
       page_url: normalizePageUrl(composePageUrlWithTab(reportPageUrl)),
@@ -2521,16 +2529,16 @@ function DevNotesForm({
       types: selectedTypes,
       severity,
       title: title.trim(),
-      description: trimmedDescription || null,
+      description: overrides?.description ?? trimmedDescription ?? null,
       expected_behavior: trimmedExpectedBehavior || null,
       actual_behavior: trimmedActualBehavior || null,
       response: null,
-      status,
+      status: statusValue,
       assigned_to: assignedTo,
       resolved_by: resolvedBy,
-      approved,
-      ai_ready: aiReady,
-      ai_description: aiDescription
+      approved: existingReport?.approved || false,
+      ai_ready: overrides?.aiReady ?? aiReady,
+      ai_description: overrides?.aiDescription ?? aiDescription
     };
     let result = null;
     if (existingReport) {
@@ -2549,6 +2557,16 @@ function DevNotesForm({
     if (result) {
       onSave(result);
     }
+  };
+  const handleSubmit = async () => {
+    setSubmitAttempted(true);
+    if (!title.trim() || !taskListId || selectedTypes.length === 0 || !hasNarrative) return;
+    if (!status) return;
+    if (requiresAiBeforeCreate) {
+      setShowAiChat(true);
+      return;
+    }
+    await saveReport();
   };
   const getTypeName = (typeId) => {
     const type = bugReportTypes.find((t) => t.id === typeId);
@@ -2604,8 +2622,35 @@ function DevNotesForm({
       setPendingTaskListName(trimmedValue);
     }
   };
-  const StatusIcon = statusIcons[status]?.icon || FiAlertCircle;
-  const statusColorClass = statusIcons[status]?.colorClass || "bg-red-100 text-red-800";
+  const StatusIcon = statusIcons[statusValue]?.icon || FiAlertCircle;
+  const statusColorClass = statusIcons[statusValue]?.colorClass || "bg-red-100 text-red-800";
+  const renderStatusSaveActions = (position) => /* @__PURE__ */ jsxs4("div", { className: "flex items-end gap-2", children: [
+    /* @__PURE__ */ jsx5(
+      SearchableSingleSelect,
+      {
+        label: "Status",
+        options: statusOptions,
+        value: status,
+        onChange: (value) => setStatus(value ?? null),
+        placeholder: "Type to search...",
+        isSuperscript: true,
+        wrapperClassName: position === "header" ? "w-[240px]" : "w-[260px]",
+        minInputWidthClassName: "min-w-[84px]"
+      }
+    ),
+    /* @__PURE__ */ jsx5(
+      "button",
+      {
+        type: "button",
+        className: "p-1.5 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:hover:bg-blue-600 self-center",
+        onClick: handleSubmit,
+        disabled: submitDisabled,
+        "aria-label": existingReport ? "Update" : "Save",
+        title: submitTitle,
+        children: loading ? /* @__PURE__ */ jsx5("div", { className: "w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" }) : /* @__PURE__ */ jsx5(FiSave, { size: 16 })
+      }
+    )
+  ] });
   return /* @__PURE__ */ jsxs4("div", { className: "bg-white rounded-xl p-4 md:p-6 min-w-[320px] w-full max-w-[960px] mx-auto relative shadow-sm", children: [
     /* @__PURE__ */ jsxs4("div", { className: "flex justify-between items-start mb-3", children: [
       /* @__PURE__ */ jsx5("div", { className: "flex flex-col gap-1", children: /* @__PURE__ */ jsxs4("div", { className: "flex items-center gap-2", children: [
@@ -2627,18 +2672,7 @@ function DevNotesForm({
             children: /* @__PURE__ */ jsx5(FiX2, { size: 16 })
           }
         ),
-        /* @__PURE__ */ jsx5(
-          "button",
-          {
-            type: "button",
-            className: "p-1.5 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50",
-            onClick: handleSubmit,
-            disabled: submitDisabled,
-            "aria-label": existingReport ? "Update" : "Save",
-            title: submitTitle,
-            children: loading ? /* @__PURE__ */ jsx5("div", { className: "w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" }) : /* @__PURE__ */ jsx5(FiCheck2, { size: 16 })
-          }
-        )
+        renderStatusSaveActions("header")
       ] })
     ] }),
     existingReport && /* @__PURE__ */ jsxs4("div", { className: "flex flex-wrap items-center gap-2 mb-3 text-xs relative", children: [
@@ -2662,6 +2696,23 @@ function DevNotesForm({
           children: existingReport.id
         }
       ),
+      forgeTaskUrl && /* @__PURE__ */ jsxs4(Fragment3, { children: [
+        /* @__PURE__ */ jsx5("span", { className: "text-gray-400", children: "|" }),
+        /* @__PURE__ */ jsxs4(
+          "a",
+          {
+            href: forgeTaskUrl,
+            target: "_blank",
+            rel: "noreferrer",
+            className: "inline-flex items-center gap-1 text-blue-600 hover:underline",
+            title: "Open task in Forge",
+            children: [
+              /* @__PURE__ */ jsx5(FiExternalLink, { size: 12 }),
+              "Open in Forge"
+            ]
+          }
+        )
+      ] }),
       /* @__PURE__ */ jsx5("span", { className: "text-gray-400", children: "|" }),
       /* @__PURE__ */ jsxs4(
         "button",
@@ -2805,17 +2856,16 @@ function DevNotesForm({
           ] })
         ] }),
         submitAttempted && !hasNarrative && /* @__PURE__ */ jsx5("p", { className: "text-xs text-red-600", children: "Add a description, expected behavior, or actual behavior." }),
-        !aiProvider && !aiDescription && /* @__PURE__ */ jsx5("p", { className: "text-xs text-gray-400 italic", children: "AI Refinement Off" }),
         aiProvider && !aiDescription && !showAiChat && /* @__PURE__ */ jsxs4(
           "button",
           {
             type: "button",
-            className: `w-full py-3 rounded-xl border-2 bg-white text-purple-700 font-medium hover:bg-purple-50 flex items-center justify-center gap-2 transition-all ${requireAi && !existingReport ? "border-purple-500 shadow-[0_0_0_3px_rgba(167,139,250,0.3)] hover:border-purple-600" : "border-purple-300 shadow-[0_0_0_3px_rgba(167,139,250,0.15)] hover:border-purple-400"}`,
+            className: `w-full py-3 rounded-xl border-2 bg-white text-purple-700 font-medium hover:bg-purple-50 flex items-center justify-center gap-2 transition-all ${!existingReport ? "border-purple-500 shadow-[0_0_0_3px_rgba(167,139,250,0.3)] hover:border-purple-600" : "border-purple-300 shadow-[0_0_0_3px_rgba(167,139,250,0.15)] hover:border-purple-400"}`,
             onClick: () => setShowAiChat(true),
             children: [
               /* @__PURE__ */ jsx5(FiZap2, { size: 18 }),
-              "Refine with AI",
-              /* @__PURE__ */ jsx5("span", { className: `text-[0.65rem] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide ${requireAi && !existingReport ? "bg-red-100 text-red-700" : "bg-purple-100 text-purple-700"}`, children: requireAi && !existingReport ? "Required" : "Recommended" })
+              existingReport ? "Refine with AI" : "Start AI Clarification",
+              /* @__PURE__ */ jsx5("span", { className: `text-[0.65rem] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide ${!existingReport ? "bg-red-100 text-red-700" : "bg-purple-100 text-purple-700"}`, children: !existingReport ? "Used On Save" : "Optional" })
             ]
           }
         ),
@@ -2835,10 +2885,18 @@ function DevNotesForm({
               capture_context: capturedContext || void 0
             },
             aiProvider,
-            onAccept: (refined) => {
+            onAccept: async (refined) => {
+              setDescription(refined);
               setAiDescription(refined);
               setAiReady(true);
               setShowAiChat(false);
+              if (!existingReport) {
+                await saveReport({
+                  description: refined,
+                  aiDescription: refined,
+                  aiReady: true
+                });
+              }
             },
             onCancel: () => setShowAiChat(false)
           }
@@ -3014,48 +3072,17 @@ function DevNotesForm({
                 children: "Assignment & Workflow"
               }
             ),
-            /* @__PURE__ */ jsxs4("div", { className: "flex flex-col gap-2", children: [
-              /* @__PURE__ */ jsx5(
-                SearchableSingleSelect,
-                {
-                  label: "Assignee",
-                  options: [{ id: "", label: "Unassigned" }, ...collaboratorOptions],
-                  value: assignedTo ?? "",
-                  onChange: (value) => setAssignedTo(value || null),
-                  placeholder: "Search assignee...",
-                  isSuperscript: isSuperscriptLabels
-                }
-              ),
-              /* @__PURE__ */ jsxs4("div", { className: "flex items-center gap-4 flex-wrap", children: [
-                /* @__PURE__ */ jsxs4("label", { className: "inline-flex items-center gap-1.5 text-sm cursor-pointer", children: [
-                  /* @__PURE__ */ jsx5(
-                    "input",
-                    {
-                      type: "checkbox",
-                      checked: approved,
-                      onChange: (e) => setApproved(e.target.checked),
-                      className: "rounded border-gray-300 text-yellow-500 focus:ring-yellow-500"
-                    }
-                  ),
-                  /* @__PURE__ */ jsx5("span", { title: "When a Senior Engineer has reviewed this task from the Submitter it should be marked as Approved for the development team to complete.", children: "Approved" })
-                ] }),
-                /* @__PURE__ */ jsxs4("label", { className: "inline-flex items-center gap-1.5 text-sm cursor-pointer", children: [
-                  /* @__PURE__ */ jsx5(
-                    "input",
-                    {
-                      type: "checkbox",
-                      checked: aiReady,
-                      onChange: (e) => {
-                        setAiReady(e.target.checked);
-                        if (e.target.checked) setApproved(true);
-                      },
-                      className: "rounded border-gray-300 text-blue-500 focus:ring-blue-500"
-                    }
-                  ),
-                  "AI Ready"
-                ] })
-              ] })
-            ] })
+            /* @__PURE__ */ jsx5("div", { className: "flex flex-col gap-2", children: /* @__PURE__ */ jsx5(
+              SearchableSingleSelect,
+              {
+                label: "Assignee",
+                options: [{ id: "", label: "Unassigned" }, ...collaboratorOptions],
+                value: assignedTo ?? "",
+                onChange: (value) => setAssignedTo(value || null),
+                placeholder: "Search assignee...",
+                isSuperscript: isSuperscriptLabels
+              }
+            ) })
           ] }),
           /* @__PURE__ */ jsxs4("div", { className: isSuperscriptLabels ? "relative" : "", children: [
             /* @__PURE__ */ jsx5(
@@ -3164,21 +3191,7 @@ function DevNotesForm({
               ] }) })
             ] })
           ] }),
-          existingReport && isAdmin && /* @__PURE__ */ jsx5(
-            SearchableSingleSelect,
-            {
-              label: "Status",
-              options: statusOptions,
-              value: status,
-              onChange: (value) => {
-                if (!value) return;
-                setStatus(value);
-              },
-              placeholder: "Search status...",
-              isSuperscript: isSuperscriptLabels
-            }
-          ),
-          existingReport && isAdmin && (status === "Closed" || status === "Resolved") && /* @__PURE__ */ jsx5(
+          existingReport && isAdmin && (statusValue === "Closed" || statusValue === "Resolved") && /* @__PURE__ */ jsx5(
             SearchableSingleSelect,
             {
               label: "Resolved By",
@@ -3225,18 +3238,66 @@ function DevNotesForm({
         existingReport && /* @__PURE__ */ jsx5(DevNotesDiscussion, { report: existingReport })
       ] }),
       /* @__PURE__ */ jsxs4("div", { className: "flex justify-between pt-2", children: [
-        existingReport && onDelete ? /* @__PURE__ */ jsx5(
-          "button",
-          {
-            type: "button",
-            className: "p-1.5 rounded text-red-500 hover:bg-red-50 disabled:opacity-50",
-            onClick: onDelete,
-            disabled: loading,
-            "aria-label": "Delete",
-            title: "Delete",
-            children: /* @__PURE__ */ jsx5(FiTrash22, { size: 16 })
-          }
-        ) : /* @__PURE__ */ jsx5("div", {}),
+        /* @__PURE__ */ jsxs4("div", { className: "relative flex items-center gap-4 flex-wrap", children: [
+          isAdmin && /* @__PURE__ */ jsx5(Fragment3, { children: /* @__PURE__ */ jsx5("span", { className: `inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${aiReady ? "bg-purple-100 text-purple-800" : "bg-gray-100 text-gray-500"}`, children: aiReady ? "AI Ready" : "AI Not Ready" }) }),
+          existingReport && (onDelete || onArchive) ? /* @__PURE__ */ jsxs4(Fragment3, { children: [
+            onArchive && /* @__PURE__ */ jsx5(
+              "button",
+              {
+                type: "button",
+                className: "p-1.5 rounded text-gray-500 hover:bg-gray-100 disabled:opacity-50",
+                onClick: () => setPendingDestructiveAction("archive"),
+                disabled: loading,
+                "aria-label": "Archive",
+                title: "Archive",
+                children: /* @__PURE__ */ jsx5(FiArchive, { size: 16 })
+              }
+            ),
+            onDelete && /* @__PURE__ */ jsx5(
+              "button",
+              {
+                type: "button",
+                className: "p-1.5 rounded text-red-500 hover:bg-red-50 disabled:opacity-50",
+                onClick: () => setPendingDestructiveAction("delete"),
+                disabled: loading,
+                "aria-label": "Delete",
+                title: "Delete",
+                children: /* @__PURE__ */ jsx5(FiTrash22, { size: 16 })
+              }
+            ),
+            pendingDestructiveAction && /* @__PURE__ */ jsxs4("div", { className: "absolute bottom-[calc(100%+8px)] left-0 z-30 min-w-[240px] rounded-md border border-gray-200 bg-white p-3 shadow-lg", children: [
+              /* @__PURE__ */ jsx5("p", { className: "text-sm text-gray-800", children: pendingDestructiveAction === "delete" ? "Delete this dev note permanently?" : "Archive this dev note by setting its status to Closed?" }),
+              /* @__PURE__ */ jsxs4("div", { className: "mt-3 flex justify-end gap-2", children: [
+                /* @__PURE__ */ jsx5(
+                  "button",
+                  {
+                    type: "button",
+                    className: "rounded px-2 py-1 text-xs text-gray-600 hover:bg-gray-100",
+                    onClick: () => setPendingDestructiveAction(null),
+                    children: "Cancel"
+                  }
+                ),
+                /* @__PURE__ */ jsx5(
+                  "button",
+                  {
+                    type: "button",
+                    className: `rounded px-2 py-1 text-xs text-white ${pendingDestructiveAction === "delete" ? "bg-red-500 hover:bg-red-600" : "bg-gray-700 hover:bg-gray-800"}`,
+                    onClick: async () => {
+                      const action = pendingDestructiveAction;
+                      setPendingDestructiveAction(null);
+                      if (action === "delete") {
+                        await onDelete?.();
+                        return;
+                      }
+                      await onArchive?.();
+                    },
+                    children: pendingDestructiveAction === "delete" ? "Delete" : "Archive"
+                  }
+                )
+              ] })
+            ] })
+          ] }) : null
+        ] }),
         /* @__PURE__ */ jsxs4("div", { className: "flex items-center gap-2", children: [
           /* @__PURE__ */ jsx5(
             "button",
@@ -3249,18 +3310,7 @@ function DevNotesForm({
               children: /* @__PURE__ */ jsx5(FiX2, { size: 16 })
             }
           ),
-          /* @__PURE__ */ jsx5(
-            "button",
-            {
-              type: "button",
-              className: "p-1.5 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50",
-              onClick: handleSubmit,
-              disabled: submitDisabled,
-              "aria-label": existingReport ? "Update" : "Save",
-              title: submitTitle,
-              children: loading ? /* @__PURE__ */ jsx5("div", { className: "w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" }) : /* @__PURE__ */ jsx5(FiCheck2, { size: 16 })
-            }
-          )
+          renderStatusSaveActions("footer")
         ] })
       ] })
     ] })
@@ -3281,7 +3331,7 @@ import {
   FiCheckCircle as FiCheckCircle2,
   FiArchive as FiArchive2,
   FiMove,
-  FiCheck as FiCheck3,
+  FiCheck as FiCheck2,
   FiX as FiX3
 } from "react-icons/fi";
 
@@ -3359,7 +3409,7 @@ var useBugReportPosition = (report) => {
 };
 
 // src/DevNotesDot.tsx
-import { Fragment as Fragment3, jsx as jsx6, jsxs as jsxs5 } from "react/jsx-runtime";
+import { Fragment as Fragment4, jsx as jsx6, jsxs as jsxs5 } from "react/jsx-runtime";
 var statusConfig = {
   Open: { color: "red", bgClass: "bg-red-500", bgHoverClass: "bg-red-600", icon: FiAlertCircle2 },
   "In Progress": { color: "blue", bgClass: "bg-blue-500", bgHoverClass: "bg-blue-600", icon: FiLoader2 },
@@ -3522,7 +3572,7 @@ function DevNotesDot({ report }) {
   const createdLabel = new Date(report.created_at).toLocaleString();
   const needsApproval = !report.approved && !report.ai_ready;
   const compensated = compensate(displayPosition.x, displayPosition.y);
-  return /* @__PURE__ */ jsxs5(Fragment3, { children: [
+  return /* @__PURE__ */ jsxs5(Fragment4, { children: [
     /* @__PURE__ */ jsxs5(
       "div",
       {
@@ -3592,7 +3642,7 @@ function DevNotesDot({ report }) {
                   confirmMove();
                 },
                 title: "Confirm new position",
-                children: /* @__PURE__ */ jsx6(FiCheck3, { color: "white", size: 14 })
+                children: /* @__PURE__ */ jsx6(FiCheck2, { color: "white", size: 14 })
               }
             ),
             /* @__PURE__ */ jsx6(
@@ -3611,7 +3661,7 @@ function DevNotesDot({ report }) {
         ]
       }
     ),
-    isFormOpen && /* @__PURE__ */ jsxs5(Fragment3, { children: [
+    isFormOpen && /* @__PURE__ */ jsxs5(Fragment4, { children: [
       /* @__PURE__ */ jsx6(
         "div",
         {
@@ -3639,7 +3689,7 @@ function DevNotesDot({ report }) {
 }
 
 // src/DevNotesOverlay.tsx
-import { Fragment as Fragment4, jsx as jsx7, jsxs as jsxs6 } from "react/jsx-runtime";
+import { Fragment as Fragment5, jsx as jsx7, jsxs as jsxs6 } from "react/jsx-runtime";
 function DevNotesOverlay({
   openReportId,
   onOpenReportClose
@@ -3652,9 +3702,11 @@ function DevNotesOverlay({
     bugReports,
     currentPageBugReports,
     deleteBugReport,
+    updateBugReport,
     dotContainer,
     compensate,
-    role
+    role,
+    user
   } = useDevNotes();
   const [pendingDot, setPendingDot] = useState9(null);
   const [showPendingForm, setShowPendingForm] = useState9(false);
@@ -3718,6 +3770,17 @@ function DevNotesOverlay({
       onOpenReportClose?.();
     }
   }, [openedReport, deleteBugReport, onOpenReportClose]);
+  const handleArchiveOpenedReport = useCallback7(async () => {
+    if (!openedReport) return;
+    const archived = await updateBugReport(openedReport.id, {
+      status: "Closed",
+      resolved_by: openedReport.resolved_by || user.id
+    });
+    if (archived) {
+      setOpenedReport(null);
+      onOpenReportClose?.();
+    }
+  }, [openedReport, updateBugReport, onOpenReportClose, user.id]);
   useEffect9(() => {
     if (!isEnabled || showPendingForm) return void 0;
     const handleDocumentClick = (e) => {
@@ -3820,7 +3883,7 @@ function DevNotesOverlay({
   );
   const renderOpenedReportModal = () => {
     if (!openedReport) return null;
-    return /* @__PURE__ */ jsxs6(Fragment4, { children: [
+    return /* @__PURE__ */ jsxs6(Fragment5, { children: [
       /* @__PURE__ */ jsx7(
         "div",
         {
@@ -3845,7 +3908,8 @@ function DevNotesOverlay({
               existingReport: openedReport,
               onSave: handleCloseOpenedReport,
               onCancel: handleCloseOpenedReport,
-              onDelete: handleDeleteOpenedReport
+              onDelete: handleDeleteOpenedReport,
+              onArchive: handleArchiveOpenedReport
             }
           )
         }
@@ -3857,9 +3921,9 @@ function DevNotesOverlay({
     if (!showBugsAlways && !openedReport) {
       return null;
     }
-    return /* @__PURE__ */ jsxs6(Fragment4, { children: [
+    return /* @__PURE__ */ jsxs6(Fragment5, { children: [
       showBugsAlways && dotContainer && createPortal(
-        /* @__PURE__ */ jsxs6(Fragment4, { children: [
+        /* @__PURE__ */ jsxs6(Fragment5, { children: [
           visiblePageReports.map((report) => /* @__PURE__ */ jsx7("div", { "data-bug-dot": true, style: { pointerEvents: "auto" }, children: /* @__PURE__ */ jsx7(DevNotesDot, { report }) }, report.id)),
           renderOpenedReportModal()
         ] }),
@@ -3874,7 +3938,7 @@ function DevNotesOverlay({
     pendingDot.y - (typeof window !== "undefined" ? window.scrollY : 0)
   ) : null;
   return createPortal(
-    /* @__PURE__ */ jsxs6(Fragment4, { children: [
+    /* @__PURE__ */ jsxs6(Fragment5, { children: [
       /* @__PURE__ */ jsxs6(
         "div",
         {
@@ -3906,7 +3970,7 @@ function DevNotesOverlay({
           children: /* @__PURE__ */ jsx7(FiMove2, { color: "white", size: 14 })
         }
       ),
-      pendingDot && /* @__PURE__ */ jsxs6(Fragment4, { children: [
+      pendingDot && /* @__PURE__ */ jsxs6(Fragment5, { children: [
         showPendingForm && /* @__PURE__ */ jsx7(
           "div",
           {
@@ -3971,7 +4035,7 @@ var MS_PER_DAY = 24 * 60 * 60 * 1e3;
 function DevNotesTaskList({
   onNavigateToPage,
   onClose,
-  title = "Dev Notes Tasks"
+  title = "All Tasks"
 }) {
   const {
     bugReports,
@@ -4307,7 +4371,7 @@ function DevNotesTaskList({
 }
 
 // src/DevNotesButton.tsx
-import { Fragment as Fragment5, jsx as jsx9, jsxs as jsxs8 } from "react/jsx-runtime";
+import { Fragment as Fragment6, jsx as jsx9, jsxs as jsxs8 } from "react/jsx-runtime";
 var positionStyles = {
   "bottom-right": { position: "absolute", bottom: 16, right: 16 },
   "bottom-left": { position: "absolute", bottom: 16, left: 16 },
@@ -4325,15 +4389,15 @@ function DevNotesButton({
 }) {
   const { dotContainer, role } = useDevNotes();
   const [showTaskPanel, setShowTaskPanel] = useState11(false);
-  const [taskPanelTitle, setTaskPanelTitle] = useState11("Dev Notes Tasks");
+  const [taskPanelTitle, setTaskPanelTitle] = useState11("All Tasks");
   if (role === "none") return null;
   const openBuiltInTaskPanel = (title) => {
     setTaskPanelTitle(title);
     setShowTaskPanel(true);
   };
-  const handleViewTasks = onViewTasks || (() => openBuiltInTaskPanel("Dev Notes Tasks"));
+  const handleViewTasks = onViewTasks || (() => openBuiltInTaskPanel("All Tasks"));
   const handleSettings = onSettings || (() => openBuiltInTaskPanel("Task Settings"));
-  const buttonContent = /* @__PURE__ */ jsxs8(Fragment5, { children: [
+  const buttonContent = /* @__PURE__ */ jsxs8(Fragment6, { children: [
     /* @__PURE__ */ jsx9(
       "div",
       {
@@ -4369,7 +4433,7 @@ function DevNotesButton({
       ) })
     ] })
   ] });
-  return /* @__PURE__ */ jsxs8(Fragment5, { children: [
+  return /* @__PURE__ */ jsxs8(Fragment6, { children: [
     dotContainer ? createPortal2(buttonContent, dotContainer) : buttonContent,
     /* @__PURE__ */ jsx9(
       DevNotesOverlay,

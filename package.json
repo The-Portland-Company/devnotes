@@ -1,6 +1,6 @@
 {
   "name": "@the-portland-company/devnotes",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Forge-backed DevNotes and bug reporting for React and Next.js apps",
   "repository": {
     "type": "git",

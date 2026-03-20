@@ -60,7 +60,7 @@ declare function useDevNotes(): DevNotesContextValue;
 type DevNotesButtonProps = {
     /** Position of the floating button */
     position?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
-    /** Called when user clicks "View Tasks" in the menu. If omitted, a built-in task panel opens. */
+    /** Called when user clicks "See All Tasks" in the menu. If omitted, a built-in task panel opens. */
     onViewTasks?: () => void;
     /** Called when user clicks "Settings" in the menu */
     onSettings?: () => void;
@@ -87,7 +87,7 @@ type DevNotesOverlayProps = {
 declare function DevNotesOverlay({ openReportId, onOpenReportClose, }?: DevNotesOverlayProps): react_jsx_runtime.JSX.Element | null;
 
 type DevNotesMenuProps = {
-    /** Called when user clicks "View Tasks" */
+    /** Called when user clicks "See All Tasks" */
     onViewTasks?: () => void;
     /** Called when user clicks "Settings" */
     onSettings?: () => void;
@@ -114,8 +114,9 @@ type DevNotesFormProps = {
     onSave: (report: BugReport) => void;
     onCancel: () => void;
     onDelete?: () => void;
+    onArchive?: () => void;
 };
-declare function DevNotesForm({ pageUrl, xPosition, yPosition, targetSelector, targetRelativeX, targetRelativeY, existingReport, onSave, onCancel, onDelete, }: DevNotesFormProps): react_jsx_runtime.JSX.Element;
+declare function DevNotesForm({ pageUrl, xPosition, yPosition, targetSelector, targetRelativeX, targetRelativeY, existingReport, onSave, onCancel, onDelete, onArchive, }: DevNotesFormProps): react_jsx_runtime.JSX.Element;
 
 type DevNotesDotProps = {
     report: BugReport;

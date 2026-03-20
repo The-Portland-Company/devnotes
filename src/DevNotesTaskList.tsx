@@ -42,7 +42,7 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 export default function DevNotesTaskList({
   onNavigateToPage,
   onClose,
-  title = 'Dev Notes Tasks',
+  title = 'All Tasks',
 }: DevNotesTaskListProps) {
   const {
     bugReports,
