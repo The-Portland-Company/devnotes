@@ -1,7 +1,7 @@
 {
   "name": "@the-portland-company/devnotes",
-  "version": "0.4.0",
-  "description": "Forge-backed DevNotes and bug reporting for React and Next.js apps",
+  "version": "0.5.2",
+  "description": "Forge-backed DevNotes task creation and management for React and Next.js apps",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/the-portland-company/devnotes.git"
@@ -81,7 +81,7 @@
   "license": "MIT",
   "keywords": [
     "react",
-    "bug-reporting",
+    "task-management",
     "devnotes",
     "forge",
     "nextjs",

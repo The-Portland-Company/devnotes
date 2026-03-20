@@ -154,7 +154,7 @@ export default function AiDescriptionChat({
         <div className="flex items-center gap-2">
           <FiZap size={16} className="text-purple-600" />
           <span className="text-sm font-semibold text-purple-700">
-            AI Description Refinement
+            AI Description Review
           </span>
           <span className="text-[0.65rem] px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 font-semibold">
             GPT-4
@@ -176,7 +176,7 @@ export default function AiDescriptionChat({
           <div className="text-center">
             <FiZap size={28} className="mx-auto mb-2 text-purple-300" />
             <p className="text-sm text-gray-500">
-              Add a title above and AI will help build a full description
+              Add a description first, then AI will ask clarifying questions and refine it.
             </p>
           </div>
         </div>
@@ -278,7 +278,7 @@ export default function AiDescriptionChat({
             <div className="bg-green-50 border-2 border-green-300 rounded-lg p-4">
               <div className="flex justify-between items-center mb-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-green-700">AI-Refined Description</span>
+                  <span className="text-xs font-bold text-green-700">AI-Reviewed Description</span>
                   <span className="text-[0.6rem] px-1.5 py-0.5 rounded bg-green-100 text-green-800">
                     Ready
                   </span>

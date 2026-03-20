@@ -73,7 +73,7 @@ const resolveAttachedElementZIndex = (selector: string | null | undefined): numb
 };
 
 export default function DevNotesDot({ report }: DevNotesDotProps) {
-  const { deleteBugReport, bugReportTypes, updateBugReport, compensate } = useDevNotes();
+  const { deleteTask, taskTypes, updateTask, compensate } = useDevNotes();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
@@ -90,7 +90,7 @@ export default function DevNotesDot({ report }: DevNotesDotProps) {
   const dotRef = useRef<HTMLDivElement | null>(null);
 
   const handleDelete = async () => {
-    const success = await deleteBugReport(report.id);
+    const success = await deleteTask(report.id);
     if (success) {
       setIsFormOpen(false);
     }
@@ -99,11 +99,11 @@ export default function DevNotesDot({ report }: DevNotesDotProps) {
   const getTypeNames = useCallback(() => {
     return report.types
       .map((typeId) => {
-        const type = bugReportTypes.find((t) => t.id === typeId);
+        const type = taskTypes.find((t) => t.id === typeId);
         return type?.name || 'Unknown';
       })
       .join(', ');
-  }, [report.types, bugReportTypes]);
+  }, [report.types, taskTypes]);
 
   const persistPosition = useCallback(
     async (clientX: number, clientY: number) => {
@@ -113,7 +113,7 @@ export default function DevNotesDot({ report }: DevNotesDotProps) {
         elementsToIgnore: [dotRef.current],
       });
 
-      await updateBugReport(report.id, {
+      await updateTask(report.id, {
         x_position: payload.x,
         y_position: payload.y,
         target_selector: payload.targetSelector,
@@ -122,7 +122,7 @@ export default function DevNotesDot({ report }: DevNotesDotProps) {
         page_url: normalizePageUrl(`${window.location.pathname}${window.location.search}`),
       });
     },
-    [report.id, updateBugReport]
+    [report.id, updateTask]
   );
 
   const anchoredPosition = useBugReportPosition(report);
@@ -130,8 +130,6 @@ export default function DevNotesDot({ report }: DevNotesDotProps) {
 
   const handleDragStart = useCallback(
     (event: ReactMouseEvent<HTMLDivElement>) => {
-      if (!event.shiftKey) return;
-
       event.preventDefault();
       event.stopPropagation();
       didDragRef.current = false;
@@ -322,7 +320,7 @@ export default function DevNotesDot({ report }: DevNotesDotProps) {
               Created by {creatorName} on {createdLabel}
             </div>
             <div className="text-xs text-gray-400 mt-1">
-              Click to view/edit &middot; Hold Shift + drag to reposition
+              Click to view/edit or drag to reposition
             </div>
             {/* Tooltip arrow */}
             <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800" />

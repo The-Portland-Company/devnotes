@@ -1,4 +1,4 @@
-import type { BugCaptureContext } from '../types';
+import type { TaskCaptureContext } from '../types';
 import { normalizePageUrl } from './bugAnchors';
 
 export function deriveRouteLabelFromUrl(rawUrl: string): string {
@@ -32,7 +32,7 @@ export function detectBrowserName(userAgent: string): string {
   return 'Unknown';
 }
 
-export function buildCaptureContext(pageUrl: string): BugCaptureContext | null {
+export function buildCaptureContext(pageUrl: string): TaskCaptureContext | null {
   if (typeof window === 'undefined' || typeof navigator === 'undefined') return null;
 
   const normalizedUrl = normalizePageUrl(pageUrl || window.location.pathname);

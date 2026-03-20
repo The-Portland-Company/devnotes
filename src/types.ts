@@ -1,10 +1,10 @@
 export type {
-  BugReport,
-  BugReportType,
-  BugReportCreator,
-  BugReportMessage,
+  Task,
+  TaskType,
+  TaskCreator,
+  TaskMessage,
   TaskList,
-  BugCaptureContext,
+  TaskCaptureContext,
   DevNotesUser,
   DevNotesConfig,
   DevNotesRole,
@@ -12,6 +12,11 @@ export type {
   AiProvider,
   AiConversationMessage,
   AiAssistResult,
+  BugReport,
+  BugReportType,
+  BugReportCreator,
+  BugReportMessage,
+  BugCaptureContext,
 } from './internal/core-types';
 
 export type DevNotesCapabilities = {

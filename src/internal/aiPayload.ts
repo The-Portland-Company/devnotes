@@ -1,4 +1,4 @@
-import type { BugCaptureContext, BugReport } from '../types';
+import type { TaskCaptureContext, Task } from '../types';
 
 export type AiFixPayload = {
   source: string;
@@ -6,8 +6,8 @@ export type AiFixPayload = {
   report: {
     id: string | null;
     title: string | null;
-    status: BugReport['status'];
-    severity: BugReport['severity'];
+    status: Task['status'];
+    severity: Task['severity'];
     task_list_id: string | null;
     types: string[];
     type_names: string[];
@@ -29,7 +29,7 @@ export type AiFixPayload = {
     target_selector: string | null;
     target_relative_x: number | null;
     target_relative_y: number | null;
-    capture_context: BugCaptureContext | null;
+    capture_context: TaskCaptureContext | null;
   };
   workflow: {
     assigned_to: string | null;
@@ -46,8 +46,8 @@ export type BuildAiFixPayloadParams = {
   report: {
     id?: string | null;
     title?: string | null;
-    status: BugReport['status'];
-    severity: BugReport['severity'];
+    status: Task['status'];
+    severity: Task['severity'];
     taskListId?: string | null;
     types: string[];
     typeNames: string[];
@@ -69,7 +69,7 @@ export type BuildAiFixPayloadParams = {
     targetSelector?: string | null;
     targetRelativeX?: number | null;
     targetRelativeY?: number | null;
-    captureContext?: BugCaptureContext | null;
+    captureContext?: TaskCaptureContext | null;
   };
   workflow: {
     assignedTo?: string | null;

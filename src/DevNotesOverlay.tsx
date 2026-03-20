@@ -21,12 +21,12 @@ export default function DevNotesOverlay({
   const {
     isEnabled,
     setIsEnabled,
-    showBugsAlways,
+    showTasksAlways,
     hideResolvedClosed,
-    bugReports,
-    currentPageBugReports,
-    deleteBugReport,
-    updateBugReport,
+    tasks,
+    currentPageTasks,
+    deleteTask,
+    updateTask,
     dotContainer,
     compensate,
     role,
@@ -65,14 +65,14 @@ export default function DevNotesOverlay({
   // Handle openReportId prop
   useEffect(() => {
     if (openReportId) {
-      const report = bugReports.find((r) => r.id === openReportId);
+      const report = tasks.find((r) => r.id === openReportId);
       if (report) {
         setOpenedReport(report);
       }
     }
-  }, [openReportId, bugReports]);
+  }, [openReportId, tasks]);
 
-  // ESC key: progressively dismiss form -> dot -> bug reporting mode
+  // ESC key: progressively dismiss form -> dot -> task management mode
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -90,7 +90,7 @@ export default function DevNotesOverlay({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isEnabled, setIsEnabled, pendingDot, showPendingForm]);
 
-  // Set crosshair cursor on body when bug reporting is enabled and form not open
+  // Set crosshair cursor on body when task management is enabled and form not open
   useEffect(() => {
     if (isEnabled && !showPendingForm) {
       document.body.style.cursor = 'crosshair';
@@ -108,16 +108,16 @@ export default function DevNotesOverlay({
 
   const handleDeleteOpenedReport = useCallback(async () => {
     if (openedReport) {
-      await deleteBugReport(openedReport.id);
+      await deleteTask(openedReport.id);
       setOpenedReport(null);
       onOpenReportClose?.();
     }
-  }, [openedReport, deleteBugReport, onOpenReportClose]);
+  }, [openedReport, deleteTask, onOpenReportClose]);
 
   const handleArchiveOpenedReport = useCallback(async () => {
     if (!openedReport) return;
 
-    const archived = await updateBugReport(openedReport.id, {
+    const archived = await updateTask(openedReport.id, {
       status: 'Closed',
       resolved_by: openedReport.resolved_by || user.id,
     });
@@ -126,7 +126,7 @@ export default function DevNotesOverlay({
       setOpenedReport(null);
       onOpenReportClose?.();
     }
-  }, [openedReport, updateBugReport, onOpenReportClose, user.id]);
+  }, [openedReport, updateTask, onOpenReportClose, user.id]);
 
   // Document-level click handler for placing/repositioning bug dots
   useEffect(() => {
@@ -247,13 +247,13 @@ export default function DevNotesOverlay({
 
   const visiblePageReports = useMemo(
     () =>
-      currentPageBugReports.filter((report) => {
+      currentPageTasks.filter((report) => {
         if (hideResolvedClosed) {
           return report.status !== 'Closed' && report.status !== 'Resolved';
         }
         return true;
       }),
-    [currentPageBugReports, hideResolvedClosed]
+    [currentPageTasks, hideResolvedClosed]
   );
 
   // Render the modal for an opened report
@@ -292,13 +292,13 @@ export default function DevNotesOverlay({
   if (role === 'none') return null;
 
   if (!isEnabled) {
-    if (!showBugsAlways && !openedReport) {
+    if (!showTasksAlways && !openedReport) {
       return null;
     }
 
     return (
       <>
-        {showBugsAlways && dotContainer &&
+        {showTasksAlways && dotContainer &&
           createPortal(
             <>
               {visiblePageReports.map((report) => (
@@ -326,7 +326,7 @@ export default function DevNotesOverlay({
 
   return createPortal(
     <>
-      {/* Visual indicator that bug reporting is enabled */}
+      {/* Visual indicator that task management is enabled */}
       <div
         style={{ position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 9991, pointerEvents: 'auto' }}
         className="bg-red-500 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2"
@@ -335,11 +335,11 @@ export default function DevNotesOverlay({
         <span className="text-sm font-medium">
           {pendingDot && !showPendingForm
             ? 'Click pin to add details, or click elsewhere to reposition'
-            : 'Click anywhere to report a bug'}
+            : 'Click anywhere to create a task'}
         </span>
       </div>
 
-      {/* Existing bug report dots */}
+      {/* Existing task dots */}
       {visiblePageReports.map((report) => (
         <div key={report.id} data-bug-dot style={{ pointerEvents: 'auto' }}>
           <DevNotesDot report={report} />

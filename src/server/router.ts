@@ -1,17 +1,17 @@
 import type {
-  BugReport,
-  BugReportCreator,
-  BugReportMessage,
-  BugReportType,
+  Task,
+  TaskCreator,
+  TaskMessage,
+  TaskType,
   DevNotesAppLinkStatus,
   DevNotesCapabilities,
   DevNotesLinkAppInput,
   TaskList,
   AiAssistResult,
   AiConversationMessage,
-  BugCaptureContext,
+  TaskCaptureContext,
 } from '../types';
-import type { BugReportCreateData } from '../adapters/types';
+import type { TaskCreateData } from '../adapters/types';
 
 export type DevNotesProxyRequest = {
   method: string;
@@ -32,26 +32,26 @@ export interface DevNotesProxyBackend {
   getAppLinkStatus(req: DevNotesProxyRequest): Promise<DevNotesAppLinkStatus>;
   linkApp(input: DevNotesLinkAppInput, req: DevNotesProxyRequest): Promise<DevNotesAppLinkStatus>;
   unlinkApp(req: DevNotesProxyRequest): Promise<void>;
-  listReports(req: DevNotesProxyRequest): Promise<BugReport[]>;
-  createReport(data: BugReportCreateData, req: DevNotesProxyRequest): Promise<BugReport>;
-  updateReport(id: string, data: Partial<BugReport>, req: DevNotesProxyRequest): Promise<BugReport>;
+  listReports(req: DevNotesProxyRequest): Promise<Task[]>;
+  createReport(data: TaskCreateData, req: DevNotesProxyRequest): Promise<Task>;
+  updateReport(id: string, data: Partial<Task>, req: DevNotesProxyRequest): Promise<Task>;
   deleteReport(id: string, req: DevNotesProxyRequest): Promise<void>;
-  listReportTypes(req: DevNotesProxyRequest): Promise<BugReportType[]>;
-  createReportType(name: string, req: DevNotesProxyRequest): Promise<BugReportType>;
+  listReportTypes(req: DevNotesProxyRequest): Promise<TaskType[]>;
+  createReportType(name: string, req: DevNotesProxyRequest): Promise<TaskType>;
   deleteReportType(id: string, req: DevNotesProxyRequest): Promise<void>;
   listTaskLists(req: DevNotesProxyRequest): Promise<TaskList[]>;
   createTaskList(name: string, req: DevNotesProxyRequest): Promise<TaskList>;
-  listMessages(reportId: string, req: DevNotesProxyRequest): Promise<BugReportMessage[]>;
+  listMessages(reportId: string, req: DevNotesProxyRequest): Promise<TaskMessage[]>;
   createMessage(
     reportId: string,
     body: string,
     req: DevNotesProxyRequest
-  ): Promise<BugReportMessage>;
-  updateMessage(id: string, body: string, req: DevNotesProxyRequest): Promise<BugReportMessage>;
+  ): Promise<TaskMessage>;
+  updateMessage(id: string, body: string, req: DevNotesProxyRequest): Promise<TaskMessage>;
   deleteMessage(id: string, req: DevNotesProxyRequest): Promise<void>;
   getUnreadCounts(req: DevNotesProxyRequest): Promise<Record<string, number>>;
   markMessagesRead(messageIds: string[], req: DevNotesProxyRequest): Promise<void>;
-  listCollaborators(ids: string[] | null, req: DevNotesProxyRequest): Promise<BugReportCreator[]>;
+  listCollaborators(ids: string[] | null, req: DevNotesProxyRequest): Promise<TaskCreator[]>;
   refineDescription?: (
     input: {
       description: string;
@@ -65,7 +65,7 @@ export interface DevNotesProxyBackend {
         target_selector?: string;
         expected_behavior?: string;
         actual_behavior?: string;
-        capture_context?: BugCaptureContext;
+        capture_context?: TaskCaptureContext;
       };
     },
     req: DevNotesProxyRequest
@@ -86,6 +86,9 @@ export function isDevNotesProxyBackend(value: unknown): value is DevNotesProxyBa
 const json = (body: unknown, status = 200): DevNotesProxyResponse => ({ status, body });
 
 const getId = (slug: string[], index: number) => decodeURIComponent(slug[index] || '');
+const isTaskResource = (resource: string | undefined) => resource === 'tasks' || resource === 'reports';
+const isTaskTypeResource = (resource: string | undefined) =>
+  resource === 'task-types' || resource === 'report-types';
 
 export async function routeDevNotesProxy(
   backend: DevNotesProxyBackend,
@@ -107,27 +110,27 @@ export async function routeDevNotesProxy(
     }
   }
 
-  if (resource === 'reports' && method === 'GET' && !resourceId) {
+  if (isTaskResource(resource) && method === 'GET' && !resourceId) {
     return json(await backend.listReports(req));
   }
-  if (resource === 'reports' && method === 'POST' && !resourceId) {
+  if (isTaskResource(resource) && method === 'POST' && !resourceId) {
     return json(await backend.createReport(req.body, req));
   }
-  if (resource === 'reports' && method === 'PATCH' && resourceId && !nested) {
+  if (isTaskResource(resource) && method === 'PATCH' && resourceId && !nested) {
     return json(await backend.updateReport(getId(req.slug, 1), req.body, req));
   }
-  if (resource === 'reports' && method === 'DELETE' && resourceId && !nested) {
+  if (isTaskResource(resource) && method === 'DELETE' && resourceId && !nested) {
     await backend.deleteReport(getId(req.slug, 1), req);
     return json({ success: true });
   }
-  if (resource === 'reports' && resourceId && nested === 'messages') {
+  if (isTaskResource(resource) && resourceId && nested === 'messages') {
     if (method === 'GET') return json(await backend.listMessages(getId(req.slug, 1), req));
     if (method === 'POST') {
       return json(await backend.createMessage(getId(req.slug, 1), String(req.body?.body || ''), req));
     }
   }
 
-  if (resource === 'report-types') {
+  if (isTaskTypeResource(resource)) {
     if (method === 'GET' && !resourceId) return json(await backend.listReportTypes(req));
     if (method === 'POST' && !resourceId) {
       return json(await backend.createReportType(String(req.body?.name || ''), req));

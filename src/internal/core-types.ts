@@ -1,10 +1,10 @@
-export type BugReportCreator = {
+export type TaskCreator = {
   id: string;
   email: string | null;
   full_name: string | null;
 };
 
-export type BugReportType = {
+export type TaskType = {
   id: string;
   name: string;
   is_default: boolean;
@@ -12,7 +12,7 @@ export type BugReportType = {
   created_at: string;
 };
 
-export type BugCaptureContext = {
+export type TaskCaptureContext = {
   captured_at: string;
   route_label: string;
   path: string;
@@ -30,7 +30,7 @@ export type BugCaptureContext = {
   timezone: string | null;
 };
 
-export type BugReport = {
+export type Task = {
   id: string;
   task_list_id: string;
   page_url: string;
@@ -45,11 +45,11 @@ export type BugReport = {
   description: string | null;
   expected_behavior?: string | null;
   actual_behavior?: string | null;
-  capture_context?: BugCaptureContext | null;
+  capture_context?: TaskCaptureContext | null;
   response: string | null;
   status: 'Open' | 'In Progress' | 'Needs Review' | 'Resolved' | 'Closed';
   created_by: string;
-  creator?: BugReportCreator;
+  creator?: TaskCreator;
   assigned_to: string | null;
   resolved_at: string | null;
   resolved_by: string | null;
@@ -60,14 +60,15 @@ export type BugReport = {
   updated_at: string;
 };
 
-export type BugReportMessage = {
+export type TaskMessage = {
   id: string;
-  bug_report_id: string;
+  task_id: string;
+  bug_report_id?: string;
   author_id: string;
   body: string;
   created_at: string;
   updated_at: string;
-  author?: BugReportCreator;
+  author?: TaskCreator;
 };
 
 export type TaskList = {
@@ -117,7 +118,7 @@ export type AiProvider = {
       target_selector?: string;
       expected_behavior?: string;
       actual_behavior?: string;
-      capture_context?: BugCaptureContext;
+      capture_context?: TaskCaptureContext;
     };
   }): Promise<AiAssistResult>;
 };
@@ -142,3 +143,9 @@ export type DevNotesConfig = {
   /** Role of the current user for access control */
   role?: DevNotesRole;
 };
+
+export type BugReportCreator = TaskCreator;
+export type BugReportType = TaskType;
+export type BugCaptureContext = TaskCaptureContext;
+export type BugReport = Task;
+export type BugReportMessage = TaskMessage;

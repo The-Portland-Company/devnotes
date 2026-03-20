@@ -1,33 +1,33 @@
 import * as react_jsx_runtime from 'react/jsx-runtime';
 import { ReactNode } from 'react';
-import { D as DevNotesClientAdapter, a as DevNotesUser, b as DevNotesConfig, B as BugReport, c as BugReportType, T as TaskList, d as BugReportCreator, N as NotifyEvent, A as AiProvider, e as DevNotesRole, f as BugCaptureContext } from './types-CBHExs2F.mjs';
-export { g as AiAssistResult, h as AiConversationMessage, i as BugReportCreateData, j as BugReportMessage } from './types-CBHExs2F.mjs';
+import { D as DevNotesClientAdapter, a as DevNotesUser, b as DevNotesConfig, B as BugReport, c as BugReportType, T as TaskList, d as BugReportCreator, N as NotifyEvent, A as AiProvider, e as DevNotesRole, f as Task, g as TaskCaptureContext } from './types-C3m8yDgc.mjs';
+export { h as AiAssistResult, i as AiConversationMessage, j as BugCaptureContext, k as BugReportCreateData, l as BugReportMessage, m as TaskCreateData, n as TaskCreator, o as TaskMessage, p as TaskType } from './types-C3m8yDgc.mjs';
 import { D as DevNotesCapabilities, a as DevNotesAppLinkStatus, b as DevNotesClientOptions } from './types-CrmObeqp.mjs';
 export { c as DevNotesLinkAppInput } from './types-CrmObeqp.mjs';
 
 type DevNotesContextValue = {
     isEnabled: boolean;
     setIsEnabled: (enabled: boolean) => void;
-    showBugsAlways: boolean;
-    setShowBugsAlways: (show: boolean) => void;
+    showTasksAlways: boolean;
+    setShowTasksAlways: (show: boolean) => void;
     hideResolvedClosed: boolean;
     setHideResolvedClosed: (hide: boolean) => void;
-    bugReports: BugReport[];
-    bugReportTypes: BugReportType[];
+    tasks: BugReport[];
+    taskTypes: BugReportType[];
     taskLists: TaskList[];
     userProfiles: Record<string, BugReportCreator>;
     unreadCounts: Record<string, number>;
-    currentPageBugReports: BugReport[];
+    currentPageTasks: BugReport[];
     collaborators: BugReportCreator[];
-    loadBugReports: () => Promise<void>;
-    loadBugReportTypes: () => Promise<void>;
+    loadTasks: () => Promise<void>;
+    loadTaskTypes: () => Promise<void>;
     loadTaskLists: () => Promise<void>;
-    createBugReport: (report: Omit<BugReport, 'id' | 'created_at' | 'updated_at' | 'created_by' | 'resolved_at' | 'resolved_by'>) => Promise<BugReport | null>;
-    updateBugReport: (id: string, updates: Partial<BugReport>) => Promise<BugReport | null>;
-    deleteBugReport: (id: string) => Promise<boolean>;
+    createTask: (report: Omit<BugReport, 'id' | 'created_at' | 'updated_at' | 'created_by' | 'resolved_at' | 'resolved_by'>) => Promise<BugReport | null>;
+    updateTask: (id: string, updates: Partial<BugReport>) => Promise<BugReport | null>;
+    deleteTask: (id: string) => Promise<boolean>;
     createTaskList: (name: string) => Promise<TaskList | null>;
-    addBugReportType: (name: string) => Promise<BugReportType | null>;
-    deleteBugReportType: (id: string) => Promise<boolean>;
+    addTaskType: (name: string) => Promise<BugReportType | null>;
+    deleteTaskType: (id: string) => Promise<boolean>;
     loadUnreadCounts: () => Promise<void>;
     markMessagesAsRead: (reportId: string, messageIds: string[]) => Promise<void>;
     user: DevNotesUser;
@@ -47,6 +47,18 @@ type DevNotesContextValue = {
         x: number;
         y: number;
     };
+    bugReports: BugReport[];
+    bugReportTypes: BugReportType[];
+    currentPageBugReports: BugReport[];
+    loadBugReports: () => Promise<void>;
+    loadBugReportTypes: () => Promise<void>;
+    createBugReport: DevNotesContextValue['createTask'];
+    updateBugReport: DevNotesContextValue['updateTask'];
+    deleteBugReport: DevNotesContextValue['deleteTask'];
+    addBugReportType: DevNotesContextValue['addTaskType'];
+    deleteBugReportType: DevNotesContextValue['deleteTaskType'];
+    showBugsAlways: boolean;
+    setShowBugsAlways: (show: boolean) => void;
 };
 type DevNotesProviderProps = {
     adapter: DevNotesClientAdapter;
@@ -166,14 +178,14 @@ declare const calculateBugPositionFromPoint: ({ clientX, clientY, elementsToIgno
  *             position from its current bounding rect. This makes the dot track the element.
  * Priority 2: Fall back to stored page coordinates converted to viewport coordinates.
  */
-declare const resolveBugReportCoordinates: (report: BugReport) => {
+declare const resolveBugReportCoordinates: (report: Task) => {
     x: number;
     y: number;
 } | null;
 
 declare function deriveRouteLabelFromUrl(rawUrl: string): string;
 declare function detectBrowserName(userAgent: string): string;
-declare function buildCaptureContext(pageUrl: string): BugCaptureContext | null;
+declare function buildCaptureContext(pageUrl: string): TaskCaptureContext | null;
 
 type AiFixPayload = {
     source: string;
@@ -181,8 +193,8 @@ type AiFixPayload = {
     report: {
         id: string | null;
         title: string | null;
-        status: BugReport['status'];
-        severity: BugReport['severity'];
+        status: Task['status'];
+        severity: Task['severity'];
         task_list_id: string | null;
         types: string[];
         type_names: string[];
@@ -204,7 +216,7 @@ type AiFixPayload = {
         target_selector: string | null;
         target_relative_x: number | null;
         target_relative_y: number | null;
-        capture_context: BugCaptureContext | null;
+        capture_context: TaskCaptureContext | null;
     };
     workflow: {
         assigned_to: string | null;
@@ -220,8 +232,8 @@ type BuildAiFixPayloadParams = {
     report: {
         id?: string | null;
         title?: string | null;
-        status: BugReport['status'];
-        severity: BugReport['severity'];
+        status: Task['status'];
+        severity: Task['severity'];
         taskListId?: string | null;
         types: string[];
         typeNames: string[];
@@ -243,7 +255,7 @@ type BuildAiFixPayloadParams = {
         targetSelector?: string | null;
         targetRelativeX?: number | null;
         targetRelativeY?: number | null;
-        captureContext?: BugCaptureContext | null;
+        captureContext?: TaskCaptureContext | null;
     };
     workflow: {
         assignedTo?: string | null;
@@ -256,9 +268,9 @@ type BuildAiFixPayloadParams = {
 declare function buildAiFixPayload(params: BuildAiFixPayloadParams): AiFixPayload;
 declare function formatAiFixPayloadForCopy(payload: AiFixPayload): string;
 
-declare const useBugReportPosition: (report: BugReport | null) => {
+declare const useBugReportPosition: (report: Task | null) => {
     x: number;
     y: number;
 } | null;
 
-export { type AiFixPayload, AiProvider, BugCaptureContext, BugReport, BugReportCreator, BugReportType, type BuildAiFixPayloadParams, DevNotesAppLinkStatus, DevNotesButton, DevNotesCapabilities, DevNotesClientOptions, DevNotesConfig, DevNotesDiscussion, DevNotesDot, DevNotesForm, DevNotesMenu, DevNotesOverlay, DevNotesProvider, DevNotesRole, DevNotesTaskList, DevNotesUser, NotifyEvent, TaskList, buildAiFixPayload, buildCaptureContext, calculateBugPositionFromPoint, createDevNotesClient, deriveRouteLabelFromUrl, detectBrowserName, formatAiFixPayloadForCopy, normalizePageUrl, resolveBugReportCoordinates, useBugReportPosition, useDevNotes };
+export { type AiFixPayload, AiProvider, BugReport, BugReportCreator, BugReportType, type BuildAiFixPayloadParams, DevNotesAppLinkStatus, DevNotesButton, DevNotesCapabilities, DevNotesClientOptions, DevNotesConfig, DevNotesDiscussion, DevNotesDot, DevNotesForm, DevNotesMenu, DevNotesOverlay, DevNotesProvider, DevNotesRole, DevNotesTaskList, DevNotesUser, NotifyEvent, Task, TaskCaptureContext, TaskList, buildAiFixPayload, buildCaptureContext, calculateBugPositionFromPoint, createDevNotesClient, deriveRouteLabelFromUrl, detectBrowserName, formatAiFixPayloadForCopy, normalizePageUrl, resolveBugReportCoordinates, useBugReportPosition, useDevNotes };

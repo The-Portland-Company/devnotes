@@ -162,7 +162,7 @@ function DevNotesProvider({ adapter, user, config, children }) {
   const SHOW_BUGS_ALWAYS_KEY = `${storagePrefix}_show_bugs_always`;
   const HIDE_RESOLVED_CLOSED_KEY = `${storagePrefix}_hide_resolved_closed`;
   const [isEnabled, setIsEnabled] = (0, import_react2.useState)(false);
-  const [showBugsAlways, setShowBugsAlwaysState] = (0, import_react2.useState)(() => {
+  const [showTasksAlways, setShowBugsAlwaysState] = (0, import_react2.useState)(() => {
     try {
       return localStorage.getItem(SHOW_BUGS_ALWAYS_KEY) === "true";
     } catch {
@@ -177,8 +177,8 @@ function DevNotesProvider({ adapter, user, config, children }) {
       return true;
     }
   });
-  const [bugReports, setBugReports] = (0, import_react2.useState)([]);
-  const [bugReportTypes, setBugReportTypes] = (0, import_react2.useState)([]);
+  const [tasks, setBugReports] = (0, import_react2.useState)([]);
+  const [taskTypes, setBugReportTypes] = (0, import_react2.useState)([]);
   const [taskLists, setTaskLists] = (0, import_react2.useState)([]);
   const [userProfiles, setUserProfiles] = (0, import_react2.useState)({});
   const userProfilesRef = (0, import_react2.useRef)({});
@@ -199,7 +199,7 @@ function DevNotesProvider({ adapter, user, config, children }) {
       return "/";
     }
   });
-  const setShowBugsAlways = (0, import_react2.useCallback)(
+  const setShowTasksAlways = (0, import_react2.useCallback)(
     (show) => {
       setShowBugsAlwaysState(show);
       try {
@@ -250,17 +250,17 @@ function DevNotesProvider({ adapter, user, config, children }) {
       window.removeEventListener("hashchange", updateRoutePath);
     };
   }, [getPagePath]);
-  const visibleBugReports = (0, import_react2.useMemo)(() => {
+  const visibleTasks = (0, import_react2.useMemo)(() => {
     if (role === "reporter") {
-      return bugReports.filter((report) => report.created_by === user.id);
+      return tasks.filter((report) => report.created_by === user.id);
     }
-    return bugReports;
-  }, [bugReports, role, user.id]);
-  const currentPageBugReports = (0, import_react2.useMemo)(() => {
+    return tasks;
+  }, [tasks, role, user.id]);
+  const currentPageTasks = (0, import_react2.useMemo)(() => {
     const toPath = (url) => url.split("#")[0].split("?")[0].replace(/\/+$/, "") || "/";
     const currentPath = toPath(currentRoutePath);
-    return visibleBugReports.filter((report) => toPath(report.page_url) === currentPath);
-  }, [visibleBugReports, currentRoutePath]);
+    return visibleTasks.filter((report) => toPath(report.page_url) === currentPath);
+  }, [visibleTasks, currentRoutePath]);
   (0, import_react2.useEffect)(() => {
     userProfilesRef.current = userProfiles;
   }, [userProfiles]);
@@ -321,11 +321,11 @@ function DevNotesProvider({ adapter, user, config, children }) {
     },
     [adapter]
   );
-  const loadBugReports = (0, import_react2.useCallback)(async () => {
+  const loadTasks = (0, import_react2.useCallback)(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await adapter.fetchBugReports();
+      const data = await adapter.fetchTasks();
       setBugReports(data);
       await Promise.all([loadProfilesForReports(data), loadUnreadCounts()]);
     } catch (err) {
@@ -335,9 +335,9 @@ function DevNotesProvider({ adapter, user, config, children }) {
       setLoading(false);
     }
   }, [adapter, loadProfilesForReports, loadUnreadCounts]);
-  const loadBugReportTypes = (0, import_react2.useCallback)(async () => {
+  const loadTaskTypes = (0, import_react2.useCallback)(async () => {
     try {
-      const data = await adapter.fetchBugReportTypes();
+      const data = await adapter.fetchTaskTypes();
       setBugReportTypes(data);
     } catch (err) {
       console.error("[DevNotes] Error loading bug report types:", err);
@@ -376,12 +376,12 @@ function DevNotesProvider({ adapter, user, config, children }) {
       setAppLinkStatus(null);
     }
   }, [adapter]);
-  const createBugReport = (0, import_react2.useCallback)(
+  const createTask = (0, import_react2.useCallback)(
     async (report) => {
       setLoading(true);
       setError(null);
       try {
-        const data = await adapter.createBugReport(report);
+        const data = await adapter.createTask(report);
         setBugReports((prev) => [data, ...prev]);
         await loadProfilesForReports([data]);
         return data;
@@ -395,12 +395,12 @@ function DevNotesProvider({ adapter, user, config, children }) {
     },
     [adapter, loadProfilesForReports]
   );
-  const updateBugReport = (0, import_react2.useCallback)(
+  const updateTask = (0, import_react2.useCallback)(
     async (id, updates) => {
       setLoading(true);
       setError(null);
       try {
-        const data = await adapter.updateBugReport(id, updates);
+        const data = await adapter.updateTask(id, updates);
         setBugReports(
           (prev) => prev.map(
             (report) => report.id === id ? { ...report, ...data, creator: report.creator || data.creator } : report
@@ -408,7 +408,7 @@ function DevNotesProvider({ adapter, user, config, children }) {
         );
         await loadProfilesForReports([data]);
         if (updates.status === "Closed" && onNotify) {
-          const originalReport = bugReports.find((r) => r.id === id);
+          const originalReport = tasks.find((r) => r.id === id);
           const authorEmail = originalReport?.creator?.email;
           const authorName = originalReport?.creator?.full_name || "there";
           const reportTitle = originalReport?.title || data.title || "Untitled";
@@ -442,14 +442,14 @@ Dev Notes`,
         setLoading(false);
       }
     },
-    [adapter, loadProfilesForReports, bugReports, user.id, onNotify]
+    [adapter, loadProfilesForReports, tasks, user.id, onNotify]
   );
-  const deleteBugReport = (0, import_react2.useCallback)(
+  const deleteTask = (0, import_react2.useCallback)(
     async (id) => {
       setLoading(true);
       setError(null);
       try {
-        await adapter.deleteBugReport(id);
+        await adapter.deleteTask(id);
         setBugReports((prev) => prev.filter((report) => report.id !== id));
         return true;
       } catch (err) {
@@ -477,10 +477,10 @@ Dev Notes`,
     },
     [adapter]
   );
-  const addBugReportType = (0, import_react2.useCallback)(
+  const addTaskType = (0, import_react2.useCallback)(
     async (name) => {
       try {
-        const data = await adapter.createBugReportType(name);
+        const data = await adapter.createTaskType(name);
         setBugReportTypes((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
         return data;
       } catch (err) {
@@ -490,10 +490,10 @@ Dev Notes`,
     },
     [adapter]
   );
-  const deleteBugReportType = (0, import_react2.useCallback)(
+  const deleteTaskType = (0, import_react2.useCallback)(
     async (id) => {
       try {
-        await adapter.deleteBugReportType(id);
+        await adapter.deleteTaskType(id);
         setBugReportTypes((prev) => prev.filter((type) => type.id !== id));
         return true;
       } catch (err) {
@@ -504,15 +504,15 @@ Dev Notes`,
     [adapter]
   );
   (0, import_react2.useEffect)(() => {
-    loadBugReports();
-    loadBugReportTypes();
+    loadTasks();
+    loadTaskTypes();
     loadTaskLists();
     loadCollaborators();
     refreshCapabilities();
     refreshAppLinkStatus();
   }, [
-    loadBugReports,
-    loadBugReportTypes,
+    loadTasks,
+    loadTaskTypes,
     loadTaskLists,
     loadCollaborators,
     refreshCapabilities,
@@ -522,26 +522,36 @@ Dev Notes`,
     () => ({
       isEnabled,
       setIsEnabled,
-      showBugsAlways,
-      setShowBugsAlways,
+      showTasksAlways,
+      setShowTasksAlways,
       hideResolvedClosed,
       setHideResolvedClosed,
-      bugReports: visibleBugReports,
-      bugReportTypes,
+      tasks: visibleTasks,
+      bugReports: visibleTasks,
+      taskTypes,
+      bugReportTypes: taskTypes,
       taskLists,
       userProfiles,
       unreadCounts,
-      currentPageBugReports,
+      currentPageTasks,
+      currentPageBugReports: currentPageTasks,
       collaborators,
-      loadBugReports,
-      loadBugReportTypes,
+      loadTasks,
+      loadBugReports: loadTasks,
+      loadTaskTypes,
+      loadBugReportTypes: loadTaskTypes,
       loadTaskLists,
-      createBugReport,
-      updateBugReport,
-      deleteBugReport,
+      createTask,
+      createBugReport: createTask,
+      updateTask,
+      updateBugReport: updateTask,
+      deleteTask,
+      deleteBugReport: deleteTask,
       createTaskList,
-      addBugReportType,
-      deleteBugReportType,
+      addTaskType,
+      addBugReportType: addTaskType,
+      deleteTaskType,
+      deleteBugReportType: deleteTaskType,
       loadUnreadCounts,
       markMessagesAsRead,
       user,
@@ -557,31 +567,33 @@ Dev Notes`,
       loading,
       error,
       dotContainer,
-      compensate
+      compensate,
+      showBugsAlways: showTasksAlways,
+      setShowBugsAlways: setShowTasksAlways
     }),
     [
       isEnabled,
       setIsEnabled,
-      showBugsAlways,
-      setShowBugsAlways,
+      showTasksAlways,
+      setShowTasksAlways,
       hideResolvedClosed,
       setHideResolvedClosed,
-      visibleBugReports,
-      bugReportTypes,
+      visibleTasks,
+      taskTypes,
       taskLists,
       userProfiles,
       unreadCounts,
-      currentPageBugReports,
+      currentPageTasks,
       collaborators,
-      loadBugReports,
-      loadBugReportTypes,
+      loadTasks,
+      loadTaskTypes,
       loadTaskLists,
-      createBugReport,
-      updateBugReport,
-      deleteBugReport,
+      createTask,
+      updateTask,
+      deleteTask,
       createTaskList,
-      addBugReportType,
-      deleteBugReportType,
+      addTaskType,
+      deleteTaskType,
       loadUnreadCounts,
       markMessagesAsRead,
       user,
@@ -606,30 +618,45 @@ var defaultContextValue = {
   isEnabled: false,
   setIsEnabled: () => {
   },
+  showTasksAlways: false,
+  setShowTasksAlways: () => {
+  },
   showBugsAlways: false,
   setShowBugsAlways: () => {
   },
   hideResolvedClosed: true,
   setHideResolvedClosed: () => {
   },
+  tasks: [],
   bugReports: [],
+  taskTypes: [],
   bugReportTypes: [],
   taskLists: [],
   userProfiles: {},
   unreadCounts: {},
+  currentPageTasks: [],
   currentPageBugReports: [],
   collaborators: [],
+  loadTasks: async () => {
+  },
   loadBugReports: async () => {
+  },
+  loadTaskTypes: async () => {
   },
   loadBugReportTypes: async () => {
   },
   loadTaskLists: async () => {
   },
+  createTask: async () => null,
   createBugReport: async () => null,
+  updateTask: async () => null,
   updateBugReport: async () => null,
+  deleteTask: async () => false,
   deleteBugReport: async () => false,
   createTaskList: async () => null,
+  addTaskType: async () => null,
   addBugReportType: async () => null,
+  deleteTaskType: async () => false,
   deleteBugReportType: async () => false,
   loadUnreadCounts: async () => {
   },
@@ -668,11 +695,11 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
   const {
     isEnabled,
     setIsEnabled,
-    showBugsAlways,
-    setShowBugsAlways,
+    showTasksAlways,
+    setShowTasksAlways,
     hideResolvedClosed,
     setHideResolvedClosed,
-    bugReports,
+    tasks,
     role
   } = useDevNotes();
   const [open, setOpen] = (0, import_react3.useState)(false);
@@ -687,7 +714,7 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [open]);
-  const openBugCount = bugReports.filter(
+  const openBugCount = tasks.filter(
     (r) => r.status === "Open" || r.status === "In Progress" || r.status === "Needs Review"
   ).length;
   if (role === "none") return null;
@@ -712,10 +739,10 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
           "button",
           {
             type: "button",
-            "aria-label": isEnabled ? "Click to disable bug reporting" : "Bug reporting menu",
+            "aria-label": isEnabled ? "Click to disable task creation" : "Task menu",
             onClick: handleIconClick,
             className: "inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-700 transition hover:text-emerald-600",
-            title: "Bug reports",
+            title: "Tasks",
             children: /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("span", { className: "relative", children: [
               IconComponent ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(IconComponent, { size: 20, color: isEnabled ? "#E53E3E" : void 0 }) : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_fi.FiAlertTriangle, { size: 20, color: isEnabled ? "#E53E3E" : void 0 }),
               openBugCount > 0 && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "absolute -right-2 -top-1 inline-flex min-w-[16px] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white", children: openBugCount })
@@ -754,7 +781,7 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                   children: [
                     /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
                       isEnabled ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_fi.FiToggleRight, { className: "text-green-600" }) : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_fi.FiToggleLeft, {}),
-                      isEnabled ? "Stop Reporting" : "Report Bug / Request Feature"
+                      isEnabled ? "Stop Creating Tasks" : "Create Task"
                     ] }),
                     /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
                       "span",
@@ -778,23 +805,23 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                 {
                   type: "button",
                   "data-menu-item": true,
-                  onClick: () => setShowBugsAlways(!showBugsAlways),
+                  onClick: () => setShowTasksAlways(!showTasksAlways),
                   className: "flex w-full items-center justify-between gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50",
                   children: [
                     /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
-                      showBugsAlways ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_fi.FiEye, { className: "text-blue-600" }) : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_fi.FiEyeOff, {}),
-                      "Show Bugs Always"
+                      showTasksAlways ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_fi.FiEye, { className: "text-blue-600" }) : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_fi.FiEyeOff, {}),
+                      "Show Tasks Always"
                     ] }),
                     /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
                       "span",
                       {
                         role: "switch",
-                        "aria-checked": showBugsAlways,
-                        className: `relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ${showBugsAlways ? "bg-green-500" : "bg-gray-300"}`,
+                        "aria-checked": showTasksAlways,
+                        className: `relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ${showTasksAlways ? "bg-green-500" : "bg-gray-300"}`,
                         children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
                           "span",
                           {
-                            className: `inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${showBugsAlways ? "translate-x-4" : "translate-x-0.5"} mt-0.5`
+                            className: `inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${showTasksAlways ? "translate-x-4" : "translate-x-0.5"} mt-0.5`
                           }
                         )
                       }
@@ -1501,7 +1528,7 @@ function AiDescriptionChat({
     /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "flex justify-between items-center", children: [
       /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "flex items-center gap-2", children: [
         /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_fi3.FiZap, { size: 16, className: "text-purple-600" }),
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "text-sm font-semibold text-purple-700", children: "AI Description Refinement" }),
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "text-sm font-semibold text-purple-700", children: "AI Description Review" }),
         /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "text-[0.65rem] px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 font-semibold", children: "GPT-4" })
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(
@@ -1519,7 +1546,7 @@ function AiDescriptionChat({
     ] }),
     !hasStarted && !initialDescription.trim() && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "flex-1 flex items-center justify-center min-h-[120px]", children: /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "text-center", children: [
       /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_fi3.FiZap, { size: 28, className: "mx-auto mb-2 text-purple-300" }),
-      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("p", { className: "text-sm text-gray-500", children: "Add a title above and AI will help build a full description" })
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("p", { className: "text-sm text-gray-500", children: "Add a description first, then AI will ask clarifying questions and refine it." })
     ] }) }),
     hasStarted && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
       "div",
@@ -1591,7 +1618,7 @@ function AiDescriptionChat({
           })(),
           finalizedDescription && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "bg-green-50 border-2 border-green-300 rounded-lg p-4", children: [
             /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "flex justify-between items-center mb-2", children: /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "flex items-center gap-2", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "text-xs font-bold text-green-700", children: "AI-Refined Description" }),
+              /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "text-xs font-bold text-green-700", children: "AI-Reviewed Description" }),
               /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "text-[0.6rem] px-1.5 py-0.5 rounded bg-green-100 text-green-800", children: "Ready" })
             ] }) }),
             isEditing ? /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "flex flex-col gap-2", children: [
@@ -2156,11 +2183,11 @@ function DevNotesForm({
   onArchive
 }) {
   const {
-    bugReportTypes,
-    createBugReport,
-    updateBugReport,
-    addBugReportType,
-    deleteBugReportType,
+    taskTypes,
+    createTask,
+    updateTask,
+    addTaskType,
+    deleteTaskType,
     taskLists,
     createTaskList,
     loading,
@@ -2207,11 +2234,11 @@ function DevNotesForm({
   const [selectedTypes, setSelectedTypes] = (0, import_react6.useState)(existingReport?.types || []);
   (0, import_react6.useEffect)(() => {
     if (existingReport || selectedTypes.length > 0) return;
-    const bugType = bugReportTypes.find((t) => t.name.toLowerCase() === "bug");
+    const bugType = taskTypes.find((t) => t.name.toLowerCase() === "bug");
     if (bugType) {
       setSelectedTypes([bugType.id]);
     }
-  }, [bugReportTypes, existingReport, selectedTypes.length]);
+  }, [taskTypes, existingReport, selectedTypes.length]);
   const [severity, setSeverity] = (0, import_react6.useState)(
     existingReport?.severity || "Medium"
   );
@@ -2377,7 +2404,7 @@ function DevNotesForm({
   (0, import_react6.useEffect)(() => {
     resizeBehaviorField(actualBehaviorRef.current, actualBehavior, setActualBehaviorHeight);
   }, [actualBehavior]);
-  const availableTypes = bugReportTypes.filter((type) => !selectedTypes.includes(type.id));
+  const availableTypes = taskTypes.filter((type) => !selectedTypes.includes(type.id));
   const handleTypeSelect = (typeId) => {
     setSelectedTypes((prev) => [...prev, typeId]);
     setShowTypeDropdown(false);
@@ -2389,7 +2416,7 @@ function DevNotesForm({
   const createTypeFromValue = async (value) => {
     const trimmedValue = value.trim();
     if (!trimmedValue) return;
-    const existingType = bugReportTypes.find(
+    const existingType = taskTypes.find(
       (type) => type.name.toLowerCase() === trimmedValue.toLowerCase()
     );
     if (existingType) {
@@ -2401,7 +2428,7 @@ function DevNotesForm({
       setPendingTypeName(null);
       return;
     }
-    const newType = await addBugReportType(trimmedValue);
+    const newType = await addTaskType(trimmedValue);
     if (newType) {
       setSelectedTypes((prev) => [...prev, newType.id]);
       setNewTypeName("");
@@ -2418,7 +2445,7 @@ function DevNotesForm({
       }
       const trimmedValue = newTypeName.trim();
       if (!trimmedValue) return;
-      const existingType = bugReportTypes.find(
+      const existingType = taskTypes.find(
         (type) => type.name.toLowerCase() === trimmedValue.toLowerCase()
       );
       if (existingType) {
@@ -2430,9 +2457,9 @@ function DevNotesForm({
   };
   const handleDeleteType = async (typeId, e) => {
     e.stopPropagation();
-    const typeToDelete = bugReportTypes.find((t) => t.id === typeId);
+    const typeToDelete = taskTypes.find((t) => t.id === typeId);
     if (typeToDelete?.is_default) return;
-    const success = await deleteBugReportType(typeId);
+    const success = await deleteTaskType(typeId);
     if (success) {
       setSelectedTypes((prev) => prev.filter((id) => id !== typeId));
     }
@@ -2451,7 +2478,7 @@ function DevNotesForm({
   const handleCopyLink = async () => {
     if (!existingReport?.id) return;
     try {
-      const link = `${window.location.origin}/bug-reports/${existingReport.id}`;
+      const link = `${window.location.origin}/tasks/${existingReport.id}`;
       await navigator.clipboard.writeText(link);
       setShowLinkCopied(true);
       if (linkCopyTimeoutRef.current) window.clearTimeout(linkCopyTimeoutRef.current);
@@ -2462,7 +2489,7 @@ function DevNotesForm({
   };
   const handleCopyAiPayload = async () => {
     const typeNames = selectedTypes.map((typeId) => {
-      const type = bugReportTypes.find((item) => item.id === typeId);
+      const type = taskTypes.find((item) => item.id === typeId);
       return type?.name || typeId;
     });
     const normalizedPageUrl = normalizePageUrl(composePageUrlWithTab(reportPageUrl));
@@ -2531,6 +2558,7 @@ function DevNotesForm({
   const submitDisabled = loading || !hasNarrative || statusRequired;
   const submitTitle = requiresAiBeforeCreate ? "Save will start AI clarification before creating the task" : statusRequired ? "Select a status before saving" : !hasNarrative ? "Add a description, expected behavior, or actual behavior" : existingReport ? "Update" : "Save";
   const aiSeedDescription = hasDescription ? trimmedDescription : hasBehavior ? [trimmedExpectedBehavior, trimmedActualBehavior].filter(Boolean).join("\n") : title.trim();
+  const canReviewDescriptionWithAi = Boolean(aiProvider && trimmedDescription);
   const saveReport = async (overrides) => {
     const reportData = {
       task_list_id: taskListId,
@@ -2556,14 +2584,14 @@ function DevNotesForm({
     };
     let result = null;
     if (existingReport) {
-      result = await updateBugReport(existingReport.id, {
+      result = await updateTask(existingReport.id, {
         ...reportData,
         capture_context: existingReport.capture_context || capturedContext,
         assigned_to: assignedTo,
         resolved_by: resolvedBy
       });
     } else {
-      result = await createBugReport({
+      result = await createTask({
         ...reportData,
         capture_context: capturedContext
       });
@@ -2583,7 +2611,7 @@ function DevNotesForm({
     await saveReport();
   };
   const getTypeName = (typeId) => {
-    const type = bugReportTypes.find((t) => t.id === typeId);
+    const type = taskTypes.find((t) => t.id === typeId);
     return type?.name || "Unknown";
   };
   const getTaskListName = (listId) => {
@@ -2668,7 +2696,7 @@ function DevNotesForm({
   return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "bg-white rounded-xl p-4 md:p-6 min-w-[320px] w-full max-w-[960px] mx-auto relative shadow-sm", children: [
     /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "flex justify-between items-start mb-3", children: [
       /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "flex flex-col gap-1", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "flex items-center gap-2", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "font-bold text-base", children: existingReport ? "Edit Bug Report" : "Report Bug" }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "font-bold text-base", children: existingReport ? "Edit Task" : "Create Task" }),
         existingReport && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("span", { className: `text-xs px-2 py-0.5 rounded-full flex items-center gap-1 ${statusColorClass}`, children: [
           /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(StatusIcon, { size: 12 }),
           status
@@ -2783,11 +2811,36 @@ function DevNotesForm({
           )
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: isSuperscriptLabels ? "relative" : "", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
-            "label",
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
+            "div",
             {
-              className: isSuperscriptLabels ? "absolute -top-[9px] left-[10px] bg-white px-1.5 text-xs leading-4 rounded-md pointer-events-none z-[2] text-gray-700" : "block text-sm mb-1 text-gray-700",
-              children: "Description"
+              className: isSuperscriptLabels ? "absolute -top-[9px] left-[10px] right-[10px] z-[2] flex items-center justify-between" : "mb-1 flex items-center justify-between",
+              children: [
+                /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+                  "label",
+                  {
+                    className: isSuperscriptLabels ? "bg-white px-1.5 text-xs leading-4 rounded-md pointer-events-none text-gray-700" : "block text-sm text-gray-700",
+                    children: "Description"
+                  }
+                ),
+                aiProvider && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
+                  "button",
+                  {
+                    type: "button",
+                    className: `inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition ${canReviewDescriptionWithAi ? "bg-purple-50 text-purple-700 hover:bg-purple-100" : "cursor-not-allowed bg-gray-100 text-gray-400"}`,
+                    onClick: () => {
+                      if (!canReviewDescriptionWithAi) return;
+                      setShowAiChat(true);
+                    },
+                    disabled: !canReviewDescriptionWithAi,
+                    title: canReviewDescriptionWithAi ? "Review the description with AI" : "Add a description to review it with AI",
+                    children: [
+                      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_fi4.FiZap, { size: 12 }),
+                      "Review with AI"
+                    ]
+                  }
+                )
+              ]
             }
           ),
           /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
@@ -2870,19 +2923,6 @@ function DevNotesForm({
           ] })
         ] }),
         submitAttempted && !hasNarrative && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("p", { className: "text-xs text-red-600", children: "Add a description, expected behavior, or actual behavior." }),
-        aiProvider && !aiDescription && !showAiChat && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
-          "button",
-          {
-            type: "button",
-            className: `w-full py-3 rounded-xl border-2 bg-white text-purple-700 font-medium hover:bg-purple-50 flex items-center justify-center gap-2 transition-all ${!existingReport ? "border-purple-500 shadow-[0_0_0_3px_rgba(167,139,250,0.3)] hover:border-purple-600" : "border-purple-300 shadow-[0_0_0_3px_rgba(167,139,250,0.15)] hover:border-purple-400"}`,
-            onClick: () => setShowAiChat(true),
-            children: [
-              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_fi4.FiZap, { size: 18 }),
-              existingReport ? "Refine with AI" : "Start AI Clarification",
-              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: `text-[0.65rem] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide ${!existingReport ? "bg-red-100 text-red-700" : "bg-purple-100 text-purple-700"}`, children: !existingReport ? "Used On Save" : "Optional" })
-            ]
-          }
-        ),
         showAiChat && aiProvider && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
           AiDescriptionChat,
           {
@@ -2917,7 +2957,7 @@ function DevNotesForm({
         ),
         aiDescription && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "bg-green-50 border border-green-300 rounded-lg p-3", children: [
           /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "flex justify-between items-center mb-1", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "text-xs font-bold text-green-700", children: "AI-Refined Description" }),
+            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "text-xs font-bold text-green-700", children: "AI-Reviewed Description" }),
             /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
               "button",
               {
@@ -3019,7 +3059,7 @@ function DevNotesForm({
                   },
                   type.id
                 )),
-                newTypeName.trim() && !bugReportTypes.some(
+                newTypeName.trim() && !taskTypes.some(
                   (t) => t.name.toLowerCase() === newTypeName.trim().toLowerCase()
                 ) && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
                   "div",
@@ -3443,7 +3483,7 @@ var resolveAttachedElementZIndex = (selector) => {
   return 0;
 };
 function DevNotesDot({ report }) {
-  const { deleteBugReport, bugReportTypes, updateBugReport, compensate } = useDevNotes();
+  const { deleteTask, taskTypes, updateTask, compensate } = useDevNotes();
   const [isFormOpen, setIsFormOpen] = (0, import_react8.useState)(false);
   const [isDragging, setIsDragging] = (0, import_react8.useState)(false);
   const [dragPosition, setDragPosition] = (0, import_react8.useState)(null);
@@ -3453,17 +3493,17 @@ function DevNotesDot({ report }) {
   const didDragRef = (0, import_react8.useRef)(false);
   const dotRef = (0, import_react8.useRef)(null);
   const handleDelete = async () => {
-    const success = await deleteBugReport(report.id);
+    const success = await deleteTask(report.id);
     if (success) {
       setIsFormOpen(false);
     }
   };
   const getTypeNames = (0, import_react8.useCallback)(() => {
     return report.types.map((typeId) => {
-      const type = bugReportTypes.find((t) => t.id === typeId);
+      const type = taskTypes.find((t) => t.id === typeId);
       return type?.name || "Unknown";
     }).join(", ");
-  }, [report.types, bugReportTypes]);
+  }, [report.types, taskTypes]);
   const persistPosition = (0, import_react8.useCallback)(
     async (clientX, clientY) => {
       const payload = calculateBugPositionFromPoint({
@@ -3471,7 +3511,7 @@ function DevNotesDot({ report }) {
         clientY,
         elementsToIgnore: [dotRef.current]
       });
-      await updateBugReport(report.id, {
+      await updateTask(report.id, {
         x_position: payload.x,
         y_position: payload.y,
         target_selector: payload.targetSelector,
@@ -3480,13 +3520,12 @@ function DevNotesDot({ report }) {
         page_url: normalizePageUrl(`${window.location.pathname}${window.location.search}`)
       });
     },
-    [report.id, updateBugReport]
+    [report.id, updateTask]
   );
   const anchoredPosition = useBugReportPosition(report);
   const resolvedPosition = anchoredPosition ?? resolveBugReportCoordinates(report);
   const handleDragStart = (0, import_react8.useCallback)(
     (event) => {
-      if (!event.shiftKey) return;
       event.preventDefault();
       event.stopPropagation();
       didDragRef.current = false;
@@ -3629,7 +3668,7 @@ function DevNotesDot({ report }) {
               " on ",
               createdLabel
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "text-xs text-gray-400 mt-1", children: "Click to view/edit \xB7 Hold Shift + drag to reposition" }),
+            /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "text-xs text-gray-400 mt-1", children: "Click to view/edit or drag to reposition" }),
             /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800" })
           ] }),
           pendingMove && !isDragging && /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "absolute top-full left-1/2 -translate-x-1/2 mt-2 flex gap-1.5", style: { pointerEvents: "auto" }, children: [
@@ -3697,12 +3736,12 @@ function DevNotesOverlay({
   const {
     isEnabled,
     setIsEnabled,
-    showBugsAlways,
+    showTasksAlways,
     hideResolvedClosed,
-    bugReports,
-    currentPageBugReports,
-    deleteBugReport,
-    updateBugReport,
+    tasks,
+    currentPageTasks,
+    deleteTask,
+    updateTask,
     dotContainer,
     compensate,
     role,
@@ -3729,12 +3768,12 @@ function DevNotesOverlay({
   }, [isEnabled]);
   (0, import_react9.useEffect)(() => {
     if (openReportId) {
-      const report = bugReports.find((r) => r.id === openReportId);
+      const report = tasks.find((r) => r.id === openReportId);
       if (report) {
         setOpenedReport(report);
       }
     }
-  }, [openReportId, bugReports]);
+  }, [openReportId, tasks]);
   (0, import_react9.useEffect)(() => {
     const handleKeyDown = (e) => {
       if (e.key === "Escape") {
@@ -3765,14 +3804,14 @@ function DevNotesOverlay({
   }, [onOpenReportClose]);
   const handleDeleteOpenedReport = (0, import_react9.useCallback)(async () => {
     if (openedReport) {
-      await deleteBugReport(openedReport.id);
+      await deleteTask(openedReport.id);
       setOpenedReport(null);
       onOpenReportClose?.();
     }
-  }, [openedReport, deleteBugReport, onOpenReportClose]);
+  }, [openedReport, deleteTask, onOpenReportClose]);
   const handleArchiveOpenedReport = (0, import_react9.useCallback)(async () => {
     if (!openedReport) return;
-    const archived = await updateBugReport(openedReport.id, {
+    const archived = await updateTask(openedReport.id, {
       status: "Closed",
       resolved_by: openedReport.resolved_by || user.id
     });
@@ -3780,7 +3819,7 @@ function DevNotesOverlay({
       setOpenedReport(null);
       onOpenReportClose?.();
     }
-  }, [openedReport, updateBugReport, onOpenReportClose, user.id]);
+  }, [openedReport, updateTask, onOpenReportClose, user.id]);
   (0, import_react9.useEffect)(() => {
     if (!isEnabled || showPendingForm) return void 0;
     const handleDocumentClick = (e) => {
@@ -3873,13 +3912,13 @@ function DevNotesOverlay({
     return void 0;
   }, [isDragging, handleDragMove, handleDragEnd]);
   const visiblePageReports = (0, import_react9.useMemo)(
-    () => currentPageBugReports.filter((report) => {
+    () => currentPageTasks.filter((report) => {
       if (hideResolvedClosed) {
         return report.status !== "Closed" && report.status !== "Resolved";
       }
       return true;
     }),
-    [currentPageBugReports, hideResolvedClosed]
+    [currentPageTasks, hideResolvedClosed]
   );
   const renderOpenedReportModal = () => {
     if (!openedReport) return null;
@@ -3918,11 +3957,11 @@ function DevNotesOverlay({
   };
   if (role === "none") return null;
   if (!isEnabled) {
-    if (!showBugsAlways && !openedReport) {
+    if (!showTasksAlways && !openedReport) {
       return null;
     }
     return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(import_jsx_runtime7.Fragment, { children: [
-      showBugsAlways && dotContainer && (0, import_react_dom.createPortal)(
+      showTasksAlways && dotContainer && (0, import_react_dom.createPortal)(
         /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(import_jsx_runtime7.Fragment, { children: [
           visiblePageReports.map((report) => /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { "data-bug-dot": true, style: { pointerEvents: "auto" }, children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(DevNotesDot, { report }) }, report.id)),
           renderOpenedReportModal()
@@ -3946,7 +3985,7 @@ function DevNotesOverlay({
           className: "bg-red-500 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2",
           children: [
             pendingDot && !showPendingForm ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_fi6.FiMove, {}) : /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_fi6.FiCrosshair, {}),
-            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "text-sm font-medium", children: pendingDot && !showPendingForm ? "Click pin to add details, or click elsewhere to reposition" : "Click anywhere to report a bug" })
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "text-sm font-medium", children: pendingDot && !showPendingForm ? "Click pin to add details, or click elsewhere to reposition" : "Click anywhere to create a task" })
           ]
         }
       ),
@@ -4030,13 +4069,13 @@ function DevNotesTaskList({
   title = "All Tasks"
 }) {
   const {
-    bugReports,
-    bugReportTypes,
+    tasks,
+    taskTypes,
     loading,
     userProfiles,
     unreadCounts,
-    deleteBugReport,
-    updateBugReport,
+    deleteTask,
+    updateTask,
     adapter,
     user
   } = useDevNotes();
@@ -4062,13 +4101,13 @@ function DevNotesTaskList({
     [fullName, email, emailLocalPart, profileName, profileEmail, profileEmailLocalPart].filter((value) => Boolean(value)).forEach((value) => mentionTargets.add(value));
     const collectVisibleReports = async () => {
       const baseVisibleIds = /* @__PURE__ */ new Set();
-      bugReports.forEach((report) => {
+      tasks.forEach((report) => {
         if (report.created_by === user.id || report.assigned_to === user.id) {
           baseVisibleIds.add(report.id);
         }
       });
       const messageResults = await Promise.all(
-        bugReports.map(async (report) => {
+        tasks.map(async (report) => {
           try {
             const messages = await adapter.fetchMessages(report.id);
             return { reportId: report.id, messages };
@@ -4097,7 +4136,7 @@ function DevNotesTaskList({
     return () => {
       cancelled = true;
     };
-  }, [adapter, bugReports, user.id, user.email, user.fullName, userProfiles]);
+  }, [adapter, tasks, user.id, user.email, user.fullName, userProfiles]);
   const getStaleMeta = (report) => {
     const updatedTs = new Date(report.updated_at || report.created_at).getTime();
     if (Number.isNaN(updatedTs)) {
@@ -4111,16 +4150,16 @@ function DevNotesTaskList({
     };
   };
   const stats = (0, import_react10.useMemo)(() => ({
-    total: (visibleReportIds ? bugReports.filter((r) => visibleReportIds.has(r.id)) : []).length,
-    open: (visibleReportIds ? bugReports.filter((r) => visibleReportIds.has(r.id) && r.status === "Open") : []).length,
-    inProgress: (visibleReportIds ? bugReports.filter((r) => visibleReportIds.has(r.id) && r.status === "In Progress") : []).length,
-    needsReview: (visibleReportIds ? bugReports.filter((r) => visibleReportIds.has(r.id) && r.status === "Needs Review") : []).length,
-    resolved: (visibleReportIds ? bugReports.filter((r) => visibleReportIds.has(r.id) && r.status === "Resolved") : []).length,
-    closed: (visibleReportIds ? bugReports.filter((r) => visibleReportIds.has(r.id) && r.status === "Closed") : []).length
-  }), [bugReports, visibleReportIds]);
+    total: (visibleReportIds ? tasks.filter((r) => visibleReportIds.has(r.id)) : []).length,
+    open: (visibleReportIds ? tasks.filter((r) => visibleReportIds.has(r.id) && r.status === "Open") : []).length,
+    inProgress: (visibleReportIds ? tasks.filter((r) => visibleReportIds.has(r.id) && r.status === "In Progress") : []).length,
+    needsReview: (visibleReportIds ? tasks.filter((r) => visibleReportIds.has(r.id) && r.status === "Needs Review") : []).length,
+    resolved: (visibleReportIds ? tasks.filter((r) => visibleReportIds.has(r.id) && r.status === "Resolved") : []).length,
+    closed: (visibleReportIds ? tasks.filter((r) => visibleReportIds.has(r.id) && r.status === "Closed") : []).length
+  }), [tasks, visibleReportIds]);
   const accessibleReports = (0, import_react10.useMemo)(
-    () => visibleReportIds ? bugReports.filter((report) => visibleReportIds.has(report.id)) : [],
-    [bugReports, visibleReportIds]
+    () => visibleReportIds ? tasks.filter((report) => visibleReportIds.has(report.id)) : [],
+    [tasks, visibleReportIds]
   );
   const filteredReports = (0, import_react10.useMemo)(() => {
     const severityOrder = { Critical: 0, High: 1, Medium: 2, Low: 3 };
@@ -4197,20 +4236,20 @@ function DevNotesTaskList({
         onSave: () => setSelectedReport(null),
         onCancel: () => setSelectedReport(null),
         onArchive: async () => {
-          await updateBugReport(selectedReport.id, {
+          await updateTask(selectedReport.id, {
             status: "Closed",
             resolved_by: selectedReport.resolved_by || user.id
           });
           setSelectedReport(null);
         },
         onDelete: async () => {
-          await deleteBugReport(selectedReport.id);
+          await deleteTask(selectedReport.id);
           setSelectedReport(null);
         }
       }
     ) });
   }
-  if (loading && bugReports.length === 0 || visibleReportIds === null) {
+  if (loading && tasks.length === 0 || visibleReportIds === null) {
     return /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "flex items-center justify-center py-12", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" }) });
   }
   return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "flex flex-col gap-4", children: [
@@ -4563,37 +4602,48 @@ function createDevNotesClient(options) {
     });
     return await parseResponse(response);
   };
+  const fetchTasks = async () => await request("/tasks");
+  const createTask = async (data) => await request("/tasks", {
+    method: "POST",
+    body: JSON.stringify(data)
+  });
+  const updateTask = async (id, data) => await request(`/tasks/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify(data)
+  });
+  const deleteTask = async (id) => {
+    await request(`/tasks/${encodeURIComponent(id)}`, { method: "DELETE" });
+  };
+  const fetchTaskTypes = async () => await request("/task-types");
+  const createTaskType = async (name) => await request("/task-types", {
+    method: "POST",
+    body: JSON.stringify({ name })
+  });
+  const deleteTaskType = async (id) => {
+    await request(`/task-types/${encodeURIComponent(id)}`, { method: "DELETE" });
+  };
+  const fetchTaskLists = async () => await request("/task-lists");
+  const createTaskList = async (name) => await request("/task-lists", {
+    method: "POST",
+    body: JSON.stringify({ name })
+  });
+  const fetchMessages = async (taskId) => await request(`/tasks/${encodeURIComponent(taskId)}/messages`);
+  const createMessage = async (taskId, body) => await request(`/tasks/${encodeURIComponent(taskId)}/messages`, {
+    method: "POST",
+    body: JSON.stringify({ body })
+  });
   return {
-    fetchBugReports: async () => await request("/reports"),
-    createBugReport: async (data) => await request("/reports", {
-      method: "POST",
-      body: JSON.stringify(data)
-    }),
-    updateBugReport: async (id, data) => await request(`/reports/${encodeURIComponent(id)}`, {
-      method: "PATCH",
-      body: JSON.stringify(data)
-    }),
-    deleteBugReport: async (id) => {
-      await request(`/reports/${encodeURIComponent(id)}`, { method: "DELETE" });
-    },
-    fetchBugReportTypes: async () => await request("/report-types"),
-    createBugReportType: async (name) => await request("/report-types", {
-      method: "POST",
-      body: JSON.stringify({ name })
-    }),
-    deleteBugReportType: async (id) => {
-      await request(`/report-types/${encodeURIComponent(id)}`, { method: "DELETE" });
-    },
-    fetchTaskLists: async () => await request("/task-lists"),
-    createTaskList: async (name) => await request("/task-lists", {
-      method: "POST",
-      body: JSON.stringify({ name })
-    }),
-    fetchMessages: async (bugReportId) => await request(`/reports/${encodeURIComponent(bugReportId)}/messages`),
-    createMessage: async (bugReportId, body) => await request(`/reports/${encodeURIComponent(bugReportId)}/messages`, {
-      method: "POST",
-      body: JSON.stringify({ body })
-    }),
+    fetchTasks,
+    createTask,
+    updateTask,
+    deleteTask,
+    fetchTaskTypes,
+    createTaskType,
+    deleteTaskType,
+    fetchTaskLists,
+    createTaskList,
+    fetchMessages,
+    createMessage,
     updateMessage: async (id, body) => await request(`/messages/${encodeURIComponent(id)}`, {
       method: "PATCH",
       body: JSON.stringify({ body })
@@ -4631,7 +4681,14 @@ function createDevNotesClient(options) {
     }),
     unlinkApp: async () => {
       await request("/app-link", { method: "DELETE" });
-    }
+    },
+    fetchBugReports: fetchTasks,
+    createBugReport: createTask,
+    updateBugReport: updateTask,
+    deleteBugReport: deleteTask,
+    fetchBugReportTypes: fetchTaskTypes,
+    createBugReportType: createTaskType,
+    deleteBugReportType: deleteTaskType
   };
 }
 // Annotate the CommonJS export names for ESM import in node:

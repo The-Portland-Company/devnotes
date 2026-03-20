@@ -178,11 +178,11 @@ export default function DevNotesForm({
   onArchive,
 }: DevNotesFormProps) {
   const {
-    bugReportTypes,
-    createBugReport,
-    updateBugReport,
-    addBugReportType,
-    deleteBugReportType,
+    taskTypes,
+    createTask,
+    updateTask,
+    addTaskType,
+    deleteTaskType,
     taskLists,
     createTaskList,
     loading,
@@ -234,11 +234,11 @@ export default function DevNotesForm({
 
   useEffect(() => {
     if (existingReport || selectedTypes.length > 0) return;
-    const bugType = bugReportTypes.find((t) => t.name.toLowerCase() === 'bug');
+    const bugType = taskTypes.find((t) => t.name.toLowerCase() === 'bug');
     if (bugType) {
       setSelectedTypes([bugType.id]);
     }
-  }, [bugReportTypes, existingReport, selectedTypes.length]);
+  }, [taskTypes, existingReport, selectedTypes.length]);
 
   const [severity, setSeverity] = useState<'Critical' | 'High' | 'Medium' | 'Low'>(
     existingReport?.severity || 'Medium'
@@ -429,7 +429,7 @@ export default function DevNotesForm({
     resizeBehaviorField(actualBehaviorRef.current, actualBehavior, setActualBehaviorHeight);
   }, [actualBehavior]);
 
-  const availableTypes = bugReportTypes.filter((type) => !selectedTypes.includes(type.id));
+  const availableTypes = taskTypes.filter((type) => !selectedTypes.includes(type.id));
 
   const handleTypeSelect = (typeId: string) => {
     setSelectedTypes((prev) => [...prev, typeId]);
@@ -445,7 +445,7 @@ export default function DevNotesForm({
     const trimmedValue = value.trim();
     if (!trimmedValue) return;
 
-    const existingType = bugReportTypes.find(
+    const existingType = taskTypes.find(
       (type) => type.name.toLowerCase() === trimmedValue.toLowerCase()
     );
 
@@ -459,7 +459,7 @@ export default function DevNotesForm({
       return;
     }
 
-    const newType = await addBugReportType(trimmedValue);
+    const newType = await addTaskType(trimmedValue);
     if (newType) {
       setSelectedTypes((prev) => [...prev, newType.id]);
       setNewTypeName('');
@@ -479,7 +479,7 @@ export default function DevNotesForm({
       const trimmedValue = newTypeName.trim();
       if (!trimmedValue) return;
 
-      const existingType = bugReportTypes.find(
+      const existingType = taskTypes.find(
         (type) => type.name.toLowerCase() === trimmedValue.toLowerCase()
       );
       if (existingType) {
@@ -493,10 +493,10 @@ export default function DevNotesForm({
 
   const handleDeleteType = async (typeId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    const typeToDelete = bugReportTypes.find((t) => t.id === typeId);
+    const typeToDelete = taskTypes.find((t) => t.id === typeId);
     if (typeToDelete?.is_default) return;
 
-    const success = await deleteBugReportType(typeId);
+    const success = await deleteTaskType(typeId);
     if (success) {
       setSelectedTypes((prev) => prev.filter((id) => id !== typeId));
     }
@@ -517,7 +517,7 @@ export default function DevNotesForm({
   const handleCopyLink = async () => {
     if (!existingReport?.id) return;
     try {
-      const link = `${window.location.origin}/bug-reports/${existingReport.id}`;
+      const link = `${window.location.origin}/tasks/${existingReport.id}`;
       await navigator.clipboard.writeText(link);
       setShowLinkCopied(true);
       if (linkCopyTimeoutRef.current) window.clearTimeout(linkCopyTimeoutRef.current);
@@ -529,7 +529,7 @@ export default function DevNotesForm({
 
   const handleCopyAiPayload = async () => {
     const typeNames = selectedTypes.map((typeId) => {
-      const type = bugReportTypes.find((item) => item.id === typeId);
+      const type = taskTypes.find((item) => item.id === typeId);
       return type?.name || typeId;
     });
 
@@ -617,6 +617,7 @@ export default function DevNotesForm({
     : hasBehavior
       ? [trimmedExpectedBehavior, trimmedActualBehavior].filter(Boolean).join('\n')
       : title.trim();
+  const canReviewDescriptionWithAi = Boolean(aiProvider && trimmedDescription);
 
   const saveReport = async (overrides?: {
     description?: string | null;
@@ -649,14 +650,14 @@ export default function DevNotesForm({
     let result: BugReport | null = null;
 
     if (existingReport) {
-      result = await updateBugReport(existingReport.id, {
+      result = await updateTask(existingReport.id, {
         ...reportData,
         capture_context: existingReport.capture_context || capturedContext,
         assigned_to: assignedTo,
         resolved_by: resolvedBy,
       });
     } else {
-      result = await createBugReport({
+      result = await createTask({
         ...reportData,
         capture_context: capturedContext,
       });
@@ -681,7 +682,7 @@ export default function DevNotesForm({
   };
 
   const getTypeName = (typeId: string) => {
-    const type = bugReportTypes.find((t) => t.id === typeId);
+    const type = taskTypes.find((t) => t.id === typeId);
     return type?.name || 'Unknown';
   };
 
@@ -784,7 +785,7 @@ export default function DevNotesForm({
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
             <span className="font-bold text-base">
-              {existingReport ? 'Edit Bug Report' : 'Report Bug'}
+              {existingReport ? 'Edit Task' : 'Create Task'}
             </span>
             {existingReport && (
               <span className={`text-xs px-2 py-0.5 rounded-full flex items-center gap-1 ${statusColorClass}`}>
@@ -903,15 +904,46 @@ export default function DevNotesForm({
 
           {/* Description */}
           <div className={isSuperscriptLabels ? 'relative' : ''}>
-            <label
+            <div
               className={
                 isSuperscriptLabels
-                  ? 'absolute -top-[9px] left-[10px] bg-white px-1.5 text-xs leading-4 rounded-md pointer-events-none z-[2] text-gray-700'
-                  : 'block text-sm mb-1 text-gray-700'
+                  ? 'absolute -top-[9px] left-[10px] right-[10px] z-[2] flex items-center justify-between'
+                  : 'mb-1 flex items-center justify-between'
               }
             >
-              Description
-            </label>
+              <label
+                className={
+                  isSuperscriptLabels
+                    ? 'bg-white px-1.5 text-xs leading-4 rounded-md pointer-events-none text-gray-700'
+                    : 'block text-sm text-gray-700'
+                }
+              >
+                Description
+              </label>
+              {aiProvider && (
+                <button
+                  type="button"
+                  className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition ${
+                    canReviewDescriptionWithAi
+                      ? 'bg-purple-50 text-purple-700 hover:bg-purple-100'
+                      : 'cursor-not-allowed bg-gray-100 text-gray-400'
+                  }`}
+                  onClick={() => {
+                    if (!canReviewDescriptionWithAi) return;
+                    setShowAiChat(true);
+                  }}
+                  disabled={!canReviewDescriptionWithAi}
+                  title={
+                    canReviewDescriptionWithAi
+                      ? 'Review the description with AI'
+                      : 'Add a description to review it with AI'
+                  }
+                >
+                  <FiZap size={12} />
+                  Review with AI
+                </button>
+              )}
+            </div>
             <textarea
               ref={descriptionRef}
               className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none resize-none transition-[height] duration-200 hover:border-gray-400"
@@ -1001,27 +1033,6 @@ export default function DevNotesForm({
             </p>
           )}
 
-          {/* AI Refine button */}
-          {aiProvider && !aiDescription && !showAiChat && (
-            <button
-              type="button"
-              className={`w-full py-3 rounded-xl border-2 bg-white text-purple-700 font-medium hover:bg-purple-50 flex items-center justify-center gap-2 transition-all ${
-                !existingReport
-                  ? 'border-purple-500 shadow-[0_0_0_3px_rgba(167,139,250,0.3)] hover:border-purple-600'
-                  : 'border-purple-300 shadow-[0_0_0_3px_rgba(167,139,250,0.15)] hover:border-purple-400'
-              }`}
-              onClick={() => setShowAiChat(true)}
-            >
-              <FiZap size={18} />
-              {existingReport ? 'Refine with AI' : 'Start AI Clarification'}
-              <span className={`text-[0.65rem] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide ${
-                !existingReport ? 'bg-red-100 text-red-700' : 'bg-purple-100 text-purple-700'
-              }`}>
-                {!existingReport ? 'Used On Save' : 'Optional'}
-              </span>
-            </button>
-          )}
-
           {/* AI Description Chat */}
           {showAiChat && aiProvider && (
             <AiDescriptionChat
@@ -1060,7 +1071,7 @@ export default function DevNotesForm({
           {aiDescription && (
             <div className="bg-green-50 border border-green-300 rounded-lg p-3">
               <div className="flex justify-between items-center mb-1">
-                <span className="text-xs font-bold text-green-700">AI-Refined Description</span>
+                <span className="text-xs font-bold text-green-700">AI-Reviewed Description</span>
                 <button
                   type="button"
                   className="text-xs text-red-600 hover:text-red-700"
@@ -1164,7 +1175,7 @@ export default function DevNotesForm({
                         </div>
                       ))}
                     {newTypeName.trim() &&
-                      !bugReportTypes.some(
+                      !taskTypes.some(
                         (t) => t.name.toLowerCase() === newTypeName.trim().toLowerCase()
                       ) && (
                         <div

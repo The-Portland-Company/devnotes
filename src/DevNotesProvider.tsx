@@ -13,7 +13,6 @@ import type {
   BugReport,
   BugReportType,
   BugReportCreator,
-  BugReportMessage,
   TaskList,
   DevNotesUser,
   DevNotesConfig,
@@ -28,31 +27,31 @@ import { useDevNotesContainer } from './hooks/useContainerOffset';
 type DevNotesContextValue = {
   isEnabled: boolean;
   setIsEnabled: (enabled: boolean) => void;
-  showBugsAlways: boolean;
-  setShowBugsAlways: (show: boolean) => void;
+  showTasksAlways: boolean;
+  setShowTasksAlways: (show: boolean) => void;
   hideResolvedClosed: boolean;
   setHideResolvedClosed: (hide: boolean) => void;
-  bugReports: BugReport[];
-  bugReportTypes: BugReportType[];
+  tasks: BugReport[];
+  taskTypes: BugReportType[];
   taskLists: TaskList[];
   userProfiles: Record<string, BugReportCreator>;
   unreadCounts: Record<string, number>;
-  currentPageBugReports: BugReport[];
+  currentPageTasks: BugReport[];
   collaborators: BugReportCreator[];
-  loadBugReports: () => Promise<void>;
-  loadBugReportTypes: () => Promise<void>;
+  loadTasks: () => Promise<void>;
+  loadTaskTypes: () => Promise<void>;
   loadTaskLists: () => Promise<void>;
-  createBugReport: (
+  createTask: (
     report: Omit<
       BugReport,
       'id' | 'created_at' | 'updated_at' | 'created_by' | 'resolved_at' | 'resolved_by'
     >
   ) => Promise<BugReport | null>;
-  updateBugReport: (id: string, updates: Partial<BugReport>) => Promise<BugReport | null>;
-  deleteBugReport: (id: string) => Promise<boolean>;
+  updateTask: (id: string, updates: Partial<BugReport>) => Promise<BugReport | null>;
+  deleteTask: (id: string) => Promise<boolean>;
   createTaskList: (name: string) => Promise<TaskList | null>;
-  addBugReportType: (name: string) => Promise<BugReportType | null>;
-  deleteBugReportType: (id: string) => Promise<boolean>;
+  addTaskType: (name: string) => Promise<BugReportType | null>;
+  deleteTaskType: (id: string) => Promise<boolean>;
   loadUnreadCounts: () => Promise<void>;
   markMessagesAsRead: (reportId: string, messageIds: string[]) => Promise<void>;
   user: DevNotesUser;
@@ -69,6 +68,18 @@ type DevNotesContextValue = {
   error: string | null;
   dotContainer: HTMLDivElement | null;
   compensate: (viewportX: number, viewportY: number) => { x: number; y: number };
+  bugReports: BugReport[];
+  bugReportTypes: BugReportType[];
+  currentPageBugReports: BugReport[];
+  loadBugReports: () => Promise<void>;
+  loadBugReportTypes: () => Promise<void>;
+  createBugReport: DevNotesContextValue['createTask'];
+  updateBugReport: DevNotesContextValue['updateTask'];
+  deleteBugReport: DevNotesContextValue['deleteTask'];
+  addBugReportType: DevNotesContextValue['addTaskType'];
+  deleteBugReportType: DevNotesContextValue['deleteTaskType'];
+  showBugsAlways: boolean;
+  setShowBugsAlways: (show: boolean) => void;
 };
 
 const DevNotesContext = createContext<DevNotesContextValue | null>(null);
@@ -96,7 +107,7 @@ export function DevNotesProvider({ adapter, user, config, children }: DevNotesPr
   const HIDE_RESOLVED_CLOSED_KEY = `${storagePrefix}_hide_resolved_closed`;
 
   const [isEnabled, setIsEnabled] = useState(false);
-  const [showBugsAlways, setShowBugsAlwaysState] = useState(() => {
+  const [showTasksAlways, setShowBugsAlwaysState] = useState(() => {
     try {
       return localStorage.getItem(SHOW_BUGS_ALWAYS_KEY) === 'true';
     } catch {
@@ -111,8 +122,8 @@ export function DevNotesProvider({ adapter, user, config, children }: DevNotesPr
       return true;
     }
   });
-  const [bugReports, setBugReports] = useState<BugReport[]>([]);
-  const [bugReportTypes, setBugReportTypes] = useState<BugReportType[]>([]);
+  const [tasks, setBugReports] = useState<BugReport[]>([]);
+  const [taskTypes, setBugReportTypes] = useState<BugReportType[]>([]);
   const [taskLists, setTaskLists] = useState<TaskList[]>([]);
   const [userProfiles, setUserProfiles] = useState<Record<string, BugReportCreator>>({});
   const userProfilesRef = useRef<Record<string, BugReportCreator>>({});
@@ -134,7 +145,7 @@ export function DevNotesProvider({ adapter, user, config, children }: DevNotesPr
     }
   });
 
-  const setShowBugsAlways = useCallback(
+  const setShowTasksAlways = useCallback(
     (show: boolean) => {
       setShowBugsAlwaysState(show);
       try {
@@ -194,19 +205,19 @@ export function DevNotesProvider({ adapter, user, config, children }: DevNotesPr
     };
   }, [getPagePath]);
 
-  const visibleBugReports = useMemo(() => {
+  const visibleTasks = useMemo(() => {
     if (role === 'reporter') {
-      return bugReports.filter((report) => report.created_by === user.id);
+      return tasks.filter((report) => report.created_by === user.id);
     }
     // admin and contributor see all reports
-    return bugReports;
-  }, [bugReports, role, user.id]);
+    return tasks;
+  }, [tasks, role, user.id]);
 
-  const currentPageBugReports = useMemo(() => {
+  const currentPageTasks = useMemo(() => {
     const toPath = (url: string) => url.split('#')[0].split('?')[0].replace(/\/+$/, '') || '/';
     const currentPath = toPath(currentRoutePath);
-    return visibleBugReports.filter((report) => toPath(report.page_url) === currentPath);
-  }, [visibleBugReports, currentRoutePath]);
+    return visibleTasks.filter((report) => toPath(report.page_url) === currentPath);
+  }, [visibleTasks, currentRoutePath]);
 
   useEffect(() => {
     userProfilesRef.current = userProfiles;
@@ -276,12 +287,12 @@ export function DevNotesProvider({ adapter, user, config, children }: DevNotesPr
     [adapter]
   );
 
-  const loadBugReports = useCallback(async () => {
+  const loadTasks = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const data = await adapter.fetchBugReports();
+      const data = await adapter.fetchTasks();
       setBugReports(data);
       await Promise.all([loadProfilesForReports(data), loadUnreadCounts()]);
     } catch (err: any) {
@@ -292,9 +303,9 @@ export function DevNotesProvider({ adapter, user, config, children }: DevNotesPr
     }
   }, [adapter, loadProfilesForReports, loadUnreadCounts]);
 
-  const loadBugReportTypes = useCallback(async () => {
+  const loadTaskTypes = useCallback(async () => {
     try {
-      const data = await adapter.fetchBugReportTypes();
+      const data = await adapter.fetchTaskTypes();
       setBugReportTypes(data);
     } catch (err: any) {
       console.error('[DevNotes] Error loading bug report types:', err);
@@ -338,7 +349,7 @@ export function DevNotesProvider({ adapter, user, config, children }: DevNotesPr
     }
   }, [adapter]);
 
-  const createBugReport = useCallback(
+  const createTask = useCallback(
     async (
       report: Omit<
         BugReport,
@@ -349,7 +360,7 @@ export function DevNotesProvider({ adapter, user, config, children }: DevNotesPr
       setError(null);
 
       try {
-        const data = await adapter.createBugReport(report);
+        const data = await adapter.createTask(report);
         setBugReports((prev) => [data, ...prev]);
         await loadProfilesForReports([data]);
         return data;
@@ -364,13 +375,13 @@ export function DevNotesProvider({ adapter, user, config, children }: DevNotesPr
     [adapter, loadProfilesForReports]
   );
 
-  const updateBugReport = useCallback(
+  const updateTask = useCallback(
     async (id: string, updates: Partial<BugReport>): Promise<BugReport | null> => {
       setLoading(true);
       setError(null);
 
       try {
-        const data = await adapter.updateBugReport(id, updates);
+        const data = await adapter.updateTask(id, updates);
 
         setBugReports((prev) =>
           prev.map((report) =>
@@ -383,7 +394,7 @@ export function DevNotesProvider({ adapter, user, config, children }: DevNotesPr
 
         // Fire notification callback for status changes
         if (updates.status === 'Closed' && onNotify) {
-          const originalReport = bugReports.find((r) => r.id === id);
+          const originalReport = tasks.find((r) => r.id === id);
           const authorEmail = originalReport?.creator?.email;
           const authorName = originalReport?.creator?.full_name || 'there';
           const reportTitle = originalReport?.title || data.title || 'Untitled';
@@ -414,16 +425,16 @@ export function DevNotesProvider({ adapter, user, config, children }: DevNotesPr
         setLoading(false);
       }
     },
-    [adapter, loadProfilesForReports, bugReports, user.id, onNotify]
+    [adapter, loadProfilesForReports, tasks, user.id, onNotify]
   );
 
-  const deleteBugReport = useCallback(
+  const deleteTask = useCallback(
     async (id: string): Promise<boolean> => {
       setLoading(true);
       setError(null);
 
       try {
-        await adapter.deleteBugReport(id);
+        await adapter.deleteTask(id);
         setBugReports((prev) => prev.filter((report) => report.id !== id));
         return true;
       } catch (err: any) {
@@ -454,10 +465,10 @@ export function DevNotesProvider({ adapter, user, config, children }: DevNotesPr
     [adapter]
   );
 
-  const addBugReportType = useCallback(
+  const addTaskType = useCallback(
     async (name: string): Promise<BugReportType | null> => {
       try {
-        const data = await adapter.createBugReportType(name);
+        const data = await adapter.createTaskType(name);
         setBugReportTypes((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
         return data;
       } catch (err: any) {
@@ -468,10 +479,10 @@ export function DevNotesProvider({ adapter, user, config, children }: DevNotesPr
     [adapter]
   );
 
-  const deleteBugReportType = useCallback(
+  const deleteTaskType = useCallback(
     async (id: string): Promise<boolean> => {
       try {
-        await adapter.deleteBugReportType(id);
+        await adapter.deleteTaskType(id);
         setBugReportTypes((prev) => prev.filter((type) => type.id !== id));
         return true;
       } catch (err: any) {
@@ -484,15 +495,15 @@ export function DevNotesProvider({ adapter, user, config, children }: DevNotesPr
 
   // Load data on mount
   useEffect(() => {
-    loadBugReports();
-    loadBugReportTypes();
+    loadTasks();
+    loadTaskTypes();
     loadTaskLists();
     loadCollaborators();
     refreshCapabilities();
     refreshAppLinkStatus();
   }, [
-    loadBugReports,
-    loadBugReportTypes,
+    loadTasks,
+    loadTaskTypes,
     loadTaskLists,
     loadCollaborators,
     refreshCapabilities,
@@ -503,26 +514,36 @@ export function DevNotesProvider({ adapter, user, config, children }: DevNotesPr
     () => ({
       isEnabled,
       setIsEnabled,
-      showBugsAlways,
-      setShowBugsAlways,
+      showTasksAlways,
+      setShowTasksAlways,
       hideResolvedClosed,
       setHideResolvedClosed,
-      bugReports: visibleBugReports,
-      bugReportTypes,
+      tasks: visibleTasks,
+      bugReports: visibleTasks,
+      taskTypes,
+      bugReportTypes: taskTypes,
       taskLists,
       userProfiles,
       unreadCounts,
-      currentPageBugReports,
+      currentPageTasks,
+      currentPageBugReports: currentPageTasks,
       collaborators,
-      loadBugReports,
-      loadBugReportTypes,
+      loadTasks,
+      loadBugReports: loadTasks,
+      loadTaskTypes,
+      loadBugReportTypes: loadTaskTypes,
       loadTaskLists,
-      createBugReport,
-      updateBugReport,
-      deleteBugReport,
+      createTask,
+      createBugReport: createTask,
+      updateTask,
+      updateBugReport: updateTask,
+      deleteTask,
+      deleteBugReport: deleteTask,
       createTaskList,
-      addBugReportType,
-      deleteBugReportType,
+      addTaskType,
+      addBugReportType: addTaskType,
+      deleteTaskType,
+      deleteBugReportType: deleteTaskType,
       loadUnreadCounts,
       markMessagesAsRead,
       user,
@@ -539,30 +560,32 @@ export function DevNotesProvider({ adapter, user, config, children }: DevNotesPr
       error,
       dotContainer,
       compensate,
+      showBugsAlways: showTasksAlways,
+      setShowBugsAlways: setShowTasksAlways,
     }),
     [
       isEnabled,
       setIsEnabled,
-      showBugsAlways,
-      setShowBugsAlways,
+      showTasksAlways,
+      setShowTasksAlways,
       hideResolvedClosed,
       setHideResolvedClosed,
-      visibleBugReports,
-      bugReportTypes,
+      visibleTasks,
+      taskTypes,
       taskLists,
       userProfiles,
       unreadCounts,
-      currentPageBugReports,
+      currentPageTasks,
       collaborators,
-      loadBugReports,
-      loadBugReportTypes,
+      loadTasks,
+      loadTaskTypes,
       loadTaskLists,
-      createBugReport,
-      updateBugReport,
-      deleteBugReport,
+      createTask,
+      updateTask,
+      deleteTask,
       createTaskList,
-      addBugReportType,
-      deleteBugReportType,
+      addTaskType,
+      deleteTaskType,
       loadUnreadCounts,
       markMessagesAsRead,
       user,
@@ -588,25 +611,37 @@ export function DevNotesProvider({ adapter, user, config, children }: DevNotesPr
 const defaultContextValue: DevNotesContextValue = {
   isEnabled: false,
   setIsEnabled: () => {},
+  showTasksAlways: false,
+  setShowTasksAlways: () => {},
   showBugsAlways: false,
   setShowBugsAlways: () => {},
   hideResolvedClosed: true,
   setHideResolvedClosed: () => {},
+  tasks: [],
   bugReports: [],
+  taskTypes: [],
   bugReportTypes: [],
   taskLists: [],
   userProfiles: {},
   unreadCounts: {},
+  currentPageTasks: [],
   currentPageBugReports: [],
   collaborators: [],
+  loadTasks: async () => {},
   loadBugReports: async () => {},
+  loadTaskTypes: async () => {},
   loadBugReportTypes: async () => {},
   loadTaskLists: async () => {},
+  createTask: async () => null,
   createBugReport: async () => null,
+  updateTask: async () => null,
   updateBugReport: async () => null,
+  deleteTask: async () => false,
   deleteBugReport: async () => false,
   createTaskList: async () => null,
+  addTaskType: async () => null,
   addBugReportType: async () => null,
+  deleteTaskType: async () => false,
   deleteBugReportType: async () => false,
   loadUnreadCounts: async () => {},
   markMessagesAsRead: async () => {},

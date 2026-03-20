@@ -1,6 +1,6 @@
 # @the-portland-company/devnotes
 
-Forge-backed DevNotes and bug reporting for server-capable React, Next.js, Express, and Deno apps.
+Forge-backed DevNotes task creation and management for server-capable React, Next.js, Express, and Deno apps.
 
 This package is Forge-only. It ships the Focus Forge proxy implementation for supported server runtimes and does not include a local database, SQL schema, Supabase adapter, or fallback persistence layer.
 
@@ -40,7 +40,7 @@ Then wire the generated wrapper component to your auth token source and implemen
 
 ## What this package ships
 
-- React UI components for in-app bug reporting and DevNotes overlays
+- React UI components for in-app task creation and task management overlays
 - A browser client that talks to your host app at `/api/devnotes`
 - Forge-native server helpers for Next.js, Express, and Deno
 - A `devnotes-setup` CLI that copies starter integration templates into a host app
@@ -76,6 +76,8 @@ export function AppDevNotes({ children }) {
 - `@the-portland-company/devnotes/deno`
 
 These helpers implement the DevNotes-to-Forge proxy path for you. Your app provides the authenticated host user and Forge configuration; the package owns the DevNotes routing, project discovery, and Forge API integration.
+
+The package preserves DevNotes request semantics and DevNotes-owned metadata behavior. If your host app needs additional translation between DevNotes-visible statuses and native Forge task completion state, that synchronization stays host-backend-owned.
 
 ## Host app requirements
 
@@ -167,4 +169,5 @@ export const devNotesProxy = createExpressDevNotesHandler({
 - The browser package never talks to a database directly
 - The package does not persist to Supabase, Postgres, SQLite, or any local store
 - Your host proxy must translate DevNotes operations into real Focus Forge API calls
+- Your host backend owns any native Forge completion reconciliation beyond the generic DevNotes metadata contract
 - App-level Forge credentials must stay on the server side

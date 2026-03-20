@@ -55,6 +55,118 @@ test('shared handler routes capabilities through the Next helper', async () => {
   assert.deepEqual(await response.json(), { ai: false, appLink: true });
 });
 
+test('Next helper accepts canonical /tasks routes', async () => {
+  const fetch = createFetchMock(
+    new Map([
+      [
+        'GET /api/mobile/bootstrap',
+        async () =>
+          jsonResponse({
+            data: {
+              bootstrap: {
+                projects: [{ id: 'project-1', name: 'Politogy' }],
+              },
+            },
+          }),
+      ],
+      [
+        'GET /api/mobile/tasks?projectId=project-1',
+        async () =>
+          jsonResponse({
+            data: [],
+          }),
+      ],
+      [
+        'GET /api/sync/comments?projectId=project-1',
+        async () =>
+          jsonResponse({
+            data: [
+              {
+                id: 'task-list-1',
+                created_at: '2026-01-01T00:00:00.000Z',
+                updated_at: '2026-01-01T00:00:00.000Z',
+                content:
+                  '[DEVNOTES_META:eyJraW5kIjoidGFza19saXN0IiwibmFtZSI6IkdlbmVyYWwiLCJzaGFyZV9zbHVnIjoiZ2VuZXJhbC1zbHVnIiwiaXNfZGVmYXVsdCI6dHJ1ZSwiY3JlYXRlZF9ieSI6InVzZXItMSIsImNyZWF0ZWRfYXQiOiIyMDI2LTAxLTAxVDAwOjAwOjAwLjAwMFoiLCJ1cGRhdGVkX2F0IjoiMjAyNi0wMS0wMVQwMDowMDowMC4wMDBaIn0=]',
+              },
+              {
+                id: 'type-1',
+                created_at: '2026-01-01T00:00:00.000Z',
+                updated_at: '2026-01-01T00:00:00.000Z',
+                content:
+                  '[DEVNOTES_META:eyJraW5kIjoicmVwb3J0X3R5cGUiLCJuYW1lIjoiQnVnIiwiaXNfZGVmYXVsdCI6dHJ1ZSwiY3JlYXRlZF9ieSI6InVzZXItMSIsImNyZWF0ZWRfYXQiOiIyMDI2LTAxLTAxVDAwOjAwOjAwLjAwMFoifQ==]',
+              },
+            ],
+          }),
+      ],
+    ])
+  );
+
+  const handler = createNextDevNotesHandler(createOptions({ fetch }));
+  const response = await handler(new Request('https://app.example.com/api/devnotes/tasks'));
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), []);
+});
+
+test('Next helper accepts canonical /task-types routes', async () => {
+  const fetch = createFetchMock(
+    new Map([
+      [
+        'GET /api/mobile/bootstrap',
+        async () =>
+          jsonResponse({
+            data: {
+              bootstrap: {
+                projects: [{ id: 'project-1', name: 'Politogy' }],
+              },
+            },
+          }),
+      ],
+      [
+        'GET /api/mobile/tasks?projectId=project-1',
+        async () =>
+          jsonResponse({
+            data: [],
+          }),
+      ],
+      [
+        'GET /api/sync/comments?projectId=project-1',
+        async () =>
+          jsonResponse({
+            data: [
+              {
+                id: 'type-1',
+                created_at: '2026-01-01T00:00:00.000Z',
+                updated_at: '2026-01-01T00:00:00.000Z',
+                content:
+                  '[DEVNOTES_META:eyJraW5kIjoicmVwb3J0X3R5cGUiLCJuYW1lIjoiQnVnIiwiaXNfZGVmYXVsdCI6dHJ1ZSwiY3JlYXRlZF9ieSI6InVzZXItMSIsImNyZWF0ZWRfYXQiOiIyMDI2LTAxLTAxVDAwOjAwOjAwLjAwMFoifQ==]',
+              },
+              {
+                id: 'task-list-1',
+                created_at: '2026-01-01T00:00:00.000Z',
+                updated_at: '2026-01-01T00:00:00.000Z',
+                content:
+                  '[DEVNOTES_META:eyJraW5kIjoidGFza19saXN0IiwibmFtZSI6IkdlbmVyYWwiLCJzaGFyZV9zbHVnIjoiZ2VuZXJhbC1zbHVnIiwiaXNfZGVmYXVsdCI6dHJ1ZSwiY3JlYXRlZF9ieSI6InVzZXItMSIsImNyZWF0ZWRfYXQiOiIyMDI2LTAxLTAxVDAwOjAwOjAwLjAwMFoiLCJ1cGRhdGVkX2F0IjoiMjAyNi0wMS0wMVQwMDowMDowMC4wMDBaIn0=]',
+              },
+            ],
+          }),
+      ],
+    ])
+  );
+
+  const handler = createNextDevNotesHandler(createOptions({ fetch }));
+  const response = await handler(new Request('https://app.example.com/api/devnotes/task-types'));
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), [
+    {
+      id: 'type-1',
+      name: 'Bug',
+      is_default: true,
+      created_by: 'user-1',
+      created_at: '2026-01-01T00:00:00.000Z',
+    },
+  ]);
+});
+
 test('Deno handler returns discovered projects when projectName is unset', async () => {
   const fetch = createFetchMock(
     new Map([

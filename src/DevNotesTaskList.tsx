@@ -45,13 +45,13 @@ export default function DevNotesTaskList({
   title = 'All Tasks',
 }: DevNotesTaskListProps) {
   const {
-    bugReports,
-    bugReportTypes,
+    tasks,
+    taskTypes,
     loading,
     userProfiles,
     unreadCounts,
-    deleteBugReport,
-    updateBugReport,
+    deleteTask,
+    updateTask,
     adapter,
     user,
   } = useDevNotes();
@@ -85,14 +85,14 @@ export default function DevNotesTaskList({
     const collectVisibleReports = async () => {
       const baseVisibleIds = new Set<string>();
 
-      bugReports.forEach((report) => {
+      tasks.forEach((report) => {
         if (report.created_by === user.id || report.assigned_to === user.id) {
           baseVisibleIds.add(report.id);
         }
       });
 
       const messageResults = await Promise.all(
-        bugReports.map(async (report) => {
+        tasks.map(async (report) => {
           try {
             const messages = await adapter.fetchMessages(report.id);
             return { reportId: report.id, messages };
@@ -126,7 +126,7 @@ export default function DevNotesTaskList({
     return () => {
       cancelled = true;
     };
-  }, [adapter, bugReports, user.id, user.email, user.fullName, userProfiles]);
+  }, [adapter, tasks, user.id, user.email, user.fullName, userProfiles]);
 
   const getStaleMeta = (report: BugReport) => {
     const updatedTs = new Date(report.updated_at || report.created_at).getTime();
@@ -142,17 +142,17 @@ export default function DevNotesTaskList({
   };
 
   const stats = useMemo(() => ({
-    total: (visibleReportIds ? bugReports.filter((r) => visibleReportIds.has(r.id)) : []).length,
-    open: (visibleReportIds ? bugReports.filter((r) => visibleReportIds.has(r.id) && r.status === 'Open') : []).length,
-    inProgress: (visibleReportIds ? bugReports.filter((r) => visibleReportIds.has(r.id) && r.status === 'In Progress') : []).length,
-    needsReview: (visibleReportIds ? bugReports.filter((r) => visibleReportIds.has(r.id) && r.status === 'Needs Review') : []).length,
-    resolved: (visibleReportIds ? bugReports.filter((r) => visibleReportIds.has(r.id) && r.status === 'Resolved') : []).length,
-    closed: (visibleReportIds ? bugReports.filter((r) => visibleReportIds.has(r.id) && r.status === 'Closed') : []).length,
-  }), [bugReports, visibleReportIds]);
+    total: (visibleReportIds ? tasks.filter((r) => visibleReportIds.has(r.id)) : []).length,
+    open: (visibleReportIds ? tasks.filter((r) => visibleReportIds.has(r.id) && r.status === 'Open') : []).length,
+    inProgress: (visibleReportIds ? tasks.filter((r) => visibleReportIds.has(r.id) && r.status === 'In Progress') : []).length,
+    needsReview: (visibleReportIds ? tasks.filter((r) => visibleReportIds.has(r.id) && r.status === 'Needs Review') : []).length,
+    resolved: (visibleReportIds ? tasks.filter((r) => visibleReportIds.has(r.id) && r.status === 'Resolved') : []).length,
+    closed: (visibleReportIds ? tasks.filter((r) => visibleReportIds.has(r.id) && r.status === 'Closed') : []).length,
+  }), [tasks, visibleReportIds]);
 
   const accessibleReports = useMemo(
-    () => (visibleReportIds ? bugReports.filter((report) => visibleReportIds.has(report.id)) : []),
-    [bugReports, visibleReportIds]
+    () => (visibleReportIds ? tasks.filter((report) => visibleReportIds.has(report.id)) : []),
+    [tasks, visibleReportIds]
   );
 
   const filteredReports = useMemo(() => {
@@ -245,14 +245,14 @@ export default function DevNotesTaskList({
           onSave={() => setSelectedReport(null)}
           onCancel={() => setSelectedReport(null)}
           onArchive={async () => {
-            await updateBugReport(selectedReport.id, {
+            await updateTask(selectedReport.id, {
               status: 'Closed',
               resolved_by: selectedReport.resolved_by || user.id,
             });
             setSelectedReport(null);
           }}
           onDelete={async () => {
-            await deleteBugReport(selectedReport.id);
+            await deleteTask(selectedReport.id);
             setSelectedReport(null);
           }}
         />
@@ -260,7 +260,7 @@ export default function DevNotesTaskList({
     );
   }
 
-  if ((loading && bugReports.length === 0) || visibleReportIds === null) {
+  if ((loading && tasks.length === 0) || visibleReportIds === null) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />

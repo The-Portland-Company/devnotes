@@ -11,17 +11,18 @@ export { default as DevNotesDiscussion } from './DevNotesDiscussion';
 export { default as DevNotesTaskList } from './DevNotesTaskList';
 
 // Client
-export type { BugReportCreateData } from './adapters/types';
+export type { TaskCreateData } from './adapters/types';
 export { createDevNotesClient } from './client';
+export type { BugReportCreateData } from './adapters/types';
 
 // Types
 export type {
-  BugReport,
-  BugReportType,
-  BugReportCreator,
-  BugReportMessage,
+  Task,
+  TaskType,
+  TaskCreator,
+  TaskMessage,
   TaskList,
-  BugCaptureContext,
+  TaskCaptureContext,
   DevNotesUser,
   DevNotesConfig,
   DevNotesRole,
@@ -33,6 +34,11 @@ export type {
   AiProvider,
   AiConversationMessage,
   AiAssistResult,
+  BugReport,
+  BugReportType,
+  BugReportCreator,
+  BugReportMessage,
+  BugCaptureContext,
 } from './types';
 
 // Utils

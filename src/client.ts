@@ -1,15 +1,15 @@
 import type {
-  BugReport,
-  BugReportCreator,
-  BugReportMessage,
-  BugReportType,
+  Task,
+  TaskCreator,
+  TaskMessage,
+  TaskType,
   DevNotesAppLinkStatus,
   DevNotesCapabilities,
   DevNotesClientOptions,
   DevNotesLinkAppInput,
   TaskList,
 } from './types';
-import type { BugReportCreateData, DevNotesClientAdapter } from './adapters/types';
+import type { TaskCreateData, DevNotesClientAdapter } from './adapters/types';
 
 const DEFAULT_BASE_PATH = '/api/devnotes';
 
@@ -80,45 +80,57 @@ export function createDevNotesClient(options: DevNotesClientOptions): DevNotesCl
     return await parseResponse<T>(response);
   };
 
-  return {
-    fetchBugReports: async () => await request<BugReport[]>('/reports'),
-    createBugReport: async (data) =>
-      await request<BugReport>('/reports', {
+  const fetchTasks = async () => await request<Task[]>('/tasks');
+  const createTask = async (data: TaskCreateData) =>
+      await request<Task>('/tasks', {
         method: 'POST',
         body: JSON.stringify(data),
-      }),
-    updateBugReport: async (id, data) =>
-      await request<BugReport>(`/reports/${encodeURIComponent(id)}`, {
+      });
+  const updateTask = async (id: string, data: Partial<Task>) =>
+      await request<Task>(`/tasks/${encodeURIComponent(id)}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
-      }),
-    deleteBugReport: async (id) => {
-      await request<void>(`/reports/${encodeURIComponent(id)}`, { method: 'DELETE' });
-    },
-    fetchBugReportTypes: async () => await request<BugReportType[]>('/report-types'),
-    createBugReportType: async (name) =>
-      await request<BugReportType>('/report-types', {
+      });
+  const deleteTask = async (id: string) => {
+      await request<void>(`/tasks/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    };
+  const fetchTaskTypes = async () => await request<TaskType[]>('/task-types');
+  const createTaskType = async (name: string) =>
+      await request<TaskType>('/task-types', {
         method: 'POST',
         body: JSON.stringify({ name }),
-      }),
-    deleteBugReportType: async (id) => {
-      await request<void>(`/report-types/${encodeURIComponent(id)}`, { method: 'DELETE' });
-    },
-    fetchTaskLists: async () => await request<TaskList[]>('/task-lists'),
-    createTaskList: async (name) =>
+      });
+  const deleteTaskType = async (id: string) => {
+      await request<void>(`/task-types/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    };
+  const fetchTaskLists = async () => await request<TaskList[]>('/task-lists');
+  const createTaskList = async (name: string) =>
       await request<TaskList>('/task-lists', {
         method: 'POST',
         body: JSON.stringify({ name }),
-      }),
-    fetchMessages: async (bugReportId) =>
-      await request<BugReportMessage[]>(`/reports/${encodeURIComponent(bugReportId)}/messages`),
-    createMessage: async (bugReportId, body) =>
-      await request<BugReportMessage>(`/reports/${encodeURIComponent(bugReportId)}/messages`, {
+      });
+  const fetchMessages = async (taskId: string) =>
+      await request<TaskMessage[]>(`/tasks/${encodeURIComponent(taskId)}/messages`);
+  const createMessage = async (taskId: string, body: string) =>
+      await request<TaskMessage>(`/tasks/${encodeURIComponent(taskId)}/messages`, {
         method: 'POST',
         body: JSON.stringify({ body }),
-      }),
+      });
+
+  return {
+    fetchTasks,
+    createTask,
+    updateTask,
+    deleteTask,
+    fetchTaskTypes,
+    createTaskType,
+    deleteTaskType,
+    fetchTaskLists,
+    createTaskList,
+    fetchMessages,
+    createMessage,
     updateMessage: async (id, body) =>
-      await request<BugReportMessage>(`/messages/${encodeURIComponent(id)}`, {
+      await request<TaskMessage>(`/messages/${encodeURIComponent(id)}`, {
         method: 'PATCH',
         body: JSON.stringify({ body }),
       }),
@@ -133,12 +145,12 @@ export function createDevNotesClient(options: DevNotesClientOptions): DevNotesCl
     },
     fetchUnreadCounts: async () => await request<Record<string, number>>('/unread-counts'),
     fetchCollaborators: async (ids) =>
-      await request<BugReportCreator[]>('/collaborators', {
+      await request<TaskCreator[]>('/collaborators', {
         query: ids && ids.length ? { ids: ids.join(',') } : undefined,
       }),
     fetchProfiles: async (ids) => {
       if (ids.length === 0) return [];
-      return await request<BugReportCreator[]>('/collaborators', {
+      return await request<TaskCreator[]>('/collaborators', {
         query: { ids: ids.join(',') },
       });
     },
@@ -159,5 +171,12 @@ export function createDevNotesClient(options: DevNotesClientOptions): DevNotesCl
     unlinkApp: async () => {
       await request<void>('/app-link', { method: 'DELETE' });
     },
+    fetchBugReports: fetchTasks,
+    createBugReport: createTask,
+    updateBugReport: updateTask,
+    deleteBugReport: deleteTask,
+    fetchBugReportTypes: fetchTaskTypes,
+    createBugReportType: createTaskType,
+    deleteBugReportType: deleteTaskType,
   };
 }

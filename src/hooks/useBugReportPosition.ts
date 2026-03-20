@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { BugReport } from '../types';
+import type { Task } from '../types';
 import { resolveBugReportCoordinates } from '../utils/bugAnchors';
 
 type PositionSubscriber = () => void;
@@ -68,7 +68,7 @@ const subscribeToPositionUpdates = (subscriber: PositionSubscriber) => {
   };
 };
 
-export const useBugReportPosition = (report: BugReport | null) => {
+export const useBugReportPosition = (report: Task | null) => {
   const calculate = useCallback(() => {
     if (!report) return null;
     return resolveBugReportCoordinates(report);

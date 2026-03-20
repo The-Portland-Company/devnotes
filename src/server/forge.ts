@@ -1,10 +1,10 @@
-import type { BugReportCreateData } from '../adapters/types';
+import type { TaskCreateData } from '../adapters/types';
 import type {
-  BugCaptureContext,
-  BugReport,
-  BugReportCreator,
-  BugReportMessage,
-  BugReportType,
+  TaskCaptureContext,
+  Task,
+  TaskCreator,
+  TaskMessage,
+  TaskType,
   DevNotesAppLinkStatus,
   DevNotesCapabilities,
   DevNotesProjectSummary,
@@ -377,6 +377,14 @@ function normalizeBaseUrl(baseUrl: string): string {
   return baseUrl.trim().replace(/\/+$/, '');
 }
 
+function isTaskResource(resource: string | undefined): boolean {
+  return resource === 'tasks' || resource === 'reports';
+}
+
+function isTaskTypeResource(resource: string | undefined): boolean {
+  return resource === 'task-types' || resource === 'report-types';
+}
+
 function normalizeUser(user: DevNotesServerUser | null): DevNotesServerUser | null {
   if (!user?.id) return null;
   return {
@@ -387,7 +395,7 @@ function normalizeUser(user: DevNotesServerUser | null): DevNotesServerUser | nu
   };
 }
 
-function toCreatorRecord(user: DevNotesResolvedUser): BugReportCreator {
+function toCreatorRecord(user: DevNotesResolvedUser): TaskCreator {
   return {
     id: user.id,
     email: user.email == null ? null : user.email,
@@ -489,10 +497,10 @@ function toProjectDiscovery(discovery: ForgeProjectDiscoveryResult): DevNotesApp
 
 function buildKnownUsers(
   metadataComments: DevNotesParsedComment[],
-  reports: BugReport[],
+  reports: Task[],
   currentUser: DevNotesServerUser
-): Map<string, BugReportCreator> {
-  const users = new Map<string, BugReportCreator>();
+): Map<string, TaskCreator> {
+  const users = new Map<string, TaskCreator>();
   users.set(currentUser.id, {
     id: currentUser.id,
     email: currentUser.email ?? null,
@@ -536,7 +544,7 @@ function buildKnownUsers(
 async function maybeResolveUsers(
   resolveUsers: DevNotesServerOptions['resolveUsers'],
   ids: string[]
-): Promise<BugReportCreator[]> {
+): Promise<TaskCreator[]> {
   if (!resolveUsers || ids.length === 0) return [];
   const resolved = await resolveUsers(ids);
   return resolved
@@ -599,7 +607,7 @@ function buildTaskListsFromMetadata(comments: DevNotesParsedComment[]): TaskList
     }));
 }
 
-function buildReportTypesFromMetadata(comments: DevNotesParsedComment[]): BugReportType[] {
+function buildReportTypesFromMetadata(comments: DevNotesParsedComment[]): TaskType[] {
   return comments
     .filter((item) => item.meta.kind === 'report_type')
     .sort((a, b) => String(a.meta.name || '').localeCompare(String(b.meta.name || '')))
@@ -619,7 +627,7 @@ function buildDevNotesReportFromForgeTask(
   task: Record<string, unknown>,
   overrides: Record<string, unknown> | null,
   defaultTaskListId: string
-): BugReport | null {
+): Task | null {
   if (!isDevNotesForgeTask(task)) return null;
 
   const taskId = typeof task.id === 'string' ? task.id.trim() : '';
@@ -639,7 +647,7 @@ function buildDevNotesReportFromForgeTask(
   const creatorEmail = String(combined.creator_email || '').trim() || null;
   const createdBy = String(combined.created_by || '').trim() || `forge:${taskId}:creator`;
   const taskCompleted = normalizeForgeBoolean(task.completed);
-  const status = String(combined.status || (taskCompleted ? 'Resolved' : 'Open')) as BugReport['status'];
+  const status = String(combined.status || (taskCompleted ? 'Resolved' : 'Open')) as Task['status'];
   const description =
     overrides && Object.prototype.hasOwnProperty.call(overrides, 'description')
       ? overrides.description === null
@@ -666,7 +674,7 @@ function buildDevNotesReportFromForgeTask(
         ? null
         : normalizeForgeNumber(combined.target_relative_y),
     types: normalizeForgeStringArray(combined.types),
-    severity: String(combined.severity || 'Medium') as BugReport['severity'],
+    severity: String(combined.severity || 'Medium') as Task['severity'],
     title: String(overrides?.title || task.name || ''),
     description,
     expected_behavior:
@@ -679,7 +687,7 @@ function buildDevNotesReportFromForgeTask(
         : String(combined.actual_behavior),
     capture_context:
       combined.capture_context && typeof combined.capture_context === 'object'
-        ? (combined.capture_context as BugCaptureContext)
+        ? (combined.capture_context as TaskCaptureContext)
         : null,
     response:
       combined.response === null || combined.response === undefined ? null : String(combined.response),
@@ -1013,7 +1021,7 @@ function buildAppLinkStatus(
   };
 }
 
-function sortCreators(creators: BugReportCreator[]): BugReportCreator[] {
+function sortCreators(creators: TaskCreator[]): TaskCreator[] {
   return creators.sort((left, right) => {
     const a = left.full_name || left.email || left.id;
     const b = right.full_name || right.email || right.id;
@@ -1171,7 +1179,7 @@ export function createDevNotesServerHandler(options: DevNotesServerOptions) {
         }
       });
 
-      if (resource === 'reports' && method === 'GET' && !resourceId) {
+      if (isTaskResource(resource) && method === 'GET' && !resourceId) {
         const tasks = await fetchForgeTasksForProject(forgeContext, project.id);
         const reports = tasks
           .map((task) =>
@@ -1181,12 +1189,12 @@ export function createDevNotesServerHandler(options: DevNotesServerOptions) {
               defaultTaskListId
             )
           )
-          .filter((item): item is BugReport => Boolean(item))
+          .filter((item): item is Task => Boolean(item))
           .filter((item) => !deletedReportIds.has(String(item.id)));
         return await jsonResponse(request, options.corsHeaders, reports);
       }
 
-      if (resource === 'reports' && method === 'POST' && !resourceId) {
+      if (isTaskResource(resource) && method === 'POST' && !resourceId) {
         const payload: Record<string, unknown> = {
           ...body,
           created_by: user.id,
@@ -1240,7 +1248,7 @@ export function createDevNotesServerHandler(options: DevNotesServerOptions) {
         return await jsonResponse(request, options.corsHeaders, report);
       }
 
-      if (resource === 'reports' && resourceId && !nested && method === 'PATCH') {
+      if (isTaskResource(resource) && resourceId && !nested && method === 'PATCH') {
         const reportId = decodeURIComponent(resourceId);
         const tasks = await fetchForgeTasksForProject(forgeContext, project.id);
         const existingTask = tasks.find((task) => String(task.id || '') === reportId);
@@ -1248,7 +1256,7 @@ export function createDevNotesServerHandler(options: DevNotesServerOptions) {
           return await jsonResponse(
             request,
             options.corsHeaders,
-            { error: 'Bug report not found' },
+            { error: 'Task not found' },
             404
           );
         }
@@ -1261,7 +1269,7 @@ export function createDevNotesServerHandler(options: DevNotesServerOptions) {
           return await jsonResponse(
             request,
             options.corsHeaders,
-            { error: 'Bug report not found' },
+            { error: 'Task not found' },
             404
           );
         }
@@ -1279,6 +1287,7 @@ export function createDevNotesServerHandler(options: DevNotesServerOptions) {
               ? body.resolved_by || user.id
               : existing.resolved_by,
         };
+
         const existingPatch = metadataComments.find(
           (comment) =>
             comment.meta.kind === 'report_patch' && String(comment.meta.reportId || '') === reportId
@@ -1299,7 +1308,7 @@ export function createDevNotesServerHandler(options: DevNotesServerOptions) {
         return await jsonResponse(request, options.corsHeaders, merged);
       }
 
-      if (resource === 'reports' && resourceId && !nested && method === 'DELETE') {
+      if (isTaskResource(resource) && resourceId && !nested && method === 'DELETE') {
         const reportId = decodeURIComponent(resourceId);
         const existingDelete = metadataComments.find(
           (comment) =>
@@ -1323,7 +1332,7 @@ export function createDevNotesServerHandler(options: DevNotesServerOptions) {
         return await jsonResponse(request, options.corsHeaders, { success: true });
       }
 
-      if (resource === 'reports' && resourceId && nested === 'messages' && method === 'GET') {
+      if (isTaskResource(resource) && resourceId && nested === 'messages' && method === 'GET') {
         const reportId = decodeURIComponent(resourceId);
         const projectMessages = metadataComments
           .filter(
@@ -1331,9 +1340,9 @@ export function createDevNotesServerHandler(options: DevNotesServerOptions) {
               comment.meta.kind === 'message' && String(comment.meta.reportId || '') === reportId
           )
           .sort((a, b) => a.created_at.localeCompare(b.created_at))
-          .map((comment): BugReportMessage => ({
+          .map((comment): TaskMessage => ({
             id: comment.id,
-            bug_report_id: reportId,
+            task_id: reportId,
             author_id: String(comment.meta.authorId || comment.user_id || ''),
             body: comment.body,
             created_at: comment.created_at,
@@ -1353,9 +1362,9 @@ export function createDevNotesServerHandler(options: DevNotesServerOptions) {
 
         const legacyTaskMessages = (await fetchForgeTaskComments(forgeContext, reportId))
           .filter((comment) => String(comment.project_id || '') === '')
-          .map((comment): BugReportMessage => ({
+          .map((comment): TaskMessage => ({
             id: String(comment.id || ''),
-            bug_report_id: reportId,
+            task_id: reportId,
             author_id: String(comment.user_id || ''),
             body: String(comment.content || ''),
             created_at: String(comment.created_at || new Date().toISOString()),
@@ -1379,7 +1388,7 @@ export function createDevNotesServerHandler(options: DevNotesServerOptions) {
         return await jsonResponse(request, options.corsHeaders, merged);
       }
 
-      if (resource === 'reports' && resourceId && nested === 'messages' && method === 'POST') {
+      if (isTaskResource(resource) && resourceId && nested === 'messages' && method === 'POST') {
         const reportId = decodeURIComponent(resourceId);
         const created = await createForgeProjectComment(
           forgeContext,
@@ -1402,9 +1411,9 @@ export function createDevNotesServerHandler(options: DevNotesServerOptions) {
             500
           );
         }
-        const message: BugReportMessage = {
+        const message: TaskMessage = {
           id: parsed.id,
-          bug_report_id: reportId,
+          task_id: reportId,
           author_id: String(parsed.meta.authorId || user.id),
           body: parsed.body,
           created_at: parsed.created_at,
@@ -1424,7 +1433,7 @@ export function createDevNotesServerHandler(options: DevNotesServerOptions) {
         return await jsonResponse(request, options.corsHeaders, message);
       }
 
-      if (resource === 'report-types' && method === 'GET' && !resourceId) {
+      if (isTaskTypeResource(resource) && method === 'GET' && !resourceId) {
         return await jsonResponse(
           request,
           options.corsHeaders,
@@ -1432,7 +1441,7 @@ export function createDevNotesServerHandler(options: DevNotesServerOptions) {
         );
       }
 
-      if (resource === 'report-types' && method === 'POST' && !resourceId) {
+      if (isTaskTypeResource(resource) && method === 'POST' && !resourceId) {
         const created = await createForgeProjectComment(forgeContext, project.id, '', {
           kind: 'report_type',
           name: String(body.name || '').trim(),
@@ -1447,10 +1456,10 @@ export function createDevNotesServerHandler(options: DevNotesServerOptions) {
           is_default: false,
           created_by: user.id,
           created_at: parsed?.created_at || new Date().toISOString(),
-        } satisfies BugReportType);
+        } satisfies TaskType);
       }
 
-      if (resource === 'report-types' && resourceId && method === 'DELETE') {
+      if (isTaskTypeResource(resource) && resourceId && method === 'DELETE') {
         await deleteForgeProjectComment(forgeContext, decodeURIComponent(resourceId));
         return await jsonResponse(request, options.corsHeaders, { success: true });
       }
@@ -1527,7 +1536,7 @@ export function createDevNotesServerHandler(options: DevNotesServerOptions) {
         const updatedParsed = parseDevNotesProjectComment(updated);
         return await jsonResponse(request, options.corsHeaders, {
           id: updatedParsed?.id || decodeURIComponent(resourceId),
-          bug_report_id: String(parsed.meta.reportId || ''),
+          task_id: String(parsed.meta.reportId || ''),
           author_id: String(parsed.meta.authorId || parsed.user_id || ''),
           body: updatedParsed?.body || String(body.body || '').trim(),
           created_at: updatedParsed?.created_at || parsed.created_at,
@@ -1543,7 +1552,7 @@ export function createDevNotesServerHandler(options: DevNotesServerOptions) {
                 ? null
                 : String(parsed.meta.authorName),
           },
-        } satisfies BugReportMessage);
+        } satisfies TaskMessage);
       }
 
       if (resource === 'messages' && resourceId && method === 'DELETE') {
@@ -1574,7 +1583,7 @@ export function createDevNotesServerHandler(options: DevNotesServerOptions) {
               defaultTaskListId
             )
           )
-          .filter((item): item is BugReport => Boolean(item));
+          .filter((item): item is Task => Boolean(item));
 
         const knownUsers = buildKnownUsers(metadataComments, reports, user);
         const ids = (url.searchParams.get('ids') || '')
@@ -1587,7 +1596,7 @@ export function createDevNotesServerHandler(options: DevNotesServerOptions) {
         const collaborators = ids.length > 0
           ? ids
               .map((id) => knownUsers.get(id))
-              .filter((value): value is BugReportCreator => Boolean(value))
+              .filter((value): value is TaskCreator => Boolean(value))
           : Array.from(knownUsers.values());
 
         return await jsonResponse(

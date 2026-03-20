@@ -1,18 +1,18 @@
 import { D as DevNotesCapabilities, a as DevNotesAppLinkStatus, c as DevNotesLinkAppInput } from './types-CrmObeqp.js';
 
-type BugReportCreator = {
+type TaskCreator = {
     id: string;
     email: string | null;
     full_name: string | null;
 };
-type BugReportType = {
+type TaskType = {
     id: string;
     name: string;
     is_default: boolean;
     created_by: string | null;
     created_at: string;
 };
-type BugCaptureContext = {
+type TaskCaptureContext = {
     captured_at: string;
     route_label: string;
     path: string;
@@ -29,7 +29,7 @@ type BugCaptureContext = {
     };
     timezone: string | null;
 };
-type BugReport = {
+type Task = {
     id: string;
     task_list_id: string;
     page_url: string;
@@ -44,11 +44,11 @@ type BugReport = {
     description: string | null;
     expected_behavior?: string | null;
     actual_behavior?: string | null;
-    capture_context?: BugCaptureContext | null;
+    capture_context?: TaskCaptureContext | null;
     response: string | null;
     status: 'Open' | 'In Progress' | 'Needs Review' | 'Resolved' | 'Closed';
     created_by: string;
-    creator?: BugReportCreator;
+    creator?: TaskCreator;
     assigned_to: string | null;
     resolved_at: string | null;
     resolved_by: string | null;
@@ -58,14 +58,15 @@ type BugReport = {
     created_at: string;
     updated_at: string;
 };
-type BugReportMessage = {
+type TaskMessage = {
     id: string;
-    bug_report_id: string;
+    task_id: string;
+    bug_report_id?: string;
     author_id: string;
     body: string;
     created_at: string;
     updated_at: string;
-    author?: BugReportCreator;
+    author?: TaskCreator;
 };
 type TaskList = {
     id: string;
@@ -115,7 +116,7 @@ type AiProvider = {
             target_selector?: string;
             expected_behavior?: string;
             actual_behavior?: string;
-            capture_context?: BugCaptureContext;
+            capture_context?: TaskCaptureContext;
         };
     }): Promise<AiAssistResult>;
 };
@@ -138,30 +139,43 @@ type DevNotesConfig = {
     /** Role of the current user for access control */
     role?: DevNotesRole;
 };
+type BugReportCreator = TaskCreator;
+type BugReportType = TaskType;
+type BugCaptureContext = TaskCaptureContext;
+type BugReport = Task;
+type BugReportMessage = TaskMessage;
 
-type BugReportCreateData = Omit<BugReport, 'id' | 'created_at' | 'updated_at' | 'created_by' | 'resolved_at' | 'resolved_by' | 'creator'>;
+type TaskCreateData = Omit<Task, 'id' | 'created_at' | 'updated_at' | 'created_by' | 'resolved_at' | 'resolved_by' | 'creator'>;
 interface DevNotesClientAdapter {
-    fetchBugReports(): Promise<BugReport[]>;
-    createBugReport(data: BugReportCreateData): Promise<BugReport>;
-    updateBugReport(id: string, data: Partial<BugReport>): Promise<BugReport>;
-    deleteBugReport(id: string): Promise<void>;
-    fetchBugReportTypes(): Promise<BugReportType[]>;
-    createBugReportType(name: string): Promise<BugReportType>;
-    deleteBugReportType(id: string): Promise<void>;
+    fetchTasks(): Promise<Task[]>;
+    createTask(data: TaskCreateData): Promise<Task>;
+    updateTask(id: string, data: Partial<Task>): Promise<Task>;
+    deleteTask(id: string): Promise<void>;
+    fetchTaskTypes(): Promise<TaskType[]>;
+    createTaskType(name: string): Promise<TaskType>;
+    deleteTaskType(id: string): Promise<void>;
     fetchTaskLists(): Promise<TaskList[]>;
     createTaskList(name: string): Promise<TaskList>;
-    fetchMessages(bugReportId: string): Promise<BugReportMessage[]>;
-    createMessage(bugReportId: string, body: string): Promise<BugReportMessage>;
-    updateMessage(id: string, body: string): Promise<BugReportMessage>;
+    fetchMessages(taskId: string): Promise<TaskMessage[]>;
+    createMessage(taskId: string, body: string): Promise<TaskMessage>;
+    updateMessage(id: string, body: string): Promise<TaskMessage>;
     deleteMessage(id: string): Promise<void>;
     markMessagesAsRead(messageIds: string[]): Promise<void>;
     fetchUnreadCounts(): Promise<Record<string, number>>;
-    fetchCollaborators(ids?: string[]): Promise<BugReportCreator[]>;
-    fetchProfiles(ids: string[]): Promise<BugReportCreator[]>;
+    fetchCollaborators(ids?: string[]): Promise<TaskCreator[]>;
+    fetchProfiles(ids: string[]): Promise<TaskCreator[]>;
     fetchCapabilities(): Promise<DevNotesCapabilities>;
     getAppLinkStatus(): Promise<DevNotesAppLinkStatus>;
     linkApp(input: DevNotesLinkAppInput): Promise<DevNotesAppLinkStatus>;
     unlinkApp(): Promise<void>;
+    fetchBugReports(): Promise<Task[]>;
+    createBugReport(data: TaskCreateData): Promise<Task>;
+    updateBugReport(id: string, data: Partial<Task>): Promise<Task>;
+    deleteBugReport(id: string): Promise<void>;
+    fetchBugReportTypes(): Promise<TaskType[]>;
+    createBugReportType(name: string): Promise<TaskType>;
+    deleteBugReportType(id: string): Promise<void>;
 }
+type BugReportCreateData = TaskCreateData;
 
-export type { AiProvider as A, BugReport as B, DevNotesClientAdapter as D, NotifyEvent as N, TaskList as T, DevNotesUser as a, DevNotesConfig as b, BugReportType as c, BugReportCreator as d, DevNotesRole as e, BugCaptureContext as f, AiAssistResult as g, AiConversationMessage as h, BugReportCreateData as i, BugReportMessage as j };
+export type { AiProvider as A, BugReport as B, DevNotesClientAdapter as D, NotifyEvent as N, TaskList as T, DevNotesUser as a, DevNotesConfig as b, BugReportType as c, BugReportCreator as d, DevNotesRole as e, Task as f, TaskCaptureContext as g, AiAssistResult as h, AiConversationMessage as i, BugCaptureContext as j, BugReportCreateData as k, BugReportMessage as l, TaskCreateData as m, TaskCreator as n, TaskMessage as o, TaskType as p };

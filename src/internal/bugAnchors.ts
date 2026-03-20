@@ -1,4 +1,4 @@
-import type { BugReport } from '../types';
+import type { Task } from '../types';
 
 export type BugAnchorMetadata = {
   targetSelector: string | null;
@@ -239,7 +239,7 @@ export const isElementVisible = (element: HTMLElement): boolean => {
  *             position from its current bounding rect. This makes the dot track the element.
  * Priority 2: Fall back to stored page coordinates converted to viewport coordinates.
  */
-export const resolveBugReportCoordinates = (report: BugReport): { x: number; y: number } | null => {
+export const resolveBugReportCoordinates = (report: Task): { x: number; y: number } | null => {
   if (typeof document !== 'undefined') {
     const relativeX = parseNumberish(report.target_relative_x);
     const relativeY = parseNumberish(report.target_relative_y);

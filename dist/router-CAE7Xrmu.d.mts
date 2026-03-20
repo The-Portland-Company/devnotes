@@ -1,5 +1,5 @@
 import { D as DevNotesCapabilities, a as DevNotesAppLinkStatus, c as DevNotesLinkAppInput } from './types-CrmObeqp.mjs';
-import { B as BugReport, i as BugReportCreateData, c as BugReportType, T as TaskList, j as BugReportMessage, d as BugReportCreator, h as AiConversationMessage, f as BugCaptureContext, g as AiAssistResult } from './types-CBHExs2F.mjs';
+import { f as Task, m as TaskCreateData, p as TaskType, T as TaskList, o as TaskMessage, n as TaskCreator, i as AiConversationMessage, g as TaskCaptureContext, h as AiAssistResult } from './types-C3m8yDgc.mjs';
 
 type DevNotesProxyRequest = {
     method: string;
@@ -14,22 +14,22 @@ interface DevNotesProxyBackend {
     getAppLinkStatus(req: DevNotesProxyRequest): Promise<DevNotesAppLinkStatus>;
     linkApp(input: DevNotesLinkAppInput, req: DevNotesProxyRequest): Promise<DevNotesAppLinkStatus>;
     unlinkApp(req: DevNotesProxyRequest): Promise<void>;
-    listReports(req: DevNotesProxyRequest): Promise<BugReport[]>;
-    createReport(data: BugReportCreateData, req: DevNotesProxyRequest): Promise<BugReport>;
-    updateReport(id: string, data: Partial<BugReport>, req: DevNotesProxyRequest): Promise<BugReport>;
+    listReports(req: DevNotesProxyRequest): Promise<Task[]>;
+    createReport(data: TaskCreateData, req: DevNotesProxyRequest): Promise<Task>;
+    updateReport(id: string, data: Partial<Task>, req: DevNotesProxyRequest): Promise<Task>;
     deleteReport(id: string, req: DevNotesProxyRequest): Promise<void>;
-    listReportTypes(req: DevNotesProxyRequest): Promise<BugReportType[]>;
-    createReportType(name: string, req: DevNotesProxyRequest): Promise<BugReportType>;
+    listReportTypes(req: DevNotesProxyRequest): Promise<TaskType[]>;
+    createReportType(name: string, req: DevNotesProxyRequest): Promise<TaskType>;
     deleteReportType(id: string, req: DevNotesProxyRequest): Promise<void>;
     listTaskLists(req: DevNotesProxyRequest): Promise<TaskList[]>;
     createTaskList(name: string, req: DevNotesProxyRequest): Promise<TaskList>;
-    listMessages(reportId: string, req: DevNotesProxyRequest): Promise<BugReportMessage[]>;
-    createMessage(reportId: string, body: string, req: DevNotesProxyRequest): Promise<BugReportMessage>;
-    updateMessage(id: string, body: string, req: DevNotesProxyRequest): Promise<BugReportMessage>;
+    listMessages(reportId: string, req: DevNotesProxyRequest): Promise<TaskMessage[]>;
+    createMessage(reportId: string, body: string, req: DevNotesProxyRequest): Promise<TaskMessage>;
+    updateMessage(id: string, body: string, req: DevNotesProxyRequest): Promise<TaskMessage>;
     deleteMessage(id: string, req: DevNotesProxyRequest): Promise<void>;
     getUnreadCounts(req: DevNotesProxyRequest): Promise<Record<string, number>>;
     markMessagesRead(messageIds: string[], req: DevNotesProxyRequest): Promise<void>;
-    listCollaborators(ids: string[] | null, req: DevNotesProxyRequest): Promise<BugReportCreator[]>;
+    listCollaborators(ids: string[] | null, req: DevNotesProxyRequest): Promise<TaskCreator[]>;
     refineDescription?: (input: {
         description: string;
         conversationHistory: AiConversationMessage[];
@@ -42,7 +42,7 @@ interface DevNotesProxyBackend {
             target_selector?: string;
             expected_behavior?: string;
             actual_behavior?: string;
-            capture_context?: BugCaptureContext;
+            capture_context?: TaskCaptureContext;
         };
     }, req: DevNotesProxyRequest) => Promise<AiAssistResult>;
 }

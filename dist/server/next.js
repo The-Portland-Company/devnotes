@@ -252,6 +252,12 @@ function normalizeBasePath(basePath) {
 function normalizeBaseUrl(baseUrl) {
   return baseUrl.trim().replace(/\/+$/, "");
 }
+function isTaskResource(resource) {
+  return resource === "tasks" || resource === "reports";
+}
+function isTaskTypeResource(resource) {
+  return resource === "task-types" || resource === "report-types";
+}
 function normalizeUser(user) {
   if (!user?.id) return null;
   return {
@@ -821,7 +827,7 @@ function createDevNotesServerHandler(options) {
           }
         }
       });
-      if (resource === "reports" && method === "GET" && !resourceId) {
+      if (isTaskResource(resource) && method === "GET" && !resourceId) {
         const tasks = await fetchForgeTasksForProject(forgeContext, project.id);
         const reports = tasks.map(
           (task) => buildDevNotesReportFromForgeTask(
@@ -832,7 +838,7 @@ function createDevNotesServerHandler(options) {
         ).filter((item) => Boolean(item)).filter((item) => !deletedReportIds.has(String(item.id)));
         return await jsonResponse(request, options.corsHeaders, reports);
       }
-      if (resource === "reports" && method === "POST" && !resourceId) {
+      if (isTaskResource(resource) && method === "POST" && !resourceId) {
         const payload = {
           ...body,
           created_by: user.id,
@@ -878,7 +884,7 @@ function createDevNotesServerHandler(options) {
         const report = buildDevNotesReportFromForgeTask(createdTask, null, defaultTaskListId);
         return await jsonResponse(request, options.corsHeaders, report);
       }
-      if (resource === "reports" && resourceId && !nested && method === "PATCH") {
+      if (isTaskResource(resource) && resourceId && !nested && method === "PATCH") {
         const reportId = decodeURIComponent(resourceId);
         const tasks = await fetchForgeTasksForProject(forgeContext, project.id);
         const existingTask = tasks.find((task) => String(task.id || "") === reportId);
@@ -886,7 +892,7 @@ function createDevNotesServerHandler(options) {
           return await jsonResponse(
             request,
             options.corsHeaders,
-            { error: "Bug report not found" },
+            { error: "Task not found" },
             404
           );
         }
@@ -899,7 +905,7 @@ function createDevNotesServerHandler(options) {
           return await jsonResponse(
             request,
             options.corsHeaders,
-            { error: "Bug report not found" },
+            { error: "Task not found" },
             404
           );
         }
@@ -929,7 +935,7 @@ function createDevNotesServerHandler(options) {
         }
         return await jsonResponse(request, options.corsHeaders, merged);
       }
-      if (resource === "reports" && resourceId && !nested && method === "DELETE") {
+      if (isTaskResource(resource) && resourceId && !nested && method === "DELETE") {
         const reportId = decodeURIComponent(resourceId);
         const existingDelete = metadataComments.find(
           (comment) => comment.meta.kind === "report_deleted" && String(comment.meta.reportId || "") === reportId
@@ -951,13 +957,13 @@ function createDevNotesServerHandler(options) {
         }
         return await jsonResponse(request, options.corsHeaders, { success: true });
       }
-      if (resource === "reports" && resourceId && nested === "messages" && method === "GET") {
+      if (isTaskResource(resource) && resourceId && nested === "messages" && method === "GET") {
         const reportId = decodeURIComponent(resourceId);
         const projectMessages = metadataComments.filter(
           (comment) => comment.meta.kind === "message" && String(comment.meta.reportId || "") === reportId
         ).sort((a, b) => a.created_at.localeCompare(b.created_at)).map((comment) => ({
           id: comment.id,
-          bug_report_id: reportId,
+          task_id: reportId,
           author_id: String(comment.meta.authorId || comment.user_id || ""),
           body: comment.body,
           created_at: comment.created_at,
@@ -970,7 +976,7 @@ function createDevNotesServerHandler(options) {
         }));
         const legacyTaskMessages = (await fetchForgeTaskComments(forgeContext, reportId)).filter((comment) => String(comment.project_id || "") === "").map((comment) => ({
           id: String(comment.id || ""),
-          bug_report_id: reportId,
+          task_id: reportId,
           author_id: String(comment.user_id || ""),
           body: String(comment.content || ""),
           created_at: String(comment.created_at || (/* @__PURE__ */ new Date()).toISOString()),
@@ -986,7 +992,7 @@ function createDevNotesServerHandler(options) {
         );
         return await jsonResponse(request, options.corsHeaders, merged);
       }
-      if (resource === "reports" && resourceId && nested === "messages" && method === "POST") {
+      if (isTaskResource(resource) && resourceId && nested === "messages" && method === "POST") {
         const reportId = decodeURIComponent(resourceId);
         const created = await createForgeProjectComment(
           forgeContext,
@@ -1011,7 +1017,7 @@ function createDevNotesServerHandler(options) {
         }
         const message = {
           id: parsed.id,
-          bug_report_id: reportId,
+          task_id: reportId,
           author_id: String(parsed.meta.authorId || user.id),
           body: parsed.body,
           created_at: parsed.created_at,
@@ -1024,14 +1030,14 @@ function createDevNotesServerHandler(options) {
         };
         return await jsonResponse(request, options.corsHeaders, message);
       }
-      if (resource === "report-types" && method === "GET" && !resourceId) {
+      if (isTaskTypeResource(resource) && method === "GET" && !resourceId) {
         return await jsonResponse(
           request,
           options.corsHeaders,
           buildReportTypesFromMetadata(metadataComments)
         );
       }
-      if (resource === "report-types" && method === "POST" && !resourceId) {
+      if (isTaskTypeResource(resource) && method === "POST" && !resourceId) {
         const created = await createForgeProjectComment(forgeContext, project.id, "", {
           kind: "report_type",
           name: String(body.name || "").trim(),
@@ -1048,7 +1054,7 @@ function createDevNotesServerHandler(options) {
           created_at: parsed?.created_at || (/* @__PURE__ */ new Date()).toISOString()
         });
       }
-      if (resource === "report-types" && resourceId && method === "DELETE") {
+      if (isTaskTypeResource(resource) && resourceId && method === "DELETE") {
         await deleteForgeProjectComment(forgeContext, decodeURIComponent(resourceId));
         return await jsonResponse(request, options.corsHeaders, { success: true });
       }
@@ -1117,7 +1123,7 @@ function createDevNotesServerHandler(options) {
         const updatedParsed = parseDevNotesProjectComment(updated);
         return await jsonResponse(request, options.corsHeaders, {
           id: updatedParsed?.id || decodeURIComponent(resourceId),
-          bug_report_id: String(parsed.meta.reportId || ""),
+          task_id: String(parsed.meta.reportId || ""),
           author_id: String(parsed.meta.authorId || parsed.user_id || ""),
           body: updatedParsed?.body || String(body.body || "").trim(),
           created_at: updatedParsed?.created_at || parsed.created_at,
@@ -1187,6 +1193,8 @@ function isDevNotesProxyBackend(value) {
 }
 var json = (body, status = 200) => ({ status, body });
 var getId = (slug, index) => decodeURIComponent(slug[index] || "");
+var isTaskResource2 = (resource) => resource === "tasks" || resource === "reports";
+var isTaskTypeResource2 = (resource) => resource === "task-types" || resource === "report-types";
 async function routeDevNotesProxy(backend, req) {
   const [resource, resourceId, nested] = req.slug;
   const method = req.method.toUpperCase();
@@ -1201,26 +1209,26 @@ async function routeDevNotesProxy(backend, req) {
       return json({ success: true });
     }
   }
-  if (resource === "reports" && method === "GET" && !resourceId) {
+  if (isTaskResource2(resource) && method === "GET" && !resourceId) {
     return json(await backend.listReports(req));
   }
-  if (resource === "reports" && method === "POST" && !resourceId) {
+  if (isTaskResource2(resource) && method === "POST" && !resourceId) {
     return json(await backend.createReport(req.body, req));
   }
-  if (resource === "reports" && method === "PATCH" && resourceId && !nested) {
+  if (isTaskResource2(resource) && method === "PATCH" && resourceId && !nested) {
     return json(await backend.updateReport(getId(req.slug, 1), req.body, req));
   }
-  if (resource === "reports" && method === "DELETE" && resourceId && !nested) {
+  if (isTaskResource2(resource) && method === "DELETE" && resourceId && !nested) {
     await backend.deleteReport(getId(req.slug, 1), req);
     return json({ success: true });
   }
-  if (resource === "reports" && resourceId && nested === "messages") {
+  if (isTaskResource2(resource) && resourceId && nested === "messages") {
     if (method === "GET") return json(await backend.listMessages(getId(req.slug, 1), req));
     if (method === "POST") {
       return json(await backend.createMessage(getId(req.slug, 1), String(req.body?.body || ""), req));
     }
   }
-  if (resource === "report-types") {
+  if (isTaskTypeResource2(resource)) {
     if (method === "GET" && !resourceId) return json(await backend.listReportTypes(req));
     if (method === "POST" && !resourceId) {
       return json(await backend.createReportType(String(req.body?.name || ""), req));

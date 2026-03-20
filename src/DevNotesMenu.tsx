@@ -28,11 +28,11 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
   const {
     isEnabled,
     setIsEnabled,
-    showBugsAlways,
-    setShowBugsAlways,
+    showTasksAlways,
+    setShowTasksAlways,
     hideResolvedClosed,
     setHideResolvedClosed,
-    bugReports,
+    tasks,
     role,
   } = useDevNotes();
   const [open, setOpen] = useState(false);
@@ -49,7 +49,7 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [open]);
 
-  const openBugCount = bugReports.filter(
+  const openBugCount = tasks.filter(
     (r) => r.status === 'Open' || r.status === 'In Progress' || r.status === 'Needs Review'
   ).length;
 
@@ -75,10 +75,10 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
     >
       <button
         type="button"
-        aria-label={isEnabled ? 'Click to disable bug reporting' : 'Bug reporting menu'}
+        aria-label={isEnabled ? 'Click to disable task creation' : 'Task menu'}
         onClick={handleIconClick}
         className="inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-700 transition hover:text-emerald-600"
-        title="Bug reports"
+        title="Tasks"
       >
         <span className="relative">
           {IconComponent ? (
@@ -131,7 +131,7 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
               ) : (
                 <FiToggleLeft />
               )}
-              {isEnabled ? 'Stop Reporting' : 'Report Bug / Request Feature'}
+              {isEnabled ? 'Stop Creating Tasks' : 'Create Task'}
             </span>
             <span
               role="switch"
@@ -151,27 +151,27 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
           <button
             type="button"
             data-menu-item
-            onClick={() => setShowBugsAlways(!showBugsAlways)}
+            onClick={() => setShowTasksAlways(!showTasksAlways)}
             className="flex w-full items-center justify-between gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50"
           >
             <span className="inline-flex items-center gap-2 whitespace-nowrap">
-              {showBugsAlways ? (
+              {showTasksAlways ? (
                 <FiEye className="text-blue-600" />
               ) : (
                 <FiEyeOff />
               )}
-              Show Bugs Always
+              Show Tasks Always
             </span>
             <span
               role="switch"
-              aria-checked={showBugsAlways}
+              aria-checked={showTasksAlways}
               className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ${
-                showBugsAlways ? 'bg-green-500' : 'bg-gray-300'
+                showTasksAlways ? 'bg-green-500' : 'bg-gray-300'
               }`}
             >
               <span
                 className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${
-                  showBugsAlways ? 'translate-x-4' : 'translate-x-0.5'
+                  showTasksAlways ? 'translate-x-4' : 'translate-x-0.5'
                 } mt-0.5`}
               />
             </span>
