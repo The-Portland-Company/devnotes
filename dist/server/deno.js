@@ -112,26 +112,44 @@ function splitDevNotesMeta(text) {
   const value = String(text || "");
   const markerIndex = value.lastIndexOf(DEVNOTES_META_MARKER);
   if (markerIndex === -1) {
-    return { body: value, meta: null };
+    return { body: value, token: null, meta: null };
   }
   const endIndex = value.indexOf("]", markerIndex);
   if (endIndex === -1) {
-    return { body: value, meta: null };
+    return { body: value, token: null, meta: null };
   }
+  const token = value.slice(markerIndex, endIndex + 1);
   const encoded = value.slice(markerIndex + DEVNOTES_META_MARKER.length, endIndex).trim();
   const meta = decodeDevNotesMeta(encoded);
   if (!meta) {
-    return { body: value, meta: null };
+    return { body: value, token: null, meta: null };
   }
   const body = value.slice(0, markerIndex).replace(/\n+$/, "");
-  return { body, meta };
+  return { body, token, meta };
+}
+function toDevNotesMetaToken(meta) {
+  return `${DEVNOTES_META_MARKER}${encodeDevNotesMeta(meta)}]`;
 }
 function appendDevNotesMeta(text, meta) {
   const body = String(text || "").trimEnd();
-  const marker = `${DEVNOTES_META_MARKER}${encodeDevNotesMeta(meta)}]`;
+  const marker = toDevNotesMetaToken(meta);
   return body ? `${body}
 
 ${marker}` : marker;
+}
+function normalizeTaskDescriptionAndMeta(input) {
+  const rawDescription = String(input.description || "");
+  const parsedDescription = splitDevNotesMeta(rawDescription);
+  const explicitRawMeta = input.devnotesMeta === null || input.devnotesMeta === void 0 ? input.devnotes_meta === null || input.devnotes_meta === void 0 ? null : String(input.devnotes_meta || "").trim() || null : String(input.devnotesMeta || "").trim() || null;
+  const rawToken = explicitRawMeta || parsedDescription.token;
+  const parsedMeta = rawToken && rawToken.startsWith(DEVNOTES_META_MARKER) && rawToken.endsWith("]") ? decodeDevNotesMeta(
+    rawToken.slice(DEVNOTES_META_MARKER.length, rawToken.length - 1).trim()
+  ) : null;
+  return {
+    description: parsedDescription.body.trimEnd(),
+    devnotesMeta: rawToken,
+    parsedMeta
+  };
 }
 function parseLegacyDevNotesDescription(description) {
   const legacyMarker = "\n\n---\nSource: Politogy bug report";
@@ -162,9 +180,8 @@ function parseLegacyDevNotesDescription(description) {
     creator_name: values.get("created by") || ""
   };
 }
-function buildDevNotesReportDescription(report) {
-  const description = typeof report.description === "string" ? report.description : "";
-  return appendDevNotesMeta(description, {
+function buildDevNotesReportMeta(report) {
+  return {
     kind: "report",
     version: 1,
     task_list_id: String(report.task_list_id || ""),
@@ -190,12 +207,15 @@ function buildDevNotesReportDescription(report) {
     ai_ready: normalizeForgeBoolean(report.ai_ready),
     ai_description: report.ai_description === null || report.ai_description === void 0 ? null : String(report.ai_description),
     response: report.response === null || report.response === void 0 ? null : String(report.response)
-  });
+  };
+}
+function buildDevNotesReportToken(report) {
+  return toDevNotesMetaToken(buildDevNotesReportMeta(report));
 }
 function isDevNotesForgeTask(task) {
-  const description = String(task.description || "");
-  const parsed = splitDevNotesMeta(description);
-  if (parsed.meta?.kind === "report") return true;
+  const normalized = normalizeTaskDescriptionAndMeta(task);
+  if (normalized.parsedMeta?.kind === "report") return true;
+  const description = normalized.description;
   return description.includes("Source: Politogy bug report");
 }
 function extractProjectsFromPayload(payload) {
@@ -423,8 +443,9 @@ function buildDevNotesReportFromForgeTask(task, overrides, defaultTaskListId) {
   if (!isDevNotesForgeTask(task)) return null;
   const taskId = typeof task.id === "string" ? task.id.trim() : "";
   if (!taskId) return null;
-  const parsed = splitDevNotesMeta(String(task.description || ""));
-  const base = parsed.meta?.kind === "report" ? parsed.meta : parseLegacyDevNotesDescription(String(task.description || ""));
+  const normalized = normalizeTaskDescriptionAndMeta(task);
+  const parsed = normalized.devnotesMeta ? splitDevNotesMeta(normalized.devnotesMeta) : null;
+  const base = parsed?.meta?.kind === "report" ? parsed.meta : parseLegacyDevNotesDescription(normalized.description);
   const combined = {
     ...base,
     ...overrides || {}
@@ -434,7 +455,7 @@ function buildDevNotesReportFromForgeTask(task, overrides, defaultTaskListId) {
   const createdBy = String(combined.created_by || "").trim() || `forge:${taskId}:creator`;
   const taskCompleted = normalizeForgeBoolean(task.completed);
   const status = String(combined.status || (taskCompleted ? "Resolved" : "Open"));
-  const description = overrides && Object.prototype.hasOwnProperty.call(overrides, "description") ? overrides.description === null ? null : String(overrides.description || "") : parsed.body.trim() || (base.description ? String(base.description) : null);
+  const description = overrides && Object.prototype.hasOwnProperty.call(overrides, "description") ? overrides.description === null ? null : String(overrides.description || "") : normalized.description.trim() || (base.description ? String(base.description) : null);
   return {
     id: taskId,
     task_list_id: String(combined.task_list_id || defaultTaskListId || ""),
@@ -849,15 +870,22 @@ function createDevNotesServerHandler(options) {
           task_list_id: String(body.task_list_id || defaultTaskListId),
           status: String(body.status || "Open")
         };
+        const normalizedTaskInput = normalizeTaskDescriptionAndMeta(payload);
+        const devnotesMeta = normalizedTaskInput.devnotesMeta || buildDevNotesReportToken(payload);
         const createPath = "/api/mobile/tasks";
+        const assignedTo = payload.assigned_to === null || payload.assigned_to === void 0 ? void 0 : String(payload.assigned_to);
         const response = await fetchForgeOrThrow(forgeContext, createPath, {
           method: "POST",
           body: JSON.stringify({
             name: String(payload.title || ""),
-            description: buildDevNotesReportDescription(payload),
+            description: normalizedTaskInput.description,
+            devnotesMeta,
+            devnotes_meta: devnotesMeta,
+            projectId: project.id,
             project_id: project.id,
             completed: mapBugStatusToForge(String(payload.status || "Open")) === "completed",
-            assigned_to: payload.assigned_to === null || payload.assigned_to === void 0 ? void 0 : String(payload.assigned_to)
+            assignedTo,
+            assigned_to: assignedTo
           })
         });
         const taskId = extractForgeTaskId(response.payload);
@@ -875,7 +903,9 @@ function createDevNotesServerHandler(options) {
         const createdTask = tasks.find((task) => String(task.id || "") === taskId) || {
           id: taskId,
           name: payload.title,
-          description: buildDevNotesReportDescription(payload),
+          description: normalizedTaskInput.description,
+          devnotesMeta,
+          devnotes_meta: devnotesMeta,
           created_at: (/* @__PURE__ */ new Date()).toISOString(),
           updated_at: (/* @__PURE__ */ new Date()).toISOString(),
           completed: false
@@ -916,6 +946,12 @@ function createDevNotesServerHandler(options) {
           resolved_at: body.status === "Resolved" || body.status === "Closed" ? (/* @__PURE__ */ new Date()).toISOString() : existing.resolved_at,
           resolved_by: body.status === "Resolved" || body.status === "Closed" ? body.resolved_by || user.id : existing.resolved_by
         };
+        const normalizedMerged = normalizeTaskDescriptionAndMeta(merged);
+        merged.description = normalizedMerged.description || null;
+        if (normalizedMerged.devnotesMeta) {
+          merged.devnotes_meta = normalizedMerged.devnotesMeta;
+          merged.devnotesMeta = normalizedMerged.devnotesMeta;
+        }
         const existingPatch = metadataComments.find(
           (comment) => comment.meta.kind === "report_patch" && String(comment.meta.reportId || "") === reportId
         );

@@ -169,33 +169,67 @@ function decodeDevNotesMeta(encoded: string): Record<string, unknown> | null {
 
 function splitDevNotesMeta(text: string | null | undefined): {
   body: string;
+  token: string | null;
   meta: Record<string, unknown> | null;
 } {
   const value = String(text || '');
   const markerIndex = value.lastIndexOf(DEVNOTES_META_MARKER);
   if (markerIndex === -1) {
-    return { body: value, meta: null };
+    return { body: value, token: null, meta: null };
   }
 
   const endIndex = value.indexOf(']', markerIndex);
   if (endIndex === -1) {
-    return { body: value, meta: null };
+    return { body: value, token: null, meta: null };
   }
 
+  const token = value.slice(markerIndex, endIndex + 1);
   const encoded = value.slice(markerIndex + DEVNOTES_META_MARKER.length, endIndex).trim();
   const meta = decodeDevNotesMeta(encoded);
   if (!meta) {
-    return { body: value, meta: null };
+    return { body: value, token: null, meta: null };
   }
 
   const body = value.slice(0, markerIndex).replace(/\n+$/, '');
-  return { body, meta };
+  return { body, token, meta };
+}
+
+function toDevNotesMetaToken(meta: Record<string, unknown>): string {
+  return `${DEVNOTES_META_MARKER}${encodeDevNotesMeta(meta)}]`;
 }
 
 function appendDevNotesMeta(text: string | null | undefined, meta: Record<string, unknown>): string {
   const body = String(text || '').trimEnd();
-  const marker = `${DEVNOTES_META_MARKER}${encodeDevNotesMeta(meta)}]`;
+  const marker = toDevNotesMetaToken(meta);
   return body ? `${body}\n\n${marker}` : marker;
+}
+
+function normalizeTaskDescriptionAndMeta(input: Record<string, unknown>): {
+  description: string;
+  devnotesMeta: string | null;
+  parsedMeta: Record<string, unknown> | null;
+} {
+  const rawDescription = String(input.description || '');
+  const parsedDescription = splitDevNotesMeta(rawDescription);
+  const explicitRawMeta =
+    input.devnotesMeta === null || input.devnotesMeta === undefined
+      ? input.devnotes_meta === null || input.devnotes_meta === undefined
+        ? null
+        : String(input.devnotes_meta || '').trim() || null
+      : String(input.devnotesMeta || '').trim() || null;
+  const rawToken = explicitRawMeta || parsedDescription.token;
+  const parsedMeta =
+    rawToken && rawToken.startsWith(DEVNOTES_META_MARKER) && rawToken.endsWith(']')
+      ? decodeDevNotesMeta(
+          rawToken.slice(DEVNOTES_META_MARKER.length, rawToken.length - 1).trim()
+        )
+      : null;
+
+  return {
+    description: parsedDescription.body.trimEnd(),
+    devnotesMeta: rawToken,
+    parsedMeta,
+  };
 }
 
 function parseLegacyDevNotesDescription(description: string): Record<string, unknown> {
@@ -238,9 +272,8 @@ function parseLegacyDevNotesDescription(description: string): Record<string, unk
   };
 }
 
-function buildDevNotesReportDescription(report: Record<string, unknown>): string {
-  const description = typeof report.description === 'string' ? report.description : '';
-  return appendDevNotesMeta(description, {
+function buildDevNotesReportMeta(report: Record<string, unknown>): Record<string, unknown> {
+  return {
     kind: 'report',
     version: 1,
     task_list_id: String(report.task_list_id || ''),
@@ -303,13 +336,17 @@ function buildDevNotesReportDescription(report: Record<string, unknown>): string
         : String(report.ai_description),
     response:
       report.response === null || report.response === undefined ? null : String(report.response),
-  });
+  };
+}
+
+function buildDevNotesReportToken(report: Record<string, unknown>): string {
+  return toDevNotesMetaToken(buildDevNotesReportMeta(report));
 }
 
 function isDevNotesForgeTask(task: Record<string, unknown>): boolean {
-  const description = String(task.description || '');
-  const parsed = splitDevNotesMeta(description);
-  if (parsed.meta?.kind === 'report') return true;
+  const normalized = normalizeTaskDescriptionAndMeta(task);
+  if (normalized.parsedMeta?.kind === 'report') return true;
+  const description = normalized.description;
   return description.includes('Source: Politogy bug report');
 }
 
@@ -633,11 +670,12 @@ function buildDevNotesReportFromForgeTask(
   const taskId = typeof task.id === 'string' ? task.id.trim() : '';
   if (!taskId) return null;
 
-  const parsed = splitDevNotesMeta(String(task.description || ''));
+  const normalized = normalizeTaskDescriptionAndMeta(task);
+  const parsed = normalized.devnotesMeta ? splitDevNotesMeta(normalized.devnotesMeta) : null;
   const base =
-    parsed.meta?.kind === 'report'
+    parsed?.meta?.kind === 'report'
       ? parsed.meta
-      : parseLegacyDevNotesDescription(String(task.description || ''));
+      : parseLegacyDevNotesDescription(normalized.description);
   const combined = {
     ...base,
     ...(overrides || {}),
@@ -653,7 +691,7 @@ function buildDevNotesReportFromForgeTask(
       ? overrides.description === null
         ? null
         : String(overrides.description || '')
-      : parsed.body.trim() || (base.description ? String(base.description) : null);
+      : normalized.description.trim() || (base.description ? String(base.description) : null);
 
   return {
     id: taskId,
@@ -1206,18 +1244,25 @@ export function createDevNotesServerHandler(options: DevNotesServerOptions) {
           task_list_id: String(body.task_list_id || defaultTaskListId),
           status: String(body.status || 'Open'),
         };
+        const normalizedTaskInput = normalizeTaskDescriptionAndMeta(payload);
+        const devnotesMeta = normalizedTaskInput.devnotesMeta || buildDevNotesReportToken(payload);
         const createPath = '/api/mobile/tasks';
+        const assignedTo =
+          payload.assigned_to === null || payload.assigned_to === undefined
+            ? undefined
+            : String(payload.assigned_to);
         const response = await fetchForgeOrThrow(forgeContext, createPath, {
           method: 'POST',
           body: JSON.stringify({
             name: String(payload.title || ''),
-            description: buildDevNotesReportDescription(payload),
+            description: normalizedTaskInput.description,
+            devnotesMeta,
+            devnotes_meta: devnotesMeta,
+            projectId: project.id,
             project_id: project.id,
             completed: mapBugStatusToForge(String(payload.status || 'Open')) === 'completed',
-            assigned_to:
-              payload.assigned_to === null || payload.assigned_to === undefined
-                ? undefined
-                : String(payload.assigned_to),
+            assignedTo,
+            assigned_to: assignedTo,
           }),
         });
 
@@ -1239,7 +1284,9 @@ export function createDevNotesServerHandler(options: DevNotesServerOptions) {
         const createdTask = tasks.find((task) => String(task.id || '') === taskId) || {
           id: taskId,
           name: payload.title,
-          description: buildDevNotesReportDescription(payload),
+          description: normalizedTaskInput.description,
+          devnotesMeta,
+          devnotes_meta: devnotesMeta,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           completed: false,
@@ -1287,6 +1334,12 @@ export function createDevNotesServerHandler(options: DevNotesServerOptions) {
               ? body.resolved_by || user.id
               : existing.resolved_by,
         };
+        const normalizedMerged = normalizeTaskDescriptionAndMeta(merged);
+        merged.description = normalizedMerged.description || null;
+        if (normalizedMerged.devnotesMeta) {
+          merged.devnotes_meta = normalizedMerged.devnotesMeta;
+          merged.devnotesMeta = normalizedMerged.devnotesMeta;
+        }
 
         const existingPatch = metadataComments.find(
           (comment) =>
