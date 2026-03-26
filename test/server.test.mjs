@@ -394,7 +394,6 @@ test('task creation sends Forge-compatible project and assignee fields', async (
                 id: 'task-1',
                 name: 'Visible task',
                 description: 'Task description',
-                devnotes_meta: REPORT_META_TOKEN,
                 created_at: '2026-03-26T20:00:00.000Z',
                 updated_at: '2026-03-26T20:00:00.000Z',
                 completed: false,

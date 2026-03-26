@@ -910,7 +910,23 @@ function createDevNotesServerHandler(options) {
           updated_at: (/* @__PURE__ */ new Date()).toISOString(),
           completed: false
         };
-        const report = buildDevNotesReportFromForgeTask(createdTask, null, defaultTaskListId);
+        const reportTask = {
+          ...createdTask,
+          description: typeof createdTask.description === "string" && createdTask.description.trim() ? createdTask.description : normalizedTaskInput.description,
+          devnotesMeta,
+          devnotes_meta: devnotesMeta
+        };
+        const report = buildDevNotesReportFromForgeTask(reportTask, null, defaultTaskListId);
+        if (!report) {
+          throw new UpstreamForgeError(createPath, forgeContext.baseUrl, {
+            ...response,
+            status: 502,
+            text: response.text || JSON.stringify({
+              error: "Task creation succeeded but DevNotes could not normalize the created task"
+            }),
+            contentType: response.contentType || "application/json"
+          });
+        }
         return await jsonResponse(request, options.corsHeaders, report);
       }
       if (isTaskResource(resource) && resourceId && !nested && method === "PATCH") {

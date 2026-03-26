@@ -346,6 +346,9 @@ function DevNotesProvider({ adapter, user, config, children }) {
       setError(null);
       try {
         const data = await adapter.createTask(report);
+        if (!data || !data.id || !data.page_url || !data.created_by) {
+          throw new Error("Task creation returned an invalid response.");
+        }
         setBugReports((prev) => [data, ...prev]);
         await loadProfilesForReports([data]);
         return data;
@@ -365,6 +368,9 @@ function DevNotesProvider({ adapter, user, config, children }) {
       setError(null);
       try {
         const data = await adapter.updateTask(id, updates);
+        if (!data || !data.id || !data.page_url || !data.created_by) {
+          throw new Error("Task update returned an invalid response.");
+        }
         setBugReports(
           (prev) => prev.map(
             (report) => report.id === id ? { ...report, ...data, creator: report.creator || data.creator } : report
