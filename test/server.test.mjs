@@ -20,10 +20,16 @@ function jsonResponse(body, init = {}) {
 function createFetchMock(routes) {
   return async function mockFetch(input, init = {}) {
     const url = new URL(typeof input === 'string' ? input : input.url);
-    const key = `${(init.method || 'GET').toUpperCase()} ${url.pathname}${url.search}`;
-    const responder = routes.get(key) || routes.get(`${(init.method || 'GET').toUpperCase()} ${url.pathname}`);
+    const method = (init.method || 'GET').toUpperCase();
+    const key = `${method} ${url.pathname}${url.search}`;
+    const absoluteKey = `${method} ${url.origin}${url.pathname}${url.search}`;
+    const responder =
+      routes.get(absoluteKey) ||
+      routes.get(key) ||
+      routes.get(`${method} ${url.origin}${url.pathname}`) ||
+      routes.get(`${method} ${url.pathname}`);
     if (!responder) {
-      throw new Error(`Unexpected fetch: ${key}`);
+      throw new Error(`Unexpected fetch: ${absoluteKey}`);
     }
     return await responder(url, init);
   };
@@ -543,6 +549,127 @@ test('task creation strips legacy embedded metadata from description before send
   const json = await response.json();
   assert.equal(json.id, 'task-legacy');
   assert.equal(json.description, 'Task description');
+});
+
+test('task creation emails the Forge PAT owner through Resend after the task is created', async () => {
+  const sentEmails = [];
+  const fetch = createFetchMock(
+    new Map([
+      [
+        'GET /api/mobile/bootstrap',
+        async () =>
+          jsonResponse({
+            data: {
+              user: {
+                id: 'owner-1',
+                email: 'spencerdhill@protonmail.com',
+                firstName: 'Spencer',
+                lastName: 'Hill',
+              },
+              bootstrap: {
+                projects: [{ id: 'project-1', name: 'Politogy' }],
+              },
+            },
+          }),
+      ],
+      [
+        'GET /api/sync/comments?projectId=project-1',
+        async () =>
+          jsonResponse({
+            data: [
+              {
+                id: 'task-list-1',
+                created_at: '2026-01-01T00:00:00.000Z',
+                updated_at: '2026-01-01T00:00:00.000Z',
+                content:
+                  '[DEVNOTES_META:eyJraW5kIjoidGFza19saXN0IiwibmFtZSI6IkdlbmVyYWwiLCJzaGFyZV9zbHVnIjoiZ2VuZXJhbC1zbHVnIiwiaXNfZGVmYXVsdCI6dHJ1ZSwiY3JlYXRlZF9ieSI6InVzZXItMSIsImNyZWF0ZWRfYXQiOiIyMDI2LTAxLTAxVDAwOjAwOjAwLjAwMFoiLCJ1cGRhdGVkX2F0IjoiMjAyNi0wMS0wMVQwMDowMDowMC4wMDBaIn0=]',
+              },
+              {
+                id: 'type-1',
+                created_at: '2026-01-01T00:00:00.000Z',
+                updated_at: '2026-01-01T00:00:00.000Z',
+                content:
+                  '[DEVNOTES_META:eyJraW5kIjoicmVwb3J0X3R5cGUiLCJuYW1lIjoiQnVnIiwiaXNfZGVmYXVsdCI6dHJ1ZSwiY3JlYXRlZF9ieSI6InVzZXItMSIsImNyZWF0ZWRfYXQiOiIyMDI2LTAxLTAxVDAwOjAwOjAwLjAwMFoifQ==]',
+              },
+            ],
+          }),
+      ],
+      [
+        'POST /api/mobile/tasks',
+        async () => jsonResponse({ data: { task: { id: 'task-email-1' } } }, { status: 201 }),
+      ],
+      [
+        'GET /api/mobile/tasks?projectId=project-1',
+        async () =>
+          jsonResponse({
+            data: [
+              {
+                id: 'task-email-1',
+                name: 'Email task',
+                description: 'Task description',
+                created_at: '2026-03-26T20:00:00.000Z',
+                updated_at: '2026-03-26T20:00:00.000Z',
+                completed: false,
+              },
+            ],
+          }),
+      ],
+      [
+        'POST https://api.resend.com/emails',
+        async (_url, init) => {
+          sentEmails.push(JSON.parse(init.body));
+          return jsonResponse({ id: 'email-1' }, { status: 202 });
+        },
+      ],
+    ])
+  );
+
+  const handler = createNextDevNotesHandler(
+    createOptions({
+      fetch,
+      notifications: {
+        taskCreatedEmail: {
+          apiKey: 're_test_123',
+          fromEmail: 'focusforge@theportlandcompany.com',
+          fromName: 'Focus Forge',
+        },
+      },
+    })
+  );
+
+  const response = await handler(
+    new Request('https://app.example.com/api/devnotes/tasks', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        task_list_id: 'task-list-1',
+        title: 'Email task',
+        description: 'Task description',
+        status: 'Open',
+        approved: false,
+        ai_ready: false,
+        due_date: '2026-04-01',
+        due_time: '09:30',
+        attachments: [
+          {
+            name: 'Screenshot.png',
+            url: 'https://cdn.example.com/screenshot.png',
+          },
+        ],
+        severity: 'High',
+      }),
+    })
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(sentEmails.length, 1);
+  assert.equal(sentEmails[0].from, 'Focus Forge <focusforge@theportlandcompany.com>');
+  assert.deepEqual(sentEmails[0].to, ['spencerdhill@protonmail.com']);
+  assert.equal(sentEmails[0].subject, 'Person Example has created a Task on Politogy');
+  assert.match(sentEmails[0].html, /<strong>Title:<\/strong> Email task/);
+  assert.match(sentEmails[0].html, /Due by<\/strong> 2026-04-01 09:30/);
+  assert.match(sentEmails[0].html, /Screenshot\.png/);
+  assert.match(sentEmails[0].html, /Severity/);
 });
 
 test('tasks returned with dedicated devnotes_meta keep description human-readable', async () => {

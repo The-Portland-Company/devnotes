@@ -73,6 +73,19 @@ export type DevNotesCorsHeaders =
   | HeadersInit
   | ((request: Request) => HeadersInit | Promise<HeadersInit>);
 
+export type DevNotesTaskCreatedEmailOptions = {
+  enabled?: boolean;
+  apiKey: string;
+  fromEmail?: string | null;
+  fromName?: string | null;
+  projectOwnerEmails?: string[] | null;
+  replyTo?: string[] | null;
+};
+
+export type DevNotesServerNotifications = {
+  taskCreatedEmail?: DevNotesTaskCreatedEmailOptions | null;
+};
+
 export type DevNotesServerOptions = {
   basePath?: string;
   getCurrentUser: (request: Request) => Promise<DevNotesServerUser | null> | DevNotesServerUser | null;
@@ -80,6 +93,7 @@ export type DevNotesServerOptions = {
   resolveUsers?: (ids: string[]) => Promise<DevNotesResolvedUser[]> | DevNotesResolvedUser[];
   fetch?: typeof globalThis.fetch;
   corsHeaders?: DevNotesCorsHeaders;
+  notifications?: DevNotesServerNotifications;
 };
 
 export type DevNotesClientOptions = {

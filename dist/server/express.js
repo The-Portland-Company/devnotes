@@ -91,6 +91,175 @@ function normalizeForgeStringArray(value) {
   if (!Array.isArray(value)) return [];
   return value.map((item) => String(item || "").trim()).filter(Boolean);
 }
+function normalizeNonEmptyString(value) {
+  if (value === null || value === void 0) return null;
+  const normalized = String(value).trim();
+  return normalized || null;
+}
+function normalizeEmailList(value) {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => normalizeNonEmptyString(item)).filter((item) => Boolean(item));
+}
+function escapeHtml(value) {
+  return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+function formatNotificationDateTime(value) {
+  const normalized = normalizeNonEmptyString(value);
+  if (!normalized) return null;
+  const date = new Date(normalized);
+  if (Number.isNaN(date.getTime())) return normalized;
+  return new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short"
+  }).format(date);
+}
+function tryStringify(value) {
+  if (value === null || value === void 0) return null;
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
+}
+function extractBootstrapUser(payload) {
+  const root = coerceObject(payload);
+  const data = coerceObject(root.data);
+  const bootstrap = coerceObject(data.bootstrap);
+  const user = coerceObject(data.user);
+  const bootstrapUser = coerceObject(bootstrap.user);
+  const resolvedUser = Object.keys(bootstrapUser).length > 0 ? bootstrapUser : user;
+  const firstName = normalizeNonEmptyString(resolvedUser.firstName);
+  const lastName = normalizeNonEmptyString(resolvedUser.lastName);
+  return {
+    email: normalizeNonEmptyString(resolvedUser.email),
+    name: [firstName, lastName].filter(Boolean).join(" ").trim() || null
+  };
+}
+function formatAttachmentSummary(attachments) {
+  if (!Array.isArray(attachments) || attachments.length === 0) return null;
+  const items = attachments.map((attachment) => {
+    const record = coerceObject(attachment);
+    const label = normalizeNonEmptyString(record.name) || normalizeNonEmptyString(record.fileName) || normalizeNonEmptyString(record.filename) || normalizeNonEmptyString(record.url) || normalizeNonEmptyString(record.href);
+    const url = normalizeNonEmptyString(record.url) || normalizeNonEmptyString(record.href);
+    if (!label) return null;
+    return {
+      html: url ? `<li><a href="${escapeHtml(url)}" style="color:#93c5fd;text-decoration:none;">${escapeHtml(label)}</a></li>` : `<li>${escapeHtml(label)}</li>`,
+      text: url ? `- ${label}: ${url}` : `- ${label}`
+    };
+  }).filter((item) => Boolean(item));
+  if (items.length === 0) return null;
+  return {
+    html: `<div style="margin-top:20px;"><div style="font-size:14px;font-weight:600;color:#ffffff;margin-bottom:8px;">Attachments</div><ul style="margin:0;padding-left:18px;color:#d4d4d8;">${items.map((item) => item.html).join("")}</ul></div>`,
+    text: `Attachments:
+${items.map((item) => item.text).join("\n")}`
+  };
+}
+function buildHumanReadableDetails(payload) {
+  const reservedKeys = /* @__PURE__ */ new Set([
+    "title",
+    "description",
+    "attachments",
+    "created_at",
+    "createdAt",
+    "due_at",
+    "dueAt",
+    "due_date",
+    "dueDate",
+    "due_time",
+    "dueTime",
+    "creator",
+    "created_by"
+  ]);
+  const entries = Object.entries(payload).filter(([key, value]) => !reservedKeys.has(key) && value !== null && value !== void 0 && value !== "").map(([key, value]) => {
+    const label = key.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+    const rendered = tryStringify(value);
+    return rendered ? { label, rendered } : null;
+  }).filter((item) => Boolean(item));
+  if (entries.length === 0) return null;
+  return {
+    html: `<div style="margin-top:20px;"><div style="font-size:14px;font-weight:600;color:#ffffff;margin-bottom:8px;">Details</div><table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;">${entries.map(
+      (item) => `<tr><td style="padding:6px 12px 6px 0;font-size:13px;color:#a1a1aa;vertical-align:top;white-space:nowrap;">${escapeHtml(item.label)}</td><td style="padding:6px 0;font-size:13px;color:#e4e4e7;white-space:pre-wrap;word-break:break-word;">${escapeHtml(item.rendered)}</td></tr>`
+    ).join("")}</table></div>`,
+    text: `Details:
+${entries.map((item) => `${item.label}: ${item.rendered}`).join("\n")}`
+  };
+}
+async function sendTaskCreatedEmail(params) {
+  const notification = params.notification;
+  if (!notification || notification.enabled === false) return;
+  const apiKey = normalizeNonEmptyString(notification.apiKey);
+  if (!apiKey) return;
+  const recipients = Array.from(
+    /* @__PURE__ */ new Set([
+      ...normalizeEmailList(notification.projectOwnerEmails),
+      ...params.projectOwnerEmail ? [params.projectOwnerEmail] : []
+    ])
+  );
+  if (recipients.length === 0) return;
+  const fromEmail = normalizeNonEmptyString(notification.fromEmail) || "focusforge@theportlandcompany.com";
+  const fromName = normalizeNonEmptyString(notification.fromName) || "Focus Forge";
+  const creatorName = normalizeNonEmptyString(params.currentUser.fullName) || normalizeNonEmptyString(params.currentUser.email) || "Someone";
+  const createdAt = formatNotificationDateTime(params.report.created_at) || formatNotificationDateTime((/* @__PURE__ */ new Date()).toISOString());
+  const dueBy = formatNotificationDateTime(params.payload.due_at) || formatNotificationDateTime(params.payload.dueAt) || (() => {
+    const dueDate = normalizeNonEmptyString(params.payload.due_date) || normalizeNonEmptyString(params.payload.dueDate);
+    const dueTime = normalizeNonEmptyString(params.payload.due_time) || normalizeNonEmptyString(params.payload.dueTime);
+    if (!dueDate && !dueTime) return null;
+    return [dueDate, dueTime].filter(Boolean).join(" ");
+  })();
+  const description = normalizeNonEmptyString(params.report.description);
+  const attachments = formatAttachmentSummary(params.payload.attachments);
+  const details = buildHumanReadableDetails(params.payload);
+  const subject = `${creatorName} has created a Task on ${params.project.name}`;
+  const replyTo = normalizeEmailList(notification.replyTo);
+  const htmlParts = [
+    `<!DOCTYPE html><html><body style="margin:0;padding:0;background-color:#18181b;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">`,
+    '<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#18181b;padding:32px 16px;"><tr><td align="center">',
+    '<table width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;background-color:#27272a;border:1px solid #3f3f46;border-radius:12px;overflow:hidden;">',
+    '<tr><td style="padding:24px 28px;border-bottom:1px solid #3f3f46;"><div style="font-size:24px;font-weight:700;color:#ffffff;">Focus Forge</div></td></tr>',
+    '<tr><td style="padding:28px;">',
+    `<div style="font-size:15px;line-height:24px;color:#e4e4e7;"><strong>Title:</strong> ${escapeHtml(params.report.title)}</div>`,
+    createdAt ? `<div style="margin-top:8px;font-size:12px;line-height:18px;color:#a1a1aa;"><strong>Created at</strong> ${escapeHtml(createdAt)}</div>` : "",
+    dueBy ? `<div style="margin-top:4px;font-size:12px;line-height:18px;color:#a1a1aa;"><strong>Due by</strong> ${escapeHtml(dueBy)}</div>` : "",
+    description ? `<div style="margin-top:20px;font-size:14px;line-height:24px;color:#d4d4d8;white-space:pre-wrap;">${escapeHtml(description)}</div>` : "",
+    attachments?.html || "",
+    details?.html || "",
+    "</td></tr></table></td></tr></table></body></html>"
+  ];
+  const textParts = [
+    `Title: ${params.report.title}`,
+    createdAt ? `Created at: ${createdAt}` : null,
+    dueBy ? `Due by: ${dueBy}` : null,
+    description || null,
+    attachments?.text || null,
+    details?.text || null
+  ].filter((item) => Boolean(item));
+  const resendBody = {
+    from: `${fromName} <${fromEmail}>`,
+    to: recipients,
+    subject,
+    html: htmlParts.join(""),
+    text: textParts.join("\n\n")
+  };
+  if (replyTo.length > 0) {
+    resendBody.reply_to = replyTo.map((email) => ({ email }));
+  }
+  const response = await params.fetchImpl("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(resendBody)
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(
+      `Task notification email failed (${response.status}): ${text || "Unknown error"}`
+    );
+  }
+}
 function mapBugStatusToForge(status) {
   const normalized = status.trim().toLowerCase();
   if (normalized === "in progress") return "in_progress";
@@ -522,12 +691,15 @@ async function fetchForgeOrThrow(context, path, init = {}) {
 }
 async function discoverForgeProjects(context) {
   const bootstrap = await fetchFocusForge(context, "/api/mobile/bootstrap", { method: "GET" });
+  const bootstrapUser = extractBootstrapUser(bootstrap.payload);
   if (!bootstrap.ok) {
     return {
       ok: false,
       preferredProjectName: context.projectName,
       resolvedBaseUrl: context.baseUrl,
       discoveryPath: "/api/mobile/bootstrap",
+      bootstrapUserEmail: bootstrapUser.email,
+      bootstrapUserName: bootstrapUser.name,
       response: bootstrap
     };
   }
@@ -539,6 +711,8 @@ async function discoverForgeProjects(context) {
       matched: false,
       preferredProjectName: context.projectName,
       projects: bootstrapProjects,
+      bootstrapUserEmail: bootstrapUser.email,
+      bootstrapUserName: bootstrapUser.name,
       resolvedBaseUrl: context.baseUrl,
       discoveryPath: "/api/mobile/bootstrap"
     };
@@ -550,6 +724,8 @@ async function discoverForgeProjects(context) {
       preferredProjectName: context.projectName,
       resolvedBaseUrl: context.baseUrl,
       discoveryPath: "/api/mobile/projects",
+      bootstrapUserEmail: bootstrapUser.email,
+      bootstrapUserName: bootstrapUser.name,
       response: projectsResponse
     };
   }
@@ -559,6 +735,8 @@ async function discoverForgeProjects(context) {
     matched: false,
     preferredProjectName: context.projectName,
     projects: extractProjectsFromPayload(projectsResponse.payload),
+    bootstrapUserEmail: bootstrapUser.email,
+    bootstrapUserName: bootstrapUser.name,
     resolvedBaseUrl: context.baseUrl,
     discoveryPath: "/api/mobile/projects"
   };
@@ -764,6 +942,8 @@ function createDevNotesServerHandler(options) {
           matched: false,
           preferredProjectName: forgeContext.projectName,
           projects: [],
+          bootstrapUserEmail: null,
+          bootstrapUserName: null,
           resolvedBaseUrl: forgeContext.baseUrl,
           discoveryPath: null
         })
@@ -926,6 +1106,18 @@ function createDevNotesServerHandler(options) {
               error: "Task creation succeeded but DevNotes could not normalize the created task"
             }),
             contentType: response.contentType || "application/json"
+          });
+        }
+        const taskCreatedEmail = options.notifications?.taskCreatedEmail;
+        if (taskCreatedEmail) {
+          await sendTaskCreatedEmail({
+            fetchImpl,
+            notification: taskCreatedEmail,
+            report,
+            payload,
+            project,
+            currentUser: user,
+            projectOwnerEmail: projectResolution.bootstrapUserEmail || null
           });
         }
         return await jsonResponse(request, options.corsHeaders, report);

@@ -1,9 +1,9 @@
 import * as react_jsx_runtime from 'react/jsx-runtime';
 import { ReactNode } from 'react';
-import { D as DevNotesClientAdapter, a as DevNotesUser, b as DevNotesConfig, B as BugReport, c as BugReportType, T as TaskList, d as BugReportCreator, N as NotifyEvent, A as AiProvider, e as DevNotesRole, f as Task, g as TaskCaptureContext } from './types-CTlghCes.js';
-export { h as AiAssistResult, i as AiConversationMessage, j as BugCaptureContext, k as BugReportCreateData, l as BugReportMessage, m as TaskCreateData, n as TaskCreator, o as TaskMessage, p as TaskType } from './types-CTlghCes.js';
-import { D as DevNotesCapabilities, a as DevNotesAppLinkStatus, b as DevNotesClientOptions } from './types-CrmObeqp.js';
-export { c as DevNotesLinkAppInput } from './types-CrmObeqp.js';
+import { D as DevNotesClientAdapter, a as DevNotesUser, b as DevNotesConfig, B as BugReport, c as BugReportType, T as TaskList, d as BugReportCreator, N as NotifyEvent, A as AiProvider, e as DevNotesRole, f as Task, g as TaskCaptureContext } from './types-DwvhmJrB.js';
+export { h as AiAssistResult, i as AiConversationMessage, j as BugCaptureContext, k as BugReportCreateData, l as BugReportMessage, m as TaskCreateData, n as TaskCreator, o as TaskMessage, p as TaskType } from './types-DwvhmJrB.js';
+import { D as DevNotesCapabilities, a as DevNotesAppLinkStatus, b as DevNotesClientOptions } from './types-DPJ2ViSN.js';
+export { c as DevNotesLinkAppInput } from './types-DPJ2ViSN.js';
 
 type DevNotesContextValue = {
     isEnabled: boolean;
