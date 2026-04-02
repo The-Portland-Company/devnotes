@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { FiEdit2, FiTrash2 } from 'react-icons/fi';
+import { FiAtSign, FiEdit2, FiMessageSquare, FiSend, FiTrash2 } from 'react-icons/fi';
 import { useDevNotes } from './DevNotesProvider';
 import type { BugReport, BugReportMessage, BugReportCreator } from './types';
 
@@ -105,6 +105,9 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
       return label.includes(query);
     });
   }, [mentionCandidates, mentionQuery, mentionRange]);
+
+  const messageCountLabel = messages.length === 1 ? '1 note' : `${messages.length} notes`;
+  const hasNoMentionResults = Boolean(mentionRange && mentionOptions.length === 0);
 
   useEffect(() => {
     if (!mentionRange) {
@@ -377,8 +380,18 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
 
   if (!report?.id) {
     return (
-      <div className="bg-gray-50 rounded-lg p-4 border border-gray-100 min-h-[250px]">
-        <p className="text-sm text-gray-600">Save this task first to start a conversation.</p>
+      <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 shadow-sm">
+        <div className="flex items-start gap-3 rounded-xl border border-dashed border-slate-200 bg-white/80 p-4">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-white">
+            <FiMessageSquare size={16} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-slate-900">Conversation locked</p>
+            <p className="mt-1 text-sm leading-6 text-slate-600">
+              Save this task first to open the note thread.
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -391,23 +404,33 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
   };
 
   return (
-    <div className="flex flex-col gap-4 bg-gray-50 rounded-lg border border-gray-100 p-4 h-full">
-      <div>
-        <p className="text-sm font-semibold">Comments</p>
+    <div className="flex h-full flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50/90 p-4 shadow-sm">
+      <div className="flex items-center justify-between gap-3 border-b border-slate-200 pb-3">
+        <div>
+          <p className="text-sm font-semibold text-slate-900">Discussion</p>
+          <p className="text-xs text-slate-500">{messageCountLabel}</p>
+        </div>
+        <p className="text-xs text-slate-500">Mentions notify teammates in real time.</p>
       </div>
 
-      <div className="flex-1 min-h-[220px] max-h-[360px] overflow-y-auto pr-2">
+      <div className="flex-1 min-h-[240px] max-h-[360px] overflow-y-auto pr-1">
         {loadingMessages ? (
-          <div className="flex justify-center py-10">
-            <div className="w-6 h-6 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" />
+          <div className="flex justify-center py-12">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-slate-900" />
           </div>
         ) : messages.length === 0 ? (
-          <div className="flex items-center bg-white rounded-md border border-dashed border-gray-200 p-4">
-            <p className="text-sm text-gray-500">No notes yet. Start the conversation below.</p>
+          <div className="flex items-center rounded-xl border border-dashed border-slate-300 bg-white p-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-700">
+              <FiMessageSquare size={16} />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-slate-900">No notes yet</p>
+              <p className="text-sm text-slate-600">Add context, ask for help, or mention a teammate.</p>
+            </div>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-              {messages.map((message) => {
+            {messages.map((message) => {
               const badge = directionBadge(message.author_id);
               const authorLabel =
                 message.author?.full_name ||
@@ -423,24 +446,24 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
               return (
                 <div
                   key={message.id}
-                  className="bg-white rounded-lg border border-gray-200 p-3"
+                  className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
                 >
-                  <div className="flex justify-between items-start mb-1">
+                  <div className="mb-2 flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+                      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white">
                         {getInitials(authorLabel)}
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold">{authorLabel}</span>
-                          <span className={`text-[0.65rem] px-1.5 py-0.5 rounded ${badge.className}`}>
+                          <span className="text-sm font-semibold text-slate-900">{authorLabel}</span>
+                          <span className={`rounded-full px-2 py-0.5 text-[0.65rem] font-medium ${badge.className}`}>
                             {badge.label}
                           </span>
                         </div>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-slate-500">
                           {formatTimestamp(message.created_at)}
                           {wasUpdated && (
-                            <span className="text-gray-400">
+                            <span className="text-slate-400">
                               {' '}&middot; Updated {formatTimestamp(message.updated_at)}
                             </span>
                           )}
@@ -451,21 +474,23 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
                       <div className="flex items-center gap-1">
                         <button
                           type="button"
-                          className="p-1 rounded hover:bg-gray-100 text-gray-500"
+                          className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
                           onClick={() => startEditing(message)}
                           aria-label="Edit note"
+                          title="Edit note"
                         >
                           <FiEdit2 size={14} />
                         </button>
                         <button
                           type="button"
-                          className="p-1 rounded hover:bg-gray-100 text-gray-500 disabled:opacity-50"
+                          className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-50"
                           onClick={() => handleDeleteMessage(message.id)}
                           disabled={deletingId === message.id}
                           aria-label="Delete note"
+                          title="Delete note"
                         >
                           {deletingId === message.id ? (
-                            <div className="w-3.5 h-3.5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                            <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
                           ) : (
                             <FiTrash2 size={14} />
                           )}
@@ -474,24 +499,24 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
                     )}
                   </div>
                   {editingMessageId === message.id ? (
-                    <div className="flex flex-col gap-2 mt-2">
+                    <div className="mt-3 flex flex-col gap-2">
                       <textarea
                         value={editDraft}
                         onChange={(e) => setEditDraft(e.target.value)}
                         rows={4}
-                        className="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                        className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-3 text-sm text-slate-900 outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900/20"
                       />
                       <div className="flex justify-end gap-2">
                         <button
                           type="button"
-                          className="px-3 py-1 text-xs rounded hover:bg-gray-100"
+                          className="rounded-md px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                           onClick={cancelEditing}
                         >
                           Cancel
                         </button>
                         <button
                           type="button"
-                          className="px-3 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                          className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800 disabled:opacity-50"
                           onClick={handleUpdateMessage}
                           disabled={!editDraft.trim() || editLoading}
                         >
@@ -500,7 +525,7 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
                       </div>
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{message.body}</p>
+                    <p className="whitespace-pre-wrap text-sm text-slate-700">{message.body}</p>
                   )}
                 </div>
               );
@@ -509,7 +534,7 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
         )}
       </div>
 
-      <div className="flex flex-col gap-2">
+      <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
         <div className="relative">
           <textarea
             ref={textareaRef}
@@ -520,22 +545,25 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
             onKeyUp={handleMentionCursorUpdate}
             onClick={handleMentionCursorUpdate}
             rows={4}
-            className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+            className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-900 focus:ring-1 focus:ring-slate-900/20"
           />
           {mentionRange && (
-            <div className="absolute bottom-3 left-3 bg-white border border-gray-200 rounded-md shadow-lg min-w-[220px] max-h-[200px] overflow-y-auto z-[2]">
-              {mentionOptions.length === 0 ? (
-                <div className="px-3 py-2">
-                  <p className="text-sm text-gray-500">
-                    No collaborators match "{mentionQuery}"
-                  </p>
+            <div className="absolute bottom-3 left-3 z-[2] min-w-[260px] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+              <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2 text-xs font-medium text-slate-500">
+                <FiAtSign size={12} />
+                <span>Mentions</span>
+                <span className="ml-auto">Type to filter, Enter to select</span>
+              </div>
+              {hasNoMentionResults ? (
+                <div className="px-3 py-3">
+                  <p className="text-sm text-slate-500">No collaborators match "{mentionQuery}"</p>
                 </div>
               ) : (
                 mentionOptions.map((collaborator, index) => (
                   <div
                     key={collaborator.id}
-                    className={`px-3 py-2 cursor-pointer hover:bg-gray-100 ${
-                      mentionHighlight === index ? 'bg-gray-100' : ''
+                    className={`cursor-pointer px-3 py-2 transition hover:bg-slate-50 ${
+                      mentionHighlight === index ? 'bg-slate-100' : ''
                     }`}
                     onMouseDown={(e) => {
                       e.preventDefault();
@@ -543,11 +571,11 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
                       setMentionHighlight(index);
                     }}
                   >
-                    <p className="text-sm font-semibold">
+                    <p className="text-sm font-medium text-slate-900">
                       {collaborator.full_name || collaborator.email || 'Unknown'}
                     </p>
                     {collaborator.email && collaborator.full_name && (
-                      <p className="text-xs text-gray-500">{collaborator.email}</p>
+                      <p className="text-xs text-slate-500">{collaborator.email}</p>
                     )}
                   </div>
                 ))
@@ -555,18 +583,20 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
             </div>
           )}
         </div>
-        <div className="flex justify-between items-center">
-          <p className="text-xs text-gray-500">
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-xs leading-5 text-slate-500">
             Notes are visible to everyone with access to Dev Notes. Use{' '}
             <span className="font-bold">@</span> to mention a teammate.
           </p>
           <button
             type="button"
-            className="px-4 py-1.5 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:opacity-50"
             onClick={handleSendMessage}
             disabled={!newMessage.trim() || sending}
+            title="Send note"
           >
-            {sending ? 'Sending...' : 'Send'}
+            <FiSend size={14} />
+            <span>{sending ? 'Sending...' : 'Send'}</span>
           </button>
         </div>
       </div>

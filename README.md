@@ -171,3 +171,8 @@ export const devNotesProxy = createExpressDevNotesHandler({
 - Your host proxy must translate DevNotes operations into real Focus Forge API calls
 - Your host backend owns any native Forge completion reconciliation beyond the generic DevNotes metadata contract
 - App-level Forge credentials must stay on the server side
+
+## Roadmap
+
+- Move DevNotes notification delivery off the host app mail transport and onto Focus Forge-owned email infrastructure.
+- Add explicit notification transport configuration so task-created, task-commented, and task-completed emails can use Focus Forge server credentials instead of Politogy SES defaults.

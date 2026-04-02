@@ -1016,6 +1016,8 @@ function DevNotesDiscussion({ report }) {
       return label.includes(query);
     });
   }, [mentionCandidates, mentionQuery, mentionRange]);
+  const messageCountLabel = messages.length === 1 ? "1 note" : `${messages.length} notes`;
+  const hasNoMentionResults = Boolean(mentionRange && mentionOptions.length === 0);
   (0, import_react4.useEffect)(() => {
     if (!mentionRange) {
       setMentionHighlight(0);
@@ -1262,16 +1264,34 @@ Dev Notes`,
     }
   };
   if (!report?.id) {
-    return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "bg-gray-50 rounded-lg p-4 border border-gray-100 min-h-[250px]", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "text-sm text-gray-600", children: "Save this task first to start a conversation." }) });
+    return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "rounded-2xl border border-slate-200 bg-slate-50/80 p-4 shadow-sm", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "flex items-start gap-3 rounded-xl border border-dashed border-slate-200 bg-white/80 p-4", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-white", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(import_fi2.FiMessageSquare, { size: 16 }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "min-w-0", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "text-sm font-semibold text-slate-900", children: "Conversation locked" }),
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "mt-1 text-sm leading-6 text-slate-600", children: "Save this task first to open the note thread." })
+      ] })
+    ] }) });
   }
   const getInitials = (name) => {
     const parts = name.trim().split(/\s+/);
     if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
     return name.slice(0, 2).toUpperCase();
   };
-  return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "flex flex-col gap-4 bg-gray-50 rounded-lg border border-gray-100 p-4 h-full", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "text-sm font-semibold", children: "Comments" }) }),
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "flex-1 min-h-[220px] max-h-[360px] overflow-y-auto pr-2", children: loadingMessages ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "flex justify-center py-10", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "w-6 h-6 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" }) }) : messages.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "flex items-center bg-white rounded-md border border-dashed border-gray-200 p-4", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "text-sm text-gray-500", children: "No notes yet. Start the conversation below." }) }) : /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "flex flex-col gap-3", children: messages.map((message) => {
+  return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "flex h-full flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50/90 p-4 shadow-sm", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "flex items-center justify-between gap-3 border-b border-slate-200 pb-3", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "text-sm font-semibold text-slate-900", children: "Discussion" }),
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "text-xs text-slate-500", children: messageCountLabel })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "text-xs text-slate-500", children: "Mentions notify teammates in real time." })
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "flex-1 min-h-[240px] max-h-[360px] overflow-y-auto pr-1", children: loadingMessages ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "flex justify-center py-12", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-slate-900" }) }) : messages.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "flex items-center rounded-xl border border-dashed border-slate-300 bg-white p-4", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-700", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(import_fi2.FiMessageSquare, { size: 16 }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "ml-3", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "text-sm font-medium text-slate-900", children: "No notes yet" }),
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "text-sm text-slate-600", children: "Add context, ask for help, or mention a teammate." })
+      ] })
+    ] }) : /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "flex flex-col gap-3", children: messages.map((message) => {
       const badge = directionBadge(message.author_id);
       const authorLabel = message.author?.full_name || message.author?.email || (message.author_id === report.created_by ? "Reporter" : "Team");
       const canManage = user?.id && message.author_id === user.id;
@@ -1279,19 +1299,19 @@ Dev Notes`,
       return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(
         "div",
         {
-          className: "bg-white rounded-lg border border-gray-200 p-3",
+          className: "rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md",
           children: [
-            /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "flex justify-between items-start mb-1", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "mb-2 flex items-start justify-between gap-3", children: [
               /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "flex items-center gap-3", children: [
-                /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-xs font-bold text-white flex-shrink-0", children: getInitials(authorLabel) }),
+                /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white", children: getInitials(authorLabel) }),
                 /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { children: [
                   /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "flex items-center gap-2", children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: "text-sm font-semibold", children: authorLabel }),
-                    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: `text-[0.65rem] px-1.5 py-0.5 rounded ${badge.className}`, children: badge.label })
+                    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: "text-sm font-semibold text-slate-900", children: authorLabel }),
+                    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: `rounded-full px-2 py-0.5 text-[0.65rem] font-medium ${badge.className}`, children: badge.label })
                   ] }),
-                  /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("p", { className: "text-xs text-gray-500", children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("p", { className: "text-xs text-slate-500", children: [
                     formatTimestamp(message.created_at),
-                    wasUpdated && /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("span", { className: "text-gray-400", children: [
+                    wasUpdated && /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("span", { className: "text-slate-400", children: [
                       " ",
                       "\xB7 Updated ",
                       formatTimestamp(message.updated_at)
@@ -1304,9 +1324,10 @@ Dev Notes`,
                   "button",
                   {
                     type: "button",
-                    className: "p-1 rounded hover:bg-gray-100 text-gray-500",
+                    className: "rounded-md p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900",
                     onClick: () => startEditing(message),
                     "aria-label": "Edit note",
+                    title: "Edit note",
                     children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(import_fi2.FiEdit2, { size: 14 })
                   }
                 ),
@@ -1314,23 +1335,24 @@ Dev Notes`,
                   "button",
                   {
                     type: "button",
-                    className: "p-1 rounded hover:bg-gray-100 text-gray-500 disabled:opacity-50",
+                    className: "rounded-md p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-50",
                     onClick: () => handleDeleteMessage(message.id),
                     disabled: deletingId === message.id,
                     "aria-label": "Delete note",
-                    children: deletingId === message.id ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "w-3.5 h-3.5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" }) : /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(import_fi2.FiTrash2, { size: 14 })
+                    title: "Delete note",
+                    children: deletingId === message.id ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" }) : /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(import_fi2.FiTrash2, { size: 14 })
                   }
                 )
               ] })
             ] }),
-            editingMessageId === message.id ? /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "flex flex-col gap-2 mt-2", children: [
+            editingMessageId === message.id ? /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "mt-3 flex flex-col gap-2", children: [
               /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
                 "textarea",
                 {
                   value: editDraft,
                   onChange: (e) => setEditDraft(e.target.value),
                   rows: 4,
-                  className: "w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                  className: "w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-3 text-sm text-slate-900 outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900/20"
                 }
               ),
               /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "flex justify-end gap-2", children: [
@@ -1338,7 +1360,7 @@ Dev Notes`,
                   "button",
                   {
                     type: "button",
-                    className: "px-3 py-1 text-xs rounded hover:bg-gray-100",
+                    className: "rounded-md px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900",
                     onClick: cancelEditing,
                     children: "Cancel"
                   }
@@ -1347,20 +1369,20 @@ Dev Notes`,
                   "button",
                   {
                     type: "button",
-                    className: "px-3 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50",
+                    className: "rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800 disabled:opacity-50",
                     onClick: handleUpdateMessage,
                     disabled: !editDraft.trim() || editLoading,
                     children: editLoading ? "Saving..." : "Save"
                   }
                 )
               ] })
-            ] }) : /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "text-sm text-gray-700 whitespace-pre-wrap", children: message.body })
+            ] }) : /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "whitespace-pre-wrap text-sm text-slate-700", children: message.body })
           ]
         },
         message.id
       );
     }) }) }),
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "flex flex-col gap-2", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "rounded-2xl border border-slate-200 bg-white p-3 shadow-sm", children: [
       /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "relative", children: [
         /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
           "textarea",
@@ -1373,45 +1395,56 @@ Dev Notes`,
             onKeyUp: handleMentionCursorUpdate,
             onClick: handleMentionCursorUpdate,
             rows: 4,
-            className: "w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+            className: "w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-900 focus:ring-1 focus:ring-slate-900/20"
           }
         ),
-        mentionRange && /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "absolute bottom-3 left-3 bg-white border border-gray-200 rounded-md shadow-lg min-w-[220px] max-h-[200px] overflow-y-auto z-[2]", children: mentionOptions.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "px-3 py-2", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("p", { className: "text-sm text-gray-500", children: [
-          'No collaborators match "',
-          mentionQuery,
-          '"'
-        ] }) }) : mentionOptions.map((collaborator, index) => /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(
-          "div",
-          {
-            className: `px-3 py-2 cursor-pointer hover:bg-gray-100 ${mentionHighlight === index ? "bg-gray-100" : ""}`,
-            onMouseDown: (e) => {
-              e.preventDefault();
-              insertMention(collaborator);
-              setMentionHighlight(index);
+        mentionRange && /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "absolute bottom-3 left-3 z-[2] min-w-[260px] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "flex items-center gap-2 border-b border-slate-100 px-3 py-2 text-xs font-medium text-slate-500", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(import_fi2.FiAtSign, { size: 12 }),
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: "Mentions" }),
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: "ml-auto", children: "Type to filter, Enter to select" })
+          ] }),
+          hasNoMentionResults ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "px-3 py-3", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("p", { className: "text-sm text-slate-500", children: [
+            'No collaborators match "',
+            mentionQuery,
+            '"'
+          ] }) }) : mentionOptions.map((collaborator, index) => /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(
+            "div",
+            {
+              className: `cursor-pointer px-3 py-2 transition hover:bg-slate-50 ${mentionHighlight === index ? "bg-slate-100" : ""}`,
+              onMouseDown: (e) => {
+                e.preventDefault();
+                insertMention(collaborator);
+                setMentionHighlight(index);
+              },
+              children: [
+                /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "text-sm font-medium text-slate-900", children: collaborator.full_name || collaborator.email || "Unknown" }),
+                collaborator.email && collaborator.full_name && /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "text-xs text-slate-500", children: collaborator.email })
+              ]
             },
-            children: [
-              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "text-sm font-semibold", children: collaborator.full_name || collaborator.email || "Unknown" }),
-              collaborator.email && collaborator.full_name && /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "text-xs text-gray-500", children: collaborator.email })
-            ]
-          },
-          collaborator.id
-        )) })
+            collaborator.id
+          ))
+        ] })
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "flex justify-between items-center", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("p", { className: "text-xs text-gray-500", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "mt-2 flex flex-wrap items-center justify-between gap-3", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("p", { className: "text-xs leading-5 text-slate-500", children: [
           "Notes are visible to everyone with access to Dev Notes. Use",
           " ",
           /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: "font-bold", children: "@" }),
           " to mention a teammate."
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(
           "button",
           {
             type: "button",
-            className: "px-4 py-1.5 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50",
+            className: "inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:opacity-50",
             onClick: handleSendMessage,
             disabled: !newMessage.trim() || sending,
-            children: sending ? "Sending..." : "Send"
+            title: "Send note",
+            children: [
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(import_fi2.FiSend, { size: 14 }),
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: sending ? "Sending..." : "Send" })
+            ]
           }
         )
       ] })
@@ -2088,6 +2121,13 @@ function formatAiFixPayloadForCopy(payload) {
 var import_jsx_runtime5 = require("react/jsx-runtime");
 var COMPACT_BEHAVIOR_HEIGHT = 56;
 var EXPANDED_BEHAVIOR_MIN_HEIGHT = 92;
+var FIELD_SURFACE_CLASS = "rounded-2xl border border-slate-200 bg-white/95 shadow-sm shadow-slate-900/5 transition-colors focus-within:border-slate-400 focus-within:ring-1 focus-within:ring-slate-200";
+var CONTROL_INPUT_CLASS = "w-full border-0 bg-transparent px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none";
+var CONTROL_TEXTAREA_CLASS = "w-full resize-none border-0 bg-transparent px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-[height] duration-200";
+var SECTION_CARD_CLASS = "rounded-2xl border border-slate-200 bg-slate-50/80 p-4 shadow-sm shadow-slate-900/5";
+var ACTION_ICON_BUTTON_CLASS = "inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm shadow-slate-900/5 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50";
+var floatingLabelClass = (isSuperscript) => isSuperscript ? "absolute -top-2.5 left-3 z-[2] rounded-full border border-slate-200 bg-white px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 pointer-events-none" : "mb-2 block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500";
+var sectionLabelClass = "text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500";
 function SearchableSingleSelect({
   label,
   options,
@@ -2117,61 +2157,71 @@ function SearchableSingleSelect({
     /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
       "label",
       {
-        className: isSuperscript ? "absolute -top-[9px] left-[10px] bg-white px-1.5 text-xs leading-4 rounded-md pointer-events-none z-[2] text-gray-700" : "block text-sm mb-1 text-gray-700",
+        className: isSuperscript ? floatingLabelClass(true) : floatingLabelClass(false),
         children: label
       }
     ),
     /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "relative", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "border border-gray-200 rounded-md px-2 py-1 min-h-[40px] bg-white focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 flex items-center", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "flex flex-wrap items-center gap-1", children: [
-        selectedOption && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("span", { className: "inline-flex items-center gap-1 rounded-sm bg-transparent px-1 py-0.5 text-xs font-medium text-gray-700", children: [
-          selectedOption.label,
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
-            "button",
-            {
-              type: "button",
-              className: "ml-0.5 text-gray-400 hover:text-gray-700",
-              onClick: () => {
-                onChange(null);
-                setSearchTerm("");
-                setShowDropdown(false);
-              },
-              children: "\xD7"
-            }
-          )
+      /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: FIELD_SURFACE_CLASS, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "flex items-center gap-2 px-3 py-2", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_fi4.FiSearch, { size: 14, className: "shrink-0 text-slate-400" }),
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "h-4 w-px bg-slate-200" })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
-          "input",
-          {
-            type: "text",
-            className: `flex-1 ${minInputWidthClassName} border-none outline-none text-sm bg-transparent`,
-            placeholder: selectedOption ? "Type to search..." : placeholder,
-            value: searchTerm,
-            onChange: (e) => {
-              setSearchTerm(e.target.value);
-              setShowDropdown(true);
-            },
-            onFocus: () => setShowDropdown(true),
-            onBlur: () => setTimeout(() => setShowDropdown(false), 200),
-            onKeyDown: (e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                if (filteredOptions.length > 0) {
-                  handleSelect(filteredOptions[0].id);
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "flex min-h-[40px] flex-wrap items-center gap-1 px-3 pb-2 pt-0", children: [
+          selectedOption && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("span", { className: "inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700", children: [
+            selectedOption.label,
+            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+              "button",
+              {
+                type: "button",
+                className: "ml-0.5 text-slate-400 transition hover:text-slate-700",
+                onClick: () => {
+                  onChange(null);
+                  setSearchTerm("");
+                  setShowDropdown(false);
+                },
+                children: "\xD7"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+            "input",
+            {
+              type: "text",
+              className: `flex-1 ${minInputWidthClassName} border-none outline-none text-sm bg-transparent text-slate-900 placeholder:text-slate-400`,
+              placeholder: selectedOption ? "Type to refine" : placeholder,
+              value: searchTerm,
+              onChange: (e) => {
+                setSearchTerm(e.target.value);
+                setShowDropdown(true);
+              },
+              onFocus: () => setShowDropdown(true),
+              onBlur: () => setTimeout(() => setShowDropdown(false), 200),
+              onKeyDown: (e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  if (filteredOptions.length > 0) {
+                    handleSelect(filteredOptions[0].id);
+                  }
                 }
               }
             }
-          }
-        )
-      ] }) }),
-      showDropdown && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "absolute top-[calc(100%+4px)] left-0 right-0 bg-white rounded-md shadow-lg border border-gray-200 max-h-[220px] overflow-y-auto z-20", children: filteredOptions.length > 0 ? filteredOptions.map((option) => /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+          ),
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "shrink-0 text-[11px] text-slate-400", children: "Type to search" })
+        ] })
+      ] }),
+      showDropdown && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "absolute left-0 right-0 top-[calc(100%+6px)] z-20 max-h-[240px] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10", children: filteredOptions.length > 0 ? filteredOptions.map((option) => /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
         "div",
         {
-          className: `flex items-center px-3 py-2 cursor-pointer hover:bg-gray-100 ${option.id === value ? "bg-blue-50" : ""}`,
+          className: `flex items-center justify-between px-3 py-2.5 cursor-pointer transition hover:bg-slate-50 ${option.id === value ? "bg-slate-50" : ""}`,
           onMouseDown: () => handleSelect(option.id),
-          children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "text-sm", children: option.label })
+          children: [
+            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "text-sm text-slate-700", children: option.label }),
+            option.id === value && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_fi4.FiCheck, { size: 14, className: "text-slate-500" })
+          ]
         },
         option.id
-      )) : /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "px-3 py-2", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "text-sm text-gray-500", children: "No matches" }) }) })
+      )) : /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "px-3 py-2.5", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "text-sm text-slate-500", children: "No matches" }) }) })
     ] })
   ] });
 }
@@ -2699,189 +2749,185 @@ function DevNotesForm({
       }
     )
   ] });
-  return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "bg-white rounded-xl p-4 md:p-6 min-w-[320px] w-full max-w-[960px] mx-auto relative shadow-sm", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "flex justify-between items-start mb-3", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "flex flex-col gap-1", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "flex items-center gap-2", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "font-bold text-base", children: existingReport ? "Edit Task" : "Create Task" }),
-        existingReport && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("span", { className: `text-xs px-2 py-0.5 rounded-full flex items-center gap-1 ${statusColorClass}`, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(StatusIcon, { size: 12 }),
-          status
-        ] })
-      ] }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "flex items-center gap-1 flex-shrink-0", children: [
+  return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "relative mx-auto w-full min-w-[320px] max-w-[1040px] rounded-3xl border border-slate-200 bg-gradient-to-b from-white via-slate-50/90 to-slate-100 p-4 shadow-[0_24px_90px_rgba(15,23,42,0.14)] md:p-6", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "mb-5 flex items-start justify-between gap-4", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "space-y-2", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "flex flex-wrap items-center gap-2", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "text-base font-semibold text-slate-900 md:text-lg", children: existingReport ? "Edit Task" : "Create Task" }),
+          existingReport && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
+            "span",
+            {
+              className: `inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${statusColorClass}`,
+              children: [
+                /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(StatusIcon, { size: 12 }),
+                status
+              ]
+            }
+          )
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("p", { className: "max-w-2xl text-sm text-slate-500", children: existingReport ? "Review the report with clearer field grouping, comments, and workflow controls." : "Capture the issue with a clear title, narrative, and workflow context." })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "flex flex-col items-end gap-2 sm:flex-row sm:items-center", children: [
+        renderStatusSaveActions("header"),
         /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
           "button",
           {
             type: "button",
-            className: "p-1.5 rounded hover:bg-gray-100 text-gray-500",
+            className: ACTION_ICON_BUTTON_CLASS,
             onClick: onCancel,
             "aria-label": "Cancel",
             title: "Cancel",
             children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_fi4.FiX, { size: 16 })
           }
-        ),
-        renderStatusSaveActions("header")
+        )
       ] })
     ] }),
-    existingReport && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "flex flex-wrap items-center gap-2 mb-3 text-xs relative", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("span", { className: "text-gray-500", children: [
-        "Created by",
-        " ",
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "font-medium text-gray-700", children: getFirstName(
-          existingReport.creator?.full_name || existingReport.creator?.email || "Unknown"
-        ) }),
-        " on ",
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "text-gray-600", children: formatCreatedDate(existingReport.created_at) })
-      ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "text-gray-400", children: "|" }),
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "text-gray-500", children: "Task ID" }),
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
-        "button",
-        {
-          type: "button",
-          className: "font-mono text-gray-800 hover:underline",
-          onClick: handleCopyTaskId,
-          children: existingReport.id
-        }
-      ),
-      forgeTaskUrl && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "text-gray-400", children: "|" }),
+    existingReport && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "mb-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-900/5", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "flex flex-wrap items-center gap-2 text-xs text-slate-600", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("span", { className: "inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_fi4.FiClock, { size: 12, className: "text-slate-400" }),
+          "Created by",
+          " ",
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "font-medium text-slate-700", children: getFirstName(
+            existingReport.creator?.full_name || existingReport.creator?.email || "Unknown"
+          ) }),
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "text-slate-400", children: "on" }),
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "text-slate-700", children: formatCreatedDate(existingReport.created_at) })
+        ] }),
         /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
+          "button",
+          {
+            type: "button",
+            className: "inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 font-mono text-[11px] text-slate-700 transition hover:border-slate-300 hover:bg-slate-100",
+            onClick: handleCopyTaskId,
+            title: "Copy task ID",
+            children: [
+              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_fi4.FiCopy, { size: 11, className: "text-slate-400" }),
+              existingReport.id
+            ]
+          }
+        ),
+        forgeTaskUrl && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
           "a",
           {
             href: forgeTaskUrl,
             target: "_blank",
             rel: "noreferrer",
-            className: "inline-flex items-center gap-1 text-blue-600 hover:underline",
+            className: "inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-slate-700 transition hover:border-slate-300 hover:bg-slate-100",
             title: "Open task in Forge",
             children: [
-              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_fi4.FiExternalLink, { size: 12 }),
+              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_fi4.FiExternalLink, { size: 12, className: "text-slate-400" }),
               "Open in Forge"
+            ]
+          }
+        ),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
+          "button",
+          {
+            type: "button",
+            className: "inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-slate-700 transition hover:border-slate-300 hover:bg-slate-100",
+            onClick: handleCopyLink,
+            title: "Copy shareable link",
+            children: [
+              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_fi4.FiLink2, { size: 12, className: "text-slate-400" }),
+              "Copy Link"
+            ]
+          }
+        ),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
+          "button",
+          {
+            type: "button",
+            className: "inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-slate-700 transition hover:border-slate-300 hover:bg-slate-100",
+            onClick: handleCopyAiPayload,
+            title: "Copy AI fix payload",
+            children: [
+              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_fi4.FiCopy, { size: 12, className: "text-slate-400" }),
+              "Copy AI Payload"
             ]
           }
         )
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "text-gray-400", children: "|" }),
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
-        "button",
-        {
-          type: "button",
-          className: "inline-flex items-center gap-1 text-blue-600 hover:underline",
-          onClick: handleCopyLink,
-          title: "Copy shareable link",
-          children: [
-            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_fi4.FiLink2, { size: 12 }),
-            "Copy Link"
-          ]
-        }
-      ),
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "text-gray-400", children: "|" }),
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
-        "button",
-        {
-          type: "button",
-          className: "inline-flex items-center gap-1 text-purple-700 hover:underline",
-          onClick: handleCopyAiPayload,
-          title: "Copy AI fix payload",
-          children: [
-            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_fi4.FiCopy, { size: 12 }),
-            "Copy AI Payload"
-          ]
-        }
-      ),
-      (showCopied || showLinkCopied) && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "absolute left-0 top-full mt-1 text-xs text-black animate-devnotes-fade-up pointer-events-none", children: showLinkCopied ? "Link copied!" : "Copied!" }),
-      showAiPayloadCopied && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "absolute left-0 top-full mt-1 text-xs text-black animate-devnotes-fade-up pointer-events-none", children: "AI payload copied!" })
+      /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "relative mt-2 min-h-4", children: [
+        (showCopied || showLinkCopied) && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "absolute left-0 top-0 text-xs font-medium text-slate-500 animate-devnotes-fade-up pointer-events-none", children: showLinkCopied ? "Link copied!" : "Copied!" }),
+        showAiPayloadCopied && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "absolute left-0 top-0 text-xs font-medium text-slate-500 animate-devnotes-fade-up pointer-events-none", children: "AI payload copied!" })
+      ] })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "flex flex-col gap-5", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "flex flex-col gap-4", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: isSuperscriptLabels ? "relative my-3" : "my-3", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
-            "label",
+    /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "space-y-5", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("section", { className: SECTION_CARD_CLASS, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "mb-4 flex items-center justify-between gap-3", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: sectionLabelClass, children: "Core details" }),
+          aiProvider && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
+            "button",
             {
-              className: isSuperscriptLabels ? "absolute -top-[9px] left-[10px] bg-white px-1.5 text-xs leading-4 rounded-md pointer-events-none z-[2] text-gray-700" : "block text-sm mb-1 text-gray-700",
+              type: "button",
+              className: `inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition ${canReviewDescriptionWithAi ? "border border-violet-200 bg-violet-50 text-violet-700 hover:border-violet-300 hover:bg-violet-100" : "cursor-not-allowed border border-slate-200 bg-slate-100 text-slate-400"}`,
+              onClick: () => {
+                if (!canReviewDescriptionWithAi) return;
+                setShowAiChat(true);
+              },
+              disabled: !canReviewDescriptionWithAi,
+              title: canReviewDescriptionWithAi ? "Review the description with AI" : "Add a description to review it with AI",
               children: [
-                "Title ",
-                /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "text-red-500", children: "*" })
+                /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_fi4.FiZap, { size: 12 }),
+                "Review with AI"
               ]
-            }
-          ),
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
-            "input",
-            {
-              type: "text",
-              className: "w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none hover:border-gray-400",
-              placeholder: "Brief description of the issue",
-              value: title,
-              onChange: (e) => setTitle(e.target.value)
             }
           )
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: isSuperscriptLabels ? "relative" : "", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
-            "div",
-            {
-              className: isSuperscriptLabels ? "absolute -top-[9px] left-[10px] right-[10px] z-[2] flex items-center justify-between" : "mb-1 flex items-center justify-between",
-              children: [
-                /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
-                  "label",
-                  {
-                    className: isSuperscriptLabels ? "bg-white px-1.5 text-xs leading-4 rounded-md pointer-events-none text-gray-700" : "block text-sm text-gray-700",
-                    children: "Description"
-                  }
-                ),
-                aiProvider && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
-                  "button",
-                  {
-                    type: "button",
-                    className: `inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition ${canReviewDescriptionWithAi ? "bg-purple-50 text-purple-700 hover:bg-purple-100" : "cursor-not-allowed bg-gray-100 text-gray-400"}`,
-                    onClick: () => {
-                      if (!canReviewDescriptionWithAi) return;
-                      setShowAiChat(true);
-                    },
-                    disabled: !canReviewDescriptionWithAi,
-                    title: canReviewDescriptionWithAi ? "Review the description with AI" : "Add a description to review it with AI",
-                    children: [
-                      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_fi4.FiZap, { size: 12 }),
-                      "Review with AI"
-                    ]
-                  }
-                )
-              ]
-            }
-          ),
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
-            "textarea",
-            {
-              ref: descriptionRef,
-              className: "w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none resize-none transition-[height] duration-200 hover:border-gray-400",
-              placeholder: "Detailed description (optional)",
-              value: description,
-              onChange: (e) => setDescription(e.target.value),
-              onInput: resizeDescriptionField,
-              rows: 5,
-              style: { minHeight: "120px", height: descriptionHeight }
-            }
-          )
-        ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "flex items-center gap-2 py-1", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "h-px flex-1 bg-gray-200" }),
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-[11px] font-semibold tracking-wide text-gray-500", children: "OR" }),
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "h-px flex-1 bg-gray-200" })
-        ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-4", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "space-y-4", children: [
           /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: isSuperscriptLabels ? "relative" : "", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("label", { className: floatingLabelClass(isSuperscriptLabels), children: [
+              "Title ",
+              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "text-rose-500", children: "*" })
+            ] }),
             /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
-              "label",
+              "input",
               {
-                className: isSuperscriptLabels ? "absolute -top-[9px] left-[10px] bg-white px-1.5 text-xs leading-4 rounded-md pointer-events-none z-[2] text-gray-700" : "block text-sm mb-1 text-gray-700",
-                children: "Expected Behavior"
+                type: "text",
+                className: `${FIELD_SURFACE_CLASS} ${CONTROL_INPUT_CLASS}`,
+                placeholder: "Brief description of the issue",
+                value: title,
+                onChange: (e) => setTitle(e.target.value)
               }
-            ),
+            )
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: isSuperscriptLabels ? "relative" : "", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("label", { className: floatingLabelClass(isSuperscriptLabels), children: "Description" }),
+            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+              "textarea",
+              {
+                ref: descriptionRef,
+                className: `${FIELD_SURFACE_CLASS} ${CONTROL_TEXTAREA_CLASS}`,
+                placeholder: "Detailed description (optional)",
+                value: description,
+                onChange: (e) => setDescription(e.target.value),
+                onInput: resizeDescriptionField,
+                rows: 5,
+                style: { minHeight: "120px", height: descriptionHeight }
+              }
+            )
+          ] })
+        ] })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "flex items-center gap-3", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "h-px flex-1 bg-slate-200" }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 shadow-sm shadow-slate-900/5", children: "Choose narrative path" }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "h-px flex-1 bg-slate-200" })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("section", { className: SECTION_CARD_CLASS, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "mb-4 flex items-center justify-between gap-3", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: sectionLabelClass, children: "Issue details" }),
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "text-xs text-slate-500", children: "Use one or both fields below" })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "grid grid-cols-1 gap-4 md:grid-cols-2", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: isSuperscriptLabels ? "relative" : "", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("label", { className: floatingLabelClass(isSuperscriptLabels), children: "Expected Behavior" }),
             /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
               "textarea",
               {
                 ref: expectedBehaviorRef,
-                className: "w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none resize-none transition-[height] duration-200 hover:border-gray-400",
+                className: `${FIELD_SURFACE_CLASS} ${CONTROL_TEXTAREA_CLASS}`,
                 placeholder: "What should have happened?",
                 value: expectedBehavior,
                 onChange: (e) => setExpectedBehavior(e.target.value),
@@ -2899,18 +2945,12 @@ function DevNotesForm({
             )
           ] }),
           /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: isSuperscriptLabels ? "relative" : "", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
-              "label",
-              {
-                className: isSuperscriptLabels ? "absolute -top-[9px] left-[10px] bg-white px-1.5 text-xs leading-4 rounded-md pointer-events-none z-[2] text-gray-700" : "block text-sm mb-1 text-gray-700",
-                children: "Actual Behavior"
-              }
-            ),
+            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("label", { className: floatingLabelClass(isSuperscriptLabels), children: "Actual Behavior" }),
             /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
               "textarea",
               {
                 ref: actualBehaviorRef,
-                className: "w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none resize-none transition-[height] duration-200 hover:border-gray-400",
+                className: `${FIELD_SURFACE_CLASS} ${CONTROL_TEXTAREA_CLASS}`,
                 placeholder: "What actually happened?",
                 value: actualBehavior,
                 onChange: (e) => setActualBehavior(e.target.value),
@@ -2928,134 +2968,141 @@ function DevNotesForm({
             )
           ] })
         ] }),
-        submitAttempted && !hasNarrative && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("p", { className: "text-xs text-red-600", children: "Add a description, expected behavior, or actual behavior." }),
-        showAiChat && aiProvider && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
-          AiDescriptionChat,
-          {
-            initialDescription: aiSeedDescription,
-            context: {
-              title,
-              page_url: reportPageUrl,
-              route_label: capturedContext?.route_label || deriveRouteLabelFromUrl(reportPageUrl),
-              severity,
-              types: selectedTypes,
-              target_selector: targetSelector ?? void 0,
-              expected_behavior: expectedBehavior || void 0,
-              actual_behavior: actualBehavior || void 0,
-              capture_context: capturedContext || void 0
-            },
-            aiProvider,
-            onAccept: async (refined) => {
-              setDescription(refined);
-              setAiDescription(refined);
-              setAiReady(true);
-              setShowAiChat(false);
-              if (!existingReport) {
-                await saveReport({
-                  description: refined,
-                  aiDescription: refined,
-                  aiReady: true
-                });
-              }
-            },
-            onCancel: () => setShowAiChat(false)
-          }
-        ),
-        aiDescription && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "bg-green-50 border border-green-300 rounded-lg p-3", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "flex justify-between items-center mb-1", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "text-xs font-bold text-green-700", children: "AI-Reviewed Description" }),
-            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
-              "button",
-              {
-                type: "button",
-                className: "text-xs text-red-600 hover:text-red-700",
-                onClick: () => {
-                  setAiDescription(null);
-                  setAiReady(false);
-                },
-                children: "Remove"
-              }
-            )
-          ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("p", { className: "text-sm whitespace-pre-wrap text-gray-800", children: aiDescription }),
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "mt-2 flex justify-end", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
+        submitAttempted && !hasNarrative && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("p", { className: "mt-3 text-xs font-medium text-rose-600", children: "Add a description, expected behavior, or actual behavior." })
+      ] }),
+      showAiChat && aiProvider && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+        AiDescriptionChat,
+        {
+          initialDescription: aiSeedDescription,
+          context: {
+            title,
+            page_url: reportPageUrl,
+            route_label: capturedContext?.route_label || deriveRouteLabelFromUrl(reportPageUrl),
+            severity,
+            types: selectedTypes,
+            target_selector: targetSelector ?? void 0,
+            expected_behavior: expectedBehavior || void 0,
+            actual_behavior: actualBehavior || void 0,
+            capture_context: capturedContext || void 0
+          },
+          aiProvider,
+          onAccept: async (refined) => {
+            setDescription(refined);
+            setAiDescription(refined);
+            setAiReady(true);
+            setShowAiChat(false);
+            if (!existingReport) {
+              await saveReport({
+                description: refined,
+                aiDescription: refined,
+                aiReady: true
+              });
+            }
+          },
+          onCancel: () => setShowAiChat(false)
+        }
+      ),
+      aiDescription && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("section", { className: "rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 shadow-sm shadow-emerald-900/5", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "flex items-center justify-between gap-3", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700", children: "AI-Reviewed Description" }),
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
             "button",
             {
               type: "button",
-              className: "inline-flex items-center gap-1 text-xs text-purple-700 hover:text-purple-800",
-              onClick: handleCopyAiPayload,
-              children: [
-                /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_fi4.FiCopy, { size: 12 }),
-                "Copy AI Fix Payload"
-              ]
+              className: "text-xs font-medium text-rose-600 transition hover:text-rose-700",
+              onClick: () => {
+                setAiDescription(null);
+                setAiReady(false);
+              },
+              children: "Remove"
             }
-          ) }),
-          showAiPayloadCopied && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("p", { className: "mt-1 text-xs text-purple-700 text-right", children: "AI payload copied!" })
+          )
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("p", { className: "mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-800", children: aiDescription }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "mt-3 flex items-center justify-end", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
+          "button",
+          {
+            type: "button",
+            className: "inline-flex items-center gap-1 rounded-full border border-violet-200 bg-white px-3 py-1.5 text-xs font-medium text-violet-700 transition hover:border-violet-300 hover:bg-violet-50",
+            onClick: handleCopyAiPayload,
+            children: [
+              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_fi4.FiCopy, { size: 12 }),
+              "Copy AI Fix Payload"
+            ]
+          }
+        ) }),
+        showAiPayloadCopied && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("p", { className: "mt-2 text-right text-xs font-medium text-violet-700", children: "AI payload copied!" })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("section", { className: SECTION_CARD_CLASS, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "mb-4 flex items-center justify-between gap-3", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: sectionLabelClass, children: "Workflow" }),
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "text-xs text-slate-500", children: "Search or add where allowed" })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3", children: [
           /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: isSuperscriptLabels ? "relative" : "", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
-              "label",
-              {
-                className: isSuperscriptLabels ? "absolute -top-[9px] left-[10px] bg-white px-1.5 text-xs leading-4 rounded-md pointer-events-none z-[2] text-gray-700" : "block text-sm mb-1 text-gray-700",
-                children: "Type(s)"
-              }
-            ),
+            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("label", { className: floatingLabelClass(isSuperscriptLabels), children: "Type(s)" }),
             /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "relative", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "border border-gray-200 rounded-md px-2 py-1 min-h-[40px] bg-white focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 flex items-center", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "flex flex-wrap items-center gap-1", children: [
-                selectedTypes.map((typeId) => /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
-                  "span",
-                  {
-                    className: "inline-flex items-center gap-1 rounded-sm bg-transparent px-1 py-0.5 text-xs font-medium text-gray-700",
-                    children: [
-                      getTypeName(typeId),
-                      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
-                        "button",
-                        {
-                          type: "button",
-                          className: "ml-0.5 text-gray-400 hover:text-gray-700",
-                          onClick: () => handleTypeRemove(typeId),
-                          children: "\xD7"
-                        }
-                      )
-                    ]
-                  },
-                  typeId
-                )),
-                /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
-                  "input",
-                  {
-                    ref: typeInputRef,
-                    type: "text",
-                    className: "flex-1 min-w-[120px] border-none outline-none text-sm bg-transparent",
-                    placeholder: "Type to search or add...",
-                    value: newTypeName,
-                    onChange: (e) => {
-                      setPendingTypeName(null);
-                      setNewTypeName(e.target.value);
-                      setShowTypeDropdown(true);
+              /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: FIELD_SURFACE_CLASS, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "flex items-center gap-2 px-3 py-2", children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_fi4.FiSearch, { size: 14, className: "shrink-0 text-slate-400" }),
+                  /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "h-4 w-px bg-slate-200" })
+                ] }),
+                /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "flex min-h-[40px] flex-wrap items-center gap-1 px-3 pb-2 pt-0", children: [
+                  selectedTypes.map((typeId) => /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
+                    "span",
+                    {
+                      className: "inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700",
+                      children: [
+                        getTypeName(typeId),
+                        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+                          "button",
+                          {
+                            type: "button",
+                            className: "ml-0.5 text-slate-400 transition hover:text-slate-700",
+                            onClick: () => handleTypeRemove(typeId),
+                            children: "\xD7"
+                          }
+                        )
+                      ]
                     },
-                    onFocus: () => setShowTypeDropdown(true),
-                    onBlur: () => setTimeout(() => setShowTypeDropdown(false), 200),
-                    onKeyDown: handleTypeKeyDown
-                  }
-                )
-              ] }) }),
-              showTypeDropdown && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "absolute top-[calc(100%+4px)] left-0 right-0 bg-white rounded-md shadow-lg border border-gray-200 max-h-[200px] overflow-y-auto z-20", children: [
+                    typeId
+                  )),
+                  /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+                    "input",
+                    {
+                      ref: typeInputRef,
+                      type: "text",
+                      className: "flex-1 min-w-[140px] border-none bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400",
+                      placeholder: "Type to search or add...",
+                      value: newTypeName,
+                      onChange: (e) => {
+                        setPendingTypeName(null);
+                        setNewTypeName(e.target.value);
+                        setShowTypeDropdown(true);
+                      },
+                      onFocus: () => setShowTypeDropdown(true),
+                      onBlur: () => setTimeout(() => setShowTypeDropdown(false), 200),
+                      onKeyDown: handleTypeKeyDown
+                    }
+                  ),
+                  /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "shrink-0 text-[11px] text-slate-400", children: "Enter to select" })
+                ] })
+              ] }),
+              showTypeDropdown && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "absolute left-0 right-0 top-[calc(100%+6px)] z-20 max-h-[220px] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10", children: [
                 availableTypes.filter(
                   (type) => type.name.toLowerCase().includes(newTypeName.toLowerCase())
                 ).map((type) => /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
                   "div",
                   {
-                    className: "flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-gray-100",
+                    className: "flex items-center justify-between px-3 py-2.5 cursor-pointer transition hover:bg-slate-50",
                     onMouseDown: () => handleTypeSelect(type.id),
                     children: [
-                      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "text-sm", children: type.name }),
+                      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "text-sm text-slate-700", children: type.name }),
                       !type.is_default && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
                         "button",
                         {
                           type: "button",
-                          className: "p-1 text-red-500 hover:text-red-700",
+                          className: "rounded-full p-1 text-rose-500 transition hover:bg-rose-50 hover:text-rose-700",
                           "aria-label": "Delete type",
                           onMouseDown: (e) => handleDeleteType(type.id, e),
                           children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_fi4.FiTrash2, { size: 12 })
@@ -3067,22 +3114,22 @@ function DevNotesForm({
                 )),
                 newTypeName.trim() && !taskTypes.some(
                   (t) => t.name.toLowerCase() === newTypeName.trim().toLowerCase()
-                ) && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+                ) && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
                   "div",
                   {
-                    className: "px-3 py-2 cursor-pointer bg-blue-50 hover:bg-blue-100",
+                    className: "cursor-pointer border-t border-slate-100 bg-slate-50 px-3 py-2.5 text-sm text-violet-700 transition hover:bg-violet-50",
                     onMouseDown: () => setPendingTypeName(newTypeName.trim()),
-                    children: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("span", { className: "text-sm text-blue-600", children: [
+                    children: [
                       '+ Queue "',
                       newTypeName.trim(),
                       '" for approval'
-                    ] })
+                    ]
                   }
                 ),
-                availableTypes.length === 0 && !newTypeName.trim() && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "px-3 py-2", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "text-sm text-gray-500", children: "No more types available" }) })
+                availableTypes.length === 0 && !newTypeName.trim() && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "px-3 py-2.5 text-sm text-slate-500", children: "No more types available" })
               ] }),
-              pendingTypeName && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "absolute top-[calc(100%+8px)] left-0 bg-white border border-yellow-300 rounded-md shadow-md p-2 z-30", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "flex flex-col gap-2", children: [
-                /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("p", { className: "text-xs text-gray-700", children: [
+              pendingTypeName && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "absolute left-0 top-[calc(100%+8px)] z-30 rounded-2xl border border-amber-200 bg-white p-3 shadow-xl shadow-slate-900/10", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "flex flex-col gap-3", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("p", { className: "text-xs font-medium text-slate-700", children: [
                   'Add "',
                   pendingTypeName,
                   '"? Press Shift+Enter or approve.'
@@ -3092,7 +3139,7 @@ function DevNotesForm({
                     "button",
                     {
                       type: "button",
-                      className: "px-2 py-1 text-xs rounded hover:bg-gray-100",
+                      className: "rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50",
                       onClick: () => setPendingTypeName(null),
                       children: "Cancel"
                     }
@@ -3101,7 +3148,7 @@ function DevNotesForm({
                     "button",
                     {
                       type: "button",
-                      className: "px-2 py-1 text-xs rounded bg-yellow-400 hover:bg-yellow-500",
+                      className: "rounded-full border border-amber-300 bg-amber-400 px-3 py-1.5 text-xs font-medium text-slate-900 transition hover:bg-amber-500",
                       onClick: () => createTypeFromValue(pendingTypeName),
                       children: "Approve"
                     }
@@ -3125,105 +3172,113 @@ function DevNotesForm({
             }
           ),
           isAdmin && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: isSuperscriptLabels ? "relative" : "", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
-              "label",
-              {
-                className: isSuperscriptLabels ? "absolute -top-[9px] left-[10px] bg-white px-1.5 text-xs leading-4 rounded-md pointer-events-none z-[2] text-gray-700" : "block text-sm mb-1 text-gray-700",
-                children: "Assignment & Workflow"
-              }
-            ),
-            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "flex flex-col gap-2", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
-              SearchableSingleSelect,
-              {
-                label: "Assignee",
-                options: [{ id: "", label: "Unassigned" }, ...collaboratorOptions],
-                value: assignedTo ?? "",
-                onChange: (value) => setAssignedTo(value || null),
-                placeholder: "Search assignee...",
-                isSuperscript: isSuperscriptLabels
-              }
-            ) })
+            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("label", { className: floatingLabelClass(isSuperscriptLabels), children: "Assignment & Workflow" }),
+            /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "space-y-3", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+                SearchableSingleSelect,
+                {
+                  label: "Assignee",
+                  options: [{ id: "", label: "Unassigned" }, ...collaboratorOptions],
+                  value: assignedTo ?? "",
+                  onChange: (value) => setAssignedTo(value || null),
+                  placeholder: "Search assignee...",
+                  isSuperscript: isSuperscriptLabels
+                }
+              ),
+              existingReport && (statusValue === "Closed" || statusValue === "Resolved") && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+                SearchableSingleSelect,
+                {
+                  label: "Resolved By",
+                  options: [{ id: "", label: "Not Set" }, ...collaboratorOptions],
+                  value: resolvedBy ?? "",
+                  onChange: (value) => setResolvedBy(value || null),
+                  placeholder: "Search resolver...",
+                  isSuperscript: isSuperscriptLabels
+                }
+              )
+            ] })
           ] }),
           /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: isSuperscriptLabels ? "relative" : "", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
-              "label",
-              {
-                className: isSuperscriptLabels ? "absolute -top-[9px] left-[10px] bg-white px-1.5 text-xs leading-4 rounded-md pointer-events-none z-[2] text-gray-700" : "block text-sm mb-1 text-gray-700",
-                children: "Task List"
-              }
-            ),
+            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("label", { className: floatingLabelClass(isSuperscriptLabels), children: "Task List" }),
             /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "relative", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "border border-gray-200 rounded-md px-2 py-1 min-h-[40px] bg-white focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 flex items-center", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "flex flex-wrap items-center gap-1", children: [
-                taskListId && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("span", { className: "inline-flex items-center gap-1 bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full", children: [
-                  getTaskListName(taskListId),
-                  /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
-                    "button",
-                    {
-                      type: "button",
-                      className: "ml-0.5 hover:text-blue-600",
-                      onClick: () => setTaskListId(""),
-                      children: "\xD7"
-                    }
-                  )
+              /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: FIELD_SURFACE_CLASS, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "flex items-center gap-2 px-3 py-2", children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_fi4.FiSearch, { size: 14, className: "shrink-0 text-slate-400" }),
+                  /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "h-4 w-px bg-slate-200" })
                 ] }),
-                /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
-                  "input",
-                  {
-                    ref: taskListInputRef,
-                    type: "text",
-                    className: "flex-1 min-w-[120px] border-none outline-none text-sm bg-transparent",
-                    placeholder: "Type to search or add...",
-                    value: taskListSearchTerm,
-                    onChange: (e) => {
-                      setPendingTaskListName(null);
-                      setTaskListSearchTerm(e.target.value);
-                      setShowTaskListDropdown(true);
-                    },
-                    onFocus: () => setShowTaskListDropdown(true),
-                    onBlur: () => setTimeout(() => setShowTaskListDropdown(false), 200),
-                    onKeyDown: handleTaskListKeyDown
-                  }
-                )
-              ] }) }),
-              showTaskListDropdown && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "absolute top-[calc(100%+4px)] left-0 right-0 bg-white rounded-md shadow-lg border border-gray-200 max-h-[200px] overflow-y-auto z-20", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "flex min-h-[40px] flex-wrap items-center gap-1 px-3 pb-2 pt-0", children: [
+                  taskListId && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("span", { className: "inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700", children: [
+                    getTaskListName(taskListId),
+                    /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+                      "button",
+                      {
+                        type: "button",
+                        className: "ml-0.5 text-slate-400 transition hover:text-slate-700",
+                        onClick: () => setTaskListId(""),
+                        children: "\xD7"
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+                    "input",
+                    {
+                      ref: taskListInputRef,
+                      type: "text",
+                      className: "flex-1 min-w-[140px] border-none bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400",
+                      placeholder: "Type to search or add...",
+                      value: taskListSearchTerm,
+                      onChange: (e) => {
+                        setPendingTaskListName(null);
+                        setTaskListSearchTerm(e.target.value);
+                        setShowTaskListDropdown(true);
+                      },
+                      onFocus: () => setShowTaskListDropdown(true),
+                      onBlur: () => setTimeout(() => setShowTaskListDropdown(false), 200),
+                      onKeyDown: handleTaskListKeyDown
+                    }
+                  ),
+                  /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "shrink-0 text-[11px] text-slate-400", children: "Enter to select" })
+                ] })
+              ] }),
+              showTaskListDropdown && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "absolute left-0 right-0 top-[calc(100%+6px)] z-20 max-h-[220px] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10", children: [
                 taskLists.filter(
                   (list) => list.name.toLowerCase().includes(taskListSearchTerm.toLowerCase())
                 ).map((list) => /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
                   "div",
                   {
-                    className: `flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-gray-100 ${list.id === taskListId ? "bg-blue-50" : ""}`,
+                    className: `flex items-center justify-between px-3 py-2.5 cursor-pointer transition hover:bg-slate-50 ${list.id === taskListId ? "bg-slate-50" : ""}`,
                     onMouseDown: () => handleTaskListSelect(list.id),
                     children: [
                       /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
                         "span",
                         {
-                          className: `text-sm ${list.id === taskListId ? "font-medium" : ""}`,
+                          className: `text-sm text-slate-700 ${list.id === taskListId ? "font-medium" : ""}`,
                           children: list.name
                         }
                       ),
-                      list.is_default && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-800", children: "Default" })
+                      list.is_default && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500", children: "Default" })
                     ]
                   },
                   list.id
                 )),
                 taskListSearchTerm.trim() && !taskLists.some(
                   (list) => list.name.toLowerCase() === taskListSearchTerm.trim().toLowerCase()
-                ) && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+                ) && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
                   "div",
                   {
-                    className: "px-3 py-2 cursor-pointer bg-blue-50 hover:bg-blue-100",
+                    className: "cursor-pointer border-t border-slate-100 bg-slate-50 px-3 py-2.5 text-sm text-violet-700 transition hover:bg-violet-50",
                     onMouseDown: () => setPendingTaskListName(taskListSearchTerm.trim()),
-                    children: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("span", { className: "text-sm text-blue-600", children: [
+                    children: [
                       '+ Queue "',
                       taskListSearchTerm.trim(),
                       '" for approval'
-                    ] })
+                    ]
                   }
                 ),
-                taskLists.length === 0 && !taskListSearchTerm.trim() && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "px-3 py-2", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "text-sm text-gray-500", children: "No task lists available" }) })
+                taskLists.length === 0 && !taskListSearchTerm.trim() && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "px-3 py-2.5 text-sm text-slate-500", children: "No task lists available" })
               ] }),
-              pendingTaskListName && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "absolute top-[calc(100%+8px)] left-0 bg-white border border-yellow-300 rounded-md shadow-md p-2 z-30", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "flex flex-col gap-2", children: [
-                /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("p", { className: "text-xs text-gray-700", children: [
+              pendingTaskListName && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "absolute left-0 top-[calc(100%+8px)] z-30 rounded-2xl border border-amber-200 bg-white p-3 shadow-xl shadow-slate-900/10", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "flex flex-col gap-3", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("p", { className: "text-xs font-medium text-slate-700", children: [
                   'Add "',
                   pendingTaskListName,
                   '"? Press Shift+Enter or approve.'
@@ -3233,7 +3288,7 @@ function DevNotesForm({
                     "button",
                     {
                       type: "button",
-                      className: "px-2 py-1 text-xs rounded hover:bg-gray-100",
+                      className: "rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50",
                       onClick: () => setPendingTaskListName(null),
                       children: "Cancel"
                     }
@@ -3242,7 +3297,7 @@ function DevNotesForm({
                     "button",
                     {
                       type: "button",
-                      className: "px-2 py-1 text-xs rounded bg-yellow-400 hover:bg-yellow-500",
+                      className: "rounded-full border border-amber-300 bg-amber-400 px-3 py-1.5 text-xs font-medium text-slate-900 transition hover:bg-amber-500",
                       onClick: () => createTaskListFromValue(pendingTaskListName),
                       children: "Approve"
                     }
@@ -3251,31 +3306,14 @@ function DevNotesForm({
               ] }) })
             ] })
           ] }),
-          existingReport && isAdmin && (statusValue === "Closed" || statusValue === "Resolved") && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
-            SearchableSingleSelect,
-            {
-              label: "Resolved By",
-              options: [{ id: "", label: "Not Set" }, ...collaboratorOptions],
-              value: resolvedBy ?? "",
-              onChange: (value) => setResolvedBy(value || null),
-              placeholder: "Search resolver...",
-              isSuperscript: isSuperscriptLabels
-            }
-          ),
           /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: isSuperscriptLabels ? "relative" : "", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
-              "label",
-              {
-                className: isSuperscriptLabels ? "absolute -top-[9px] left-[10px] bg-white px-1.5 text-xs leading-4 rounded-md pointer-events-none z-[2] text-gray-700" : "block text-sm mb-1 text-gray-700",
-                children: "Page URL"
-              }
-            ),
-            /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "relative", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("label", { className: floatingLabelClass(isSuperscriptLabels), children: "Page URL" }),
+            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: FIELD_SURFACE_CLASS, children: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "relative flex items-center", children: [
               /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
                 "input",
                 {
                   type: "text",
-                  className: `w-full rounded-md border border-gray-200 px-3 py-1.5 pr-10 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none hover:border-gray-400 ${!existingReport ? "bg-gray-50 cursor-not-allowed" : ""}`,
+                  className: `w-full border-0 bg-transparent py-2 pl-3 pr-10 text-sm text-slate-900 outline-none placeholder:text-slate-400 ${!existingReport ? "cursor-not-allowed text-slate-500" : ""}`,
                   value: reportPageUrl,
                   onChange: (e) => setReportPageUrl(e.target.value),
                   readOnly: !existingReport
@@ -3287,25 +3325,37 @@ function DevNotesForm({
                   href: composePageUrlWithTab(reportPageUrl),
                   target: "_blank",
                   rel: "noreferrer",
-                  className: "absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600",
+                  className: "absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700",
                   title: "Open in new tab",
                   children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_fi4.FiExternalLink, { size: 14 })
                 }
               )
-            ] })
+            ] }) })
           ] })
-        ] }),
-        existingReport && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(DevNotesDiscussion, { report: existingReport })
+        ] })
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "flex justify-between pt-2", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "relative flex items-center gap-4 flex-wrap", children: [
-          isAdmin && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_jsx_runtime5.Fragment, { children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: `inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${aiReady ? "bg-purple-100 text-purple-800" : "bg-gray-100 text-gray-500"}`, children: aiReady ? "AI Ready" : "AI Not Ready" }) }),
+      existingReport && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("section", { className: "rounded-2xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-900/5", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "mb-3 flex items-center justify-between gap-3", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: sectionLabelClass, children: "Discussion" }),
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "text-xs text-slate-500", children: "Visible to collaborators with access" })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(DevNotesDiscussion, { report: existingReport })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "flex flex-col-reverse gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "relative flex flex-wrap items-center gap-3", children: [
+          isAdmin && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+            "span",
+            {
+              className: `inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${aiReady ? "bg-violet-100 text-violet-800" : "bg-slate-100 text-slate-500"}`,
+              children: aiReady ? "AI Ready" : "AI Not Ready"
+            }
+          ),
           existingReport && (onDelete || onArchive) ? /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [
             onArchive && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
               "button",
               {
                 type: "button",
-                className: "p-1.5 rounded text-gray-500 hover:bg-gray-100 disabled:opacity-50",
+                className: ACTION_ICON_BUTTON_CLASS,
                 onClick: () => setPendingDestructiveAction("archive"),
                 disabled: loading,
                 "aria-label": "Archive",
@@ -3317,7 +3367,7 @@ function DevNotesForm({
               "button",
               {
                 type: "button",
-                className: "p-1.5 rounded text-red-500 hover:bg-red-50 disabled:opacity-50",
+                className: `${ACTION_ICON_BUTTON_CLASS} text-rose-500 hover:text-rose-700`,
                 onClick: () => setPendingDestructiveAction("delete"),
                 disabled: loading,
                 "aria-label": "Delete",
@@ -3325,14 +3375,14 @@ function DevNotesForm({
                 children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_fi4.FiTrash2, { size: 16 })
               }
             ),
-            pendingDestructiveAction && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "absolute bottom-[calc(100%+8px)] left-0 z-30 min-w-[240px] rounded-md border border-gray-200 bg-white p-3 shadow-lg", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("p", { className: "text-sm text-gray-800", children: pendingDestructiveAction === "delete" ? "Delete this dev note permanently?" : "Archive this dev note by setting its status to Closed?" }),
+            pendingDestructiveAction && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "absolute bottom-[calc(100%+8px)] left-0 z-30 min-w-[260px] rounded-2xl border border-slate-200 bg-white p-3 shadow-xl shadow-slate-900/10", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("p", { className: "text-sm text-slate-800", children: pendingDestructiveAction === "delete" ? "Delete this dev note permanently?" : "Archive this dev note by setting its status to Closed?" }),
               /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "mt-3 flex justify-end gap-2", children: [
                 /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
                   "button",
                   {
                     type: "button",
-                    className: "rounded px-2 py-1 text-xs text-gray-600 hover:bg-gray-100",
+                    className: "rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50",
                     onClick: () => setPendingDestructiveAction(null),
                     children: "Cancel"
                   }
@@ -3341,7 +3391,7 @@ function DevNotesForm({
                   "button",
                   {
                     type: "button",
-                    className: `rounded px-2 py-1 text-xs text-white ${pendingDestructiveAction === "delete" ? "bg-red-500 hover:bg-red-600" : "bg-gray-700 hover:bg-gray-800"}`,
+                    className: `rounded-full px-3 py-1.5 text-xs font-medium text-white transition ${pendingDestructiveAction === "delete" ? "bg-rose-500 hover:bg-rose-600" : "bg-slate-700 hover:bg-slate-800"}`,
                     onClick: async () => {
                       const action = pendingDestructiveAction;
                       setPendingDestructiveAction(null);
@@ -3363,7 +3413,7 @@ function DevNotesForm({
             "button",
             {
               type: "button",
-              className: "p-1.5 rounded hover:bg-gray-100 text-gray-500",
+              className: ACTION_ICON_BUTTON_CLASS,
               onClick: onCancel,
               "aria-label": "Cancel",
               title: "Cancel",

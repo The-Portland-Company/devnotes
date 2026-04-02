@@ -3,6 +3,7 @@ import {
   FiX,
   FiTrash2,
   FiSave,
+  FiSearch,
   FiExternalLink,
   FiLink2,
   FiCopy,
@@ -12,6 +13,8 @@ import {
   FiCheckCircle,
   FiArchive,
   FiZap,
+  FiCheck,
+  FiClock,
 } from 'react-icons/fi';
 import { useDevNotes } from './DevNotesProvider';
 import DevNotesDiscussion from './DevNotesDiscussion';
@@ -56,6 +59,24 @@ type SearchableSingleSelectProps = {
 
 const COMPACT_BEHAVIOR_HEIGHT = 56;
 const EXPANDED_BEHAVIOR_MIN_HEIGHT = 92;
+const FIELD_SURFACE_CLASS =
+  'rounded-2xl border border-slate-200 bg-white/95 shadow-sm shadow-slate-900/5 transition-colors focus-within:border-slate-400 focus-within:ring-1 focus-within:ring-slate-200';
+const CONTROL_INPUT_CLASS =
+  'w-full border-0 bg-transparent px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none';
+const CONTROL_TEXTAREA_CLASS =
+  'w-full resize-none border-0 bg-transparent px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-[height] duration-200';
+const SECTION_CARD_CLASS =
+  'rounded-2xl border border-slate-200 bg-slate-50/80 p-4 shadow-sm shadow-slate-900/5';
+const ACTION_ICON_BUTTON_CLASS =
+  'inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm shadow-slate-900/5 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50';
+
+const floatingLabelClass = (isSuperscript: boolean) =>
+  isSuperscript
+    ? 'absolute -top-2.5 left-3 z-[2] rounded-full border border-slate-200 bg-white px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 pointer-events-none'
+    : 'mb-2 block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500';
+
+const sectionLabelClass =
+  'text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500';
 
 function SearchableSingleSelect({
   label,
@@ -91,21 +112,25 @@ function SearchableSingleSelect({
       <label
         className={
           isSuperscript
-            ? 'absolute -top-[9px] left-[10px] bg-white px-1.5 text-xs leading-4 rounded-md pointer-events-none z-[2] text-gray-700'
-            : 'block text-sm mb-1 text-gray-700'
+            ? floatingLabelClass(true)
+            : floatingLabelClass(false)
         }
       >
         {label}
       </label>
       <div className="relative">
-        <div className="border border-gray-200 rounded-md px-2 py-1 min-h-[40px] bg-white focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 flex items-center">
-          <div className="flex flex-wrap items-center gap-1">
+        <div className={FIELD_SURFACE_CLASS}>
+          <div className="flex items-center gap-2 px-3 py-2">
+            <FiSearch size={14} className="shrink-0 text-slate-400" />
+            <div className="h-4 w-px bg-slate-200" />
+          </div>
+          <div className="flex min-h-[40px] flex-wrap items-center gap-1 px-3 pb-2 pt-0">
             {selectedOption && (
-              <span className="inline-flex items-center gap-1 rounded-sm bg-transparent px-1 py-0.5 text-xs font-medium text-gray-700">
+              <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700">
                 {selectedOption.label}
                 <button
                   type="button"
-                  className="ml-0.5 text-gray-400 hover:text-gray-700"
+                  className="ml-0.5 text-slate-400 transition hover:text-slate-700"
                   onClick={() => {
                     onChange(null);
                     setSearchTerm('');
@@ -118,8 +143,8 @@ function SearchableSingleSelect({
             )}
             <input
               type="text"
-              className={`flex-1 ${minInputWidthClassName} border-none outline-none text-sm bg-transparent`}
-              placeholder={selectedOption ? 'Type to search...' : placeholder}
+              className={`flex-1 ${minInputWidthClassName} border-none outline-none text-sm bg-transparent text-slate-900 placeholder:text-slate-400`}
+              placeholder={selectedOption ? 'Type to refine' : placeholder}
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
@@ -136,25 +161,27 @@ function SearchableSingleSelect({
                 }
               }}
             />
+            <span className="shrink-0 text-[11px] text-slate-400">Type to search</span>
           </div>
         </div>
         {showDropdown && (
-          <div className="absolute top-[calc(100%+4px)] left-0 right-0 bg-white rounded-md shadow-lg border border-gray-200 max-h-[220px] overflow-y-auto z-20">
+          <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-20 max-h-[240px] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10">
             {filteredOptions.length > 0 ? (
               filteredOptions.map((option) => (
                 <div
                   key={option.id}
-                  className={`flex items-center px-3 py-2 cursor-pointer hover:bg-gray-100 ${
-                    option.id === value ? 'bg-blue-50' : ''
+                  className={`flex items-center justify-between px-3 py-2.5 cursor-pointer transition hover:bg-slate-50 ${
+                    option.id === value ? 'bg-slate-50' : ''
                   }`}
                   onMouseDown={() => handleSelect(option.id)}
                 >
-                  <span className="text-sm">{option.label}</span>
+                  <span className="text-sm text-slate-700">{option.label}</span>
+                  {option.id === value && <FiCheck size={14} className="text-slate-500" />}
                 </div>
               ))
             ) : (
-              <div className="px-3 py-2">
-                <span className="text-sm text-gray-500">No matches</span>
+              <div className="px-3 py-2.5">
+                <span className="text-sm text-slate-500">No matches</span>
               </div>
             )}
           </div>
@@ -779,206 +806,189 @@ export default function DevNotesForm({
   );
 
   return (
-    <div className="bg-white rounded-xl p-4 md:p-6 min-w-[320px] w-full max-w-[960px] mx-auto relative shadow-sm">
-      {/* Header */}
-      <div className="flex justify-between items-start mb-3">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-base">
+    <div className="relative mx-auto w-full min-w-[320px] max-w-[1040px] rounded-3xl border border-slate-200 bg-gradient-to-b from-white via-slate-50/90 to-slate-100 p-4 shadow-[0_24px_90px_rgba(15,23,42,0.14)] md:p-6">
+      <div className="mb-5 flex items-start justify-between gap-4">
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-base font-semibold text-slate-900 md:text-lg">
               {existingReport ? 'Edit Task' : 'Create Task'}
             </span>
             {existingReport && (
-              <span className={`text-xs px-2 py-0.5 rounded-full flex items-center gap-1 ${statusColorClass}`}>
+              <span
+                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${statusColorClass}`}
+              >
                 <StatusIcon size={12} />
                 {status}
               </span>
             )}
           </div>
+          <p className="max-w-2xl text-sm text-slate-500">
+            {existingReport
+              ? 'Review the report with clearer field grouping, comments, and workflow controls.'
+              : 'Capture the issue with a clear title, narrative, and workflow context.'}
+          </p>
         </div>
-        <div className="flex items-center gap-1 flex-shrink-0">
+        <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
+          {renderStatusSaveActions('header')}
           <button
             type="button"
-            className="p-1.5 rounded hover:bg-gray-100 text-gray-500"
+            className={ACTION_ICON_BUTTON_CLASS}
             onClick={onCancel}
             aria-label="Cancel"
             title="Cancel"
           >
             <FiX size={16} />
           </button>
-          {renderStatusSaveActions('header')}
         </div>
       </div>
 
-      {/* Meta info for existing reports */}
       {existingReport && (
-        <div className="flex flex-wrap items-center gap-2 mb-3 text-xs relative">
-          <span className="text-gray-500">
-            Created by{' '}
-            <span className="font-medium text-gray-700">
-              {getFirstName(
-                existingReport.creator?.full_name || existingReport.creator?.email || 'Unknown'
-              )}
+        <div className="mb-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-900/5">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
+            <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
+              <FiClock size={12} className="text-slate-400" />
+              Created by{' '}
+              <span className="font-medium text-slate-700">
+                {getFirstName(
+                  existingReport.creator?.full_name || existingReport.creator?.email || 'Unknown'
+                )}
+              </span>
+              <span className="text-slate-400">on</span>
+              <span className="text-slate-700">{formatCreatedDate(existingReport.created_at)}</span>
             </span>
-            {' on '}
-            <span className="text-gray-600">{formatCreatedDate(existingReport.created_at)}</span>
-          </span>
-          <span className="text-gray-400">|</span>
-          <span className="text-gray-500">Task ID</span>
-          <button
-            type="button"
-            className="font-mono text-gray-800 hover:underline"
-            onClick={handleCopyTaskId}
-          >
-            {existingReport.id}
-          </button>
-          {forgeTaskUrl && (
-            <>
-              <span className="text-gray-400">|</span>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 font-mono text-[11px] text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
+              onClick={handleCopyTaskId}
+              title="Copy task ID"
+            >
+              <FiCopy size={11} className="text-slate-400" />
+              {existingReport.id}
+            </button>
+            {forgeTaskUrl && (
               <a
                 href={forgeTaskUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1 text-blue-600 hover:underline"
+                className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
                 title="Open task in Forge"
               >
-                <FiExternalLink size={12} />
+                <FiExternalLink size={12} className="text-slate-400" />
                 Open in Forge
               </a>
-            </>
-          )}
-          <span className="text-gray-400">|</span>
-          <button
-            type="button"
-            className="inline-flex items-center gap-1 text-blue-600 hover:underline"
-            onClick={handleCopyLink}
-            title="Copy shareable link"
-          >
-            <FiLink2 size={12} />
-            Copy Link
-          </button>
-          <span className="text-gray-400">|</span>
-          <button
-            type="button"
-            className="inline-flex items-center gap-1 text-purple-700 hover:underline"
-            onClick={handleCopyAiPayload}
-            title="Copy AI fix payload"
-          >
-            <FiCopy size={12} />
-            Copy AI Payload
-          </button>
-          {(showCopied || showLinkCopied) && (
-            <span className="absolute left-0 top-full mt-1 text-xs text-black animate-devnotes-fade-up pointer-events-none">
-              {showLinkCopied ? 'Link copied!' : 'Copied!'}
-            </span>
-          )}
-          {showAiPayloadCopied && (
-            <span className="absolute left-0 top-full mt-1 text-xs text-black animate-devnotes-fade-up pointer-events-none">
-              AI payload copied!
-            </span>
-          )}
+            )}
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
+              onClick={handleCopyLink}
+              title="Copy shareable link"
+            >
+              <FiLink2 size={12} className="text-slate-400" />
+              Copy Link
+            </button>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
+              onClick={handleCopyAiPayload}
+              title="Copy AI fix payload"
+            >
+              <FiCopy size={12} className="text-slate-400" />
+              Copy AI Payload
+            </button>
+          </div>
+          <div className="relative mt-2 min-h-4">
+            {(showCopied || showLinkCopied) && (
+              <span className="absolute left-0 top-0 text-xs font-medium text-slate-500 animate-devnotes-fade-up pointer-events-none">
+                {showLinkCopied ? 'Link copied!' : 'Copied!'}
+              </span>
+            )}
+            {showAiPayloadCopied && (
+              <span className="absolute left-0 top-0 text-xs font-medium text-slate-500 animate-devnotes-fade-up pointer-events-none">
+                AI payload copied!
+              </span>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Form fields */}
-      <div className="flex flex-col gap-5">
-        <div className="flex flex-col gap-4">
-          {/* Title */}
-          <div className={isSuperscriptLabels ? 'relative my-3' : 'my-3'}>
-            <label
-              className={
-                isSuperscriptLabels
-                  ? 'absolute -top-[9px] left-[10px] bg-white px-1.5 text-xs leading-4 rounded-md pointer-events-none z-[2] text-gray-700'
-                  : 'block text-sm mb-1 text-gray-700'
-              }
-            >
-              Title <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none hover:border-gray-400"
-              placeholder="Brief description of the issue"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-          </div>
-
-          {/* Description */}
-          <div className={isSuperscriptLabels ? 'relative' : ''}>
-            <div
-              className={
-                isSuperscriptLabels
-                  ? 'absolute -top-[9px] left-[10px] right-[10px] z-[2] flex items-center justify-between'
-                  : 'mb-1 flex items-center justify-between'
-              }
-            >
-              <label
-                className={
-                  isSuperscriptLabels
-                    ? 'bg-white px-1.5 text-xs leading-4 rounded-md pointer-events-none text-gray-700'
-                    : 'block text-sm text-gray-700'
+      <div className="space-y-5">
+        <section className={SECTION_CARD_CLASS}>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <span className={sectionLabelClass}>Core details</span>
+            {aiProvider && (
+              <button
+                type="button"
+                className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                  canReviewDescriptionWithAi
+                    ? 'border border-violet-200 bg-violet-50 text-violet-700 hover:border-violet-300 hover:bg-violet-100'
+                    : 'cursor-not-allowed border border-slate-200 bg-slate-100 text-slate-400'
+                }`}
+                onClick={() => {
+                  if (!canReviewDescriptionWithAi) return;
+                  setShowAiChat(true);
+                }}
+                disabled={!canReviewDescriptionWithAi}
+                title={
+                  canReviewDescriptionWithAi
+                    ? 'Review the description with AI'
+                    : 'Add a description to review it with AI'
                 }
               >
-                Description
-              </label>
-              {aiProvider && (
-                <button
-                  type="button"
-                  className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition ${
-                    canReviewDescriptionWithAi
-                      ? 'bg-purple-50 text-purple-700 hover:bg-purple-100'
-                      : 'cursor-not-allowed bg-gray-100 text-gray-400'
-                  }`}
-                  onClick={() => {
-                    if (!canReviewDescriptionWithAi) return;
-                    setShowAiChat(true);
-                  }}
-                  disabled={!canReviewDescriptionWithAi}
-                  title={
-                    canReviewDescriptionWithAi
-                      ? 'Review the description with AI'
-                      : 'Add a description to review it with AI'
-                  }
-                >
-                  <FiZap size={12} />
-                  Review with AI
-                </button>
-              )}
-            </div>
-            <textarea
-              ref={descriptionRef}
-              className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none resize-none transition-[height] duration-200 hover:border-gray-400"
-              placeholder="Detailed description (optional)"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              onInput={resizeDescriptionField}
-              rows={5}
-              style={{ minHeight: '120px', height: descriptionHeight }}
-            />
+                <FiZap size={12} />
+                Review with AI
+              </button>
+            )}
           </div>
 
-          <div className="flex items-center gap-2 py-1">
-            <div className="h-px flex-1 bg-gray-200" />
-            <span className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-[11px] font-semibold tracking-wide text-gray-500">
-              OR
-            </span>
-            <div className="h-px flex-1 bg-gray-200" />
-          </div>
-
-          {/* Expected vs Actual behavior */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-4">
             <div className={isSuperscriptLabels ? 'relative' : ''}>
-              <label
-                className={
-                  isSuperscriptLabels
-                    ? 'absolute -top-[9px] left-[10px] bg-white px-1.5 text-xs leading-4 rounded-md pointer-events-none z-[2] text-gray-700'
-                    : 'block text-sm mb-1 text-gray-700'
-                }
-              >
-                Expected Behavior
+              <label className={floatingLabelClass(isSuperscriptLabels)}>
+                Title <span className="text-rose-500">*</span>
               </label>
+              <input
+                type="text"
+                className={`${FIELD_SURFACE_CLASS} ${CONTROL_INPUT_CLASS}`}
+                placeholder="Brief description of the issue"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+            </div>
+
+            <div className={isSuperscriptLabels ? 'relative' : ''}>
+              <label className={floatingLabelClass(isSuperscriptLabels)}>Description</label>
+              <textarea
+                ref={descriptionRef}
+                className={`${FIELD_SURFACE_CLASS} ${CONTROL_TEXTAREA_CLASS}`}
+                placeholder="Detailed description (optional)"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                onInput={resizeDescriptionField}
+                rows={5}
+                style={{ minHeight: '120px', height: descriptionHeight }}
+              />
+            </div>
+          </div>
+        </section>
+
+        <div className="flex items-center gap-3">
+          <div className="h-px flex-1 bg-slate-200" />
+          <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 shadow-sm shadow-slate-900/5">
+            Choose narrative path
+          </span>
+          <div className="h-px flex-1 bg-slate-200" />
+        </div>
+
+        <section className={SECTION_CARD_CLASS}>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <span className={sectionLabelClass}>Issue details</span>
+            <span className="text-xs text-slate-500">Use one or both fields below</span>
+          </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className={isSuperscriptLabels ? 'relative' : ''}>
+              <label className={floatingLabelClass(isSuperscriptLabels)}>Expected Behavior</label>
               <textarea
                 ref={expectedBehaviorRef}
-                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none resize-none transition-[height] duration-200 hover:border-gray-400"
+                className={`${FIELD_SURFACE_CLASS} ${CONTROL_TEXTAREA_CLASS}`}
                 placeholder="What should have happened?"
                 value={expectedBehavior}
                 onChange={(e) => setExpectedBehavior(e.target.value)}
@@ -997,18 +1007,10 @@ export default function DevNotesForm({
               />
             </div>
             <div className={isSuperscriptLabels ? 'relative' : ''}>
-              <label
-                className={
-                  isSuperscriptLabels
-                    ? 'absolute -top-[9px] left-[10px] bg-white px-1.5 text-xs leading-4 rounded-md pointer-events-none z-[2] text-gray-700'
-                    : 'block text-sm mb-1 text-gray-700'
-                }
-              >
-                Actual Behavior
-              </label>
+              <label className={floatingLabelClass(isSuperscriptLabels)}>Actual Behavior</label>
               <textarea
                 ref={actualBehaviorRef}
-                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none resize-none transition-[height] duration-200 hover:border-gray-400"
+                className={`${FIELD_SURFACE_CLASS} ${CONTROL_TEXTAREA_CLASS}`}
                 placeholder="What actually happened?"
                 value={actualBehavior}
                 onChange={(e) => setActualBehavior(e.target.value)}
@@ -1028,103 +1030,107 @@ export default function DevNotesForm({
             </div>
           </div>
           {submitAttempted && !hasNarrative && (
-            <p className="text-xs text-red-600">
+            <p className="mt-3 text-xs font-medium text-rose-600">
               Add a description, expected behavior, or actual behavior.
             </p>
           )}
+        </section>
 
-          {/* AI Description Chat */}
-          {showAiChat && aiProvider && (
-            <AiDescriptionChat
-              initialDescription={aiSeedDescription}
-              context={{
-                title,
-                page_url: reportPageUrl,
-                route_label:
-                  capturedContext?.route_label || deriveRouteLabelFromUrl(reportPageUrl),
-                severity,
-                types: selectedTypes,
-                target_selector: targetSelector ?? undefined,
-                expected_behavior: expectedBehavior || undefined,
-                actual_behavior: actualBehavior || undefined,
-                capture_context: capturedContext || undefined,
-              }}
-              aiProvider={aiProvider}
-              onAccept={async (refined) => {
-                setDescription(refined);
-                setAiDescription(refined);
-                setAiReady(true);
-                setShowAiChat(false);
-                if (!existingReport) {
-                  await saveReport({
-                    description: refined,
-                    aiDescription: refined,
-                    aiReady: true,
-                  });
-                }
-              }}
-              onCancel={() => setShowAiChat(false)}
-            />
-          )}
+        {showAiChat && aiProvider && (
+          <AiDescriptionChat
+            initialDescription={aiSeedDescription}
+            context={{
+              title,
+              page_url: reportPageUrl,
+              route_label:
+                capturedContext?.route_label || deriveRouteLabelFromUrl(reportPageUrl),
+              severity,
+              types: selectedTypes,
+              target_selector: targetSelector ?? undefined,
+              expected_behavior: expectedBehavior || undefined,
+              actual_behavior: actualBehavior || undefined,
+              capture_context: capturedContext || undefined,
+            }}
+            aiProvider={aiProvider}
+            onAccept={async (refined) => {
+              setDescription(refined);
+              setAiDescription(refined);
+              setAiReady(true);
+              setShowAiChat(false);
+              if (!existingReport) {
+                await saveReport({
+                  description: refined,
+                  aiDescription: refined,
+                  aiReady: true,
+                });
+              }
+            }}
+            onCancel={() => setShowAiChat(false)}
+          />
+        )}
 
-          {/* AI description display */}
-          {aiDescription && (
-            <div className="bg-green-50 border border-green-300 rounded-lg p-3">
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-xs font-bold text-green-700">AI-Reviewed Description</span>
-                <button
-                  type="button"
-                  className="text-xs text-red-600 hover:text-red-700"
-                  onClick={() => {
-                    setAiDescription(null);
-                    setAiReady(false);
-                  }}
-                >
-                  Remove
-                </button>
-              </div>
-              <p className="text-sm whitespace-pre-wrap text-gray-800">{aiDescription}</p>
-              <div className="mt-2 flex justify-end">
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-1 text-xs text-purple-700 hover:text-purple-800"
-                  onClick={handleCopyAiPayload}
-                >
-                  <FiCopy size={12} />
-                  Copy AI Fix Payload
-                </button>
-              </div>
-              {showAiPayloadCopied && (
-                <p className="mt-1 text-xs text-purple-700 text-right">AI payload copied!</p>
-              )}
-            </div>
-          )}
-
-          {/* Grid of fields */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* Type Multi-Select */}
-            <div className={isSuperscriptLabels ? 'relative' : ''}>
-              <label
-                className={
-                  isSuperscriptLabels
-                    ? 'absolute -top-[9px] left-[10px] bg-white px-1.5 text-xs leading-4 rounded-md pointer-events-none z-[2] text-gray-700'
-                    : 'block text-sm mb-1 text-gray-700'
-                }
+        {aiDescription && (
+          <section className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 shadow-sm shadow-emerald-900/5">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                AI-Reviewed Description
+              </span>
+              <button
+                type="button"
+                className="text-xs font-medium text-rose-600 transition hover:text-rose-700"
+                onClick={() => {
+                  setAiDescription(null);
+                  setAiReady(false);
+                }}
               >
-                Type(s)
-              </label>
+                Remove
+              </button>
+            </div>
+            <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-800">
+              {aiDescription}
+            </p>
+            <div className="mt-3 flex items-center justify-end">
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-white px-3 py-1.5 text-xs font-medium text-violet-700 transition hover:border-violet-300 hover:bg-violet-50"
+                onClick={handleCopyAiPayload}
+              >
+                <FiCopy size={12} />
+                Copy AI Fix Payload
+              </button>
+            </div>
+            {showAiPayloadCopied && (
+              <p className="mt-2 text-right text-xs font-medium text-violet-700">
+                AI payload copied!
+              </p>
+            )}
+          </section>
+        )}
+
+        <section className={SECTION_CARD_CLASS}>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <span className={sectionLabelClass}>Workflow</span>
+            <span className="text-xs text-slate-500">Search or add where allowed</span>
+          </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className={isSuperscriptLabels ? 'relative' : ''}>
+              <label className={floatingLabelClass(isSuperscriptLabels)}>Type(s)</label>
               <div className="relative">
-                <div className="border border-gray-200 rounded-md px-2 py-1 min-h-[40px] bg-white focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 flex items-center">
-                  <div className="flex flex-wrap items-center gap-1">
+                <div className={FIELD_SURFACE_CLASS}>
+                  <div className="flex items-center gap-2 px-3 py-2">
+                    <FiSearch size={14} className="shrink-0 text-slate-400" />
+                    <div className="h-4 w-px bg-slate-200" />
+                  </div>
+                  <div className="flex min-h-[40px] flex-wrap items-center gap-1 px-3 pb-2 pt-0">
                     {selectedTypes.map((typeId) => (
                       <span
                         key={typeId}
-                        className="inline-flex items-center gap-1 rounded-sm bg-transparent px-1 py-0.5 text-xs font-medium text-gray-700"
+                        className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700"
                       >
                         {getTypeName(typeId)}
                         <button
                           type="button"
-                          className="ml-0.5 text-gray-400 hover:text-gray-700"
+                          className="ml-0.5 text-slate-400 transition hover:text-slate-700"
                           onClick={() => handleTypeRemove(typeId)}
                         >
                           &times;
@@ -1134,7 +1140,7 @@ export default function DevNotesForm({
                     <input
                       ref={typeInputRef}
                       type="text"
-                      className="flex-1 min-w-[120px] border-none outline-none text-sm bg-transparent"
+                      className="flex-1 min-w-[140px] border-none bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
                       placeholder="Type to search or add..."
                       value={newTypeName}
                       onChange={(e) => {
@@ -1146,11 +1152,12 @@ export default function DevNotesForm({
                       onBlur={() => setTimeout(() => setShowTypeDropdown(false), 200)}
                       onKeyDown={handleTypeKeyDown}
                     />
+                    <span className="shrink-0 text-[11px] text-slate-400">Enter to select</span>
                   </div>
                 </div>
 
                 {showTypeDropdown && (
-                  <div className="absolute top-[calc(100%+4px)] left-0 right-0 bg-white rounded-md shadow-lg border border-gray-200 max-h-[200px] overflow-y-auto z-20">
+                  <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-20 max-h-[220px] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10">
                     {availableTypes
                       .filter((type) =>
                         type.name.toLowerCase().includes(newTypeName.toLowerCase())
@@ -1158,14 +1165,14 @@ export default function DevNotesForm({
                       .map((type) => (
                         <div
                           key={type.id}
-                          className="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-gray-100"
+                          className="flex items-center justify-between px-3 py-2.5 cursor-pointer transition hover:bg-slate-50"
                           onMouseDown={() => handleTypeSelect(type.id)}
                         >
-                          <span className="text-sm">{type.name}</span>
+                          <span className="text-sm text-slate-700">{type.name}</span>
                           {!type.is_default && (
                             <button
                               type="button"
-                              className="p-1 text-red-500 hover:text-red-700"
+                              className="rounded-full p-1 text-rose-500 transition hover:bg-rose-50 hover:text-rose-700"
                               aria-label="Delete type"
                               onMouseDown={(e) => handleDeleteType(type.id, e)}
                             >
@@ -1179,39 +1186,37 @@ export default function DevNotesForm({
                         (t) => t.name.toLowerCase() === newTypeName.trim().toLowerCase()
                       ) && (
                         <div
-                          className="px-3 py-2 cursor-pointer bg-blue-50 hover:bg-blue-100"
+                          className="cursor-pointer border-t border-slate-100 bg-slate-50 px-3 py-2.5 text-sm text-violet-700 transition hover:bg-violet-50"
                           onMouseDown={() => setPendingTypeName(newTypeName.trim())}
                         >
-                          <span className="text-sm text-blue-600">
-                            + Queue "{newTypeName.trim()}" for approval
-                          </span>
+                          + Queue "{newTypeName.trim()}" for approval
                         </div>
                       )}
                     {availableTypes.length === 0 && !newTypeName.trim() && (
-                      <div className="px-3 py-2">
-                        <span className="text-sm text-gray-500">No more types available</span>
+                      <div className="px-3 py-2.5 text-sm text-slate-500">
+                        No more types available
                       </div>
                     )}
                   </div>
                 )}
 
                 {pendingTypeName && (
-                  <div className="absolute top-[calc(100%+8px)] left-0 bg-white border border-yellow-300 rounded-md shadow-md p-2 z-30">
-                    <div className="flex flex-col gap-2">
-                      <p className="text-xs text-gray-700">
+                  <div className="absolute left-0 top-[calc(100%+8px)] z-30 rounded-2xl border border-amber-200 bg-white p-3 shadow-xl shadow-slate-900/10">
+                    <div className="flex flex-col gap-3">
+                      <p className="text-xs font-medium text-slate-700">
                         Add "{pendingTypeName}"? Press Shift+Enter or approve.
                       </p>
                       <div className="flex justify-end gap-2">
                         <button
                           type="button"
-                          className="px-2 py-1 text-xs rounded hover:bg-gray-100"
+                          className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50"
                           onClick={() => setPendingTypeName(null)}
                         >
                           Cancel
                         </button>
                         <button
                           type="button"
-                          className="px-2 py-1 text-xs rounded bg-yellow-400 hover:bg-yellow-500"
+                          className="rounded-full border border-amber-300 bg-amber-400 px-3 py-1.5 text-xs font-medium text-slate-900 transition hover:bg-amber-500"
                           onClick={() => createTypeFromValue(pendingTypeName)}
                         >
                           Approve
@@ -1223,7 +1228,6 @@ export default function DevNotesForm({
               </div>
             </div>
 
-            {/* Severity */}
             <SearchableSingleSelect
               label="Severity"
               options={severityOptions}
@@ -1236,19 +1240,12 @@ export default function DevNotesForm({
               isSuperscript={isSuperscriptLabels}
             />
 
-            {/* Assignment & Workflow (admin only) */}
             {isAdmin && (
               <div className={isSuperscriptLabels ? 'relative' : ''}>
-                <label
-                  className={
-                    isSuperscriptLabels
-                      ? 'absolute -top-[9px] left-[10px] bg-white px-1.5 text-xs leading-4 rounded-md pointer-events-none z-[2] text-gray-700'
-                      : 'block text-sm mb-1 text-gray-700'
-                  }
-                >
+                <label className={floatingLabelClass(isSuperscriptLabels)}>
                   Assignment & Workflow
                 </label>
-                <div className="flex flex-col gap-2">
+                <div className="space-y-3">
                   <SearchableSingleSelect
                     label="Assignee"
                     options={[{ id: '', label: 'Unassigned' }, ...collaboratorOptions]}
@@ -1257,30 +1254,35 @@ export default function DevNotesForm({
                     placeholder="Search assignee..."
                     isSuperscript={isSuperscriptLabels}
                   />
+                  {existingReport && (statusValue === 'Closed' || statusValue === 'Resolved') && (
+                    <SearchableSingleSelect
+                      label="Resolved By"
+                      options={[{ id: '', label: 'Not Set' }, ...collaboratorOptions]}
+                      value={resolvedBy ?? ''}
+                      onChange={(value) => setResolvedBy(value || null)}
+                      placeholder="Search resolver..."
+                      isSuperscript={isSuperscriptLabels}
+                    />
+                  )}
                 </div>
               </div>
             )}
 
-            {/* Task List */}
             <div className={isSuperscriptLabels ? 'relative' : ''}>
-              <label
-                className={
-                  isSuperscriptLabels
-                    ? 'absolute -top-[9px] left-[10px] bg-white px-1.5 text-xs leading-4 rounded-md pointer-events-none z-[2] text-gray-700'
-                    : 'block text-sm mb-1 text-gray-700'
-                }
-              >
-                Task List
-              </label>
+              <label className={floatingLabelClass(isSuperscriptLabels)}>Task List</label>
               <div className="relative">
-                <div className="border border-gray-200 rounded-md px-2 py-1 min-h-[40px] bg-white focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 flex items-center">
-                  <div className="flex flex-wrap items-center gap-1">
+                <div className={FIELD_SURFACE_CLASS}>
+                  <div className="flex items-center gap-2 px-3 py-2">
+                    <FiSearch size={14} className="shrink-0 text-slate-400" />
+                    <div className="h-4 w-px bg-slate-200" />
+                  </div>
+                  <div className="flex min-h-[40px] flex-wrap items-center gap-1 px-3 pb-2 pt-0">
                     {taskListId && (
-                      <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700">
                         {getTaskListName(taskListId)}
                         <button
                           type="button"
-                          className="ml-0.5 hover:text-blue-600"
+                          className="ml-0.5 text-slate-400 transition hover:text-slate-700"
                           onClick={() => setTaskListId('')}
                         >
                           &times;
@@ -1290,7 +1292,7 @@ export default function DevNotesForm({
                     <input
                       ref={taskListInputRef}
                       type="text"
-                      className="flex-1 min-w-[120px] border-none outline-none text-sm bg-transparent"
+                      className="flex-1 min-w-[140px] border-none bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
                       placeholder="Type to search or add..."
                       value={taskListSearchTerm}
                       onChange={(e) => {
@@ -1302,11 +1304,12 @@ export default function DevNotesForm({
                       onBlur={() => setTimeout(() => setShowTaskListDropdown(false), 200)}
                       onKeyDown={handleTaskListKeyDown}
                     />
+                    <span className="shrink-0 text-[11px] text-slate-400">Enter to select</span>
                   </div>
                 </div>
 
                 {showTaskListDropdown && (
-                  <div className="absolute top-[calc(100%+4px)] left-0 right-0 bg-white rounded-md shadow-lg border border-gray-200 max-h-[200px] overflow-y-auto z-20">
+                  <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-20 max-h-[220px] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10">
                     {taskLists
                       .filter((list) =>
                         list.name.toLowerCase().includes(taskListSearchTerm.toLowerCase())
@@ -1314,18 +1317,20 @@ export default function DevNotesForm({
                       .map((list) => (
                         <div
                           key={list.id}
-                          className={`flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-gray-100 ${
-                            list.id === taskListId ? 'bg-blue-50' : ''
+                          className={`flex items-center justify-between px-3 py-2.5 cursor-pointer transition hover:bg-slate-50 ${
+                            list.id === taskListId ? 'bg-slate-50' : ''
                           }`}
                           onMouseDown={() => handleTaskListSelect(list.id)}
                         >
                           <span
-                            className={`text-sm ${list.id === taskListId ? 'font-medium' : ''}`}
+                            className={`text-sm text-slate-700 ${
+                              list.id === taskListId ? 'font-medium' : ''
+                            }`}
                           >
                             {list.name}
                           </span>
                           {list.is_default && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-800">
+                            <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
                               Default
                             </span>
                           )}
@@ -1337,39 +1342,37 @@ export default function DevNotesForm({
                           list.name.toLowerCase() === taskListSearchTerm.trim().toLowerCase()
                       ) && (
                         <div
-                          className="px-3 py-2 cursor-pointer bg-blue-50 hover:bg-blue-100"
+                          className="cursor-pointer border-t border-slate-100 bg-slate-50 px-3 py-2.5 text-sm text-violet-700 transition hover:bg-violet-50"
                           onMouseDown={() => setPendingTaskListName(taskListSearchTerm.trim())}
                         >
-                          <span className="text-sm text-blue-600">
-                            + Queue "{taskListSearchTerm.trim()}" for approval
-                          </span>
+                          + Queue "{taskListSearchTerm.trim()}" for approval
                         </div>
                       )}
                     {taskLists.length === 0 && !taskListSearchTerm.trim() && (
-                      <div className="px-3 py-2">
-                        <span className="text-sm text-gray-500">No task lists available</span>
+                      <div className="px-3 py-2.5 text-sm text-slate-500">
+                        No task lists available
                       </div>
                     )}
                   </div>
                 )}
 
                 {pendingTaskListName && (
-                  <div className="absolute top-[calc(100%+8px)] left-0 bg-white border border-yellow-300 rounded-md shadow-md p-2 z-30">
-                    <div className="flex flex-col gap-2">
-                      <p className="text-xs text-gray-700">
+                  <div className="absolute left-0 top-[calc(100%+8px)] z-30 rounded-2xl border border-amber-200 bg-white p-3 shadow-xl shadow-slate-900/10">
+                    <div className="flex flex-col gap-3">
+                      <p className="text-xs font-medium text-slate-700">
                         Add "{pendingTaskListName}"? Press Shift+Enter or approve.
                       </p>
                       <div className="flex justify-end gap-2">
                         <button
                           type="button"
-                          className="px-2 py-1 text-xs rounded hover:bg-gray-100"
+                          className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50"
                           onClick={() => setPendingTaskListName(null)}
                         >
                           Cancel
                         </button>
                         <button
                           type="button"
-                          className="px-2 py-1 text-xs rounded bg-yellow-400 hover:bg-yellow-500"
+                          className="rounded-full border border-amber-300 bg-amber-400 px-3 py-1.5 text-xs font-medium text-slate-900 transition hover:bg-amber-500"
                           onClick={() => createTaskListFromValue(pendingTaskListName)}
                         >
                           Approve
@@ -1381,74 +1384,61 @@ export default function DevNotesForm({
               </div>
             </div>
 
-            {/* Resolved By (admin only) */}
-            {existingReport && isAdmin && (statusValue === 'Closed' || statusValue === 'Resolved') && (
-              <SearchableSingleSelect
-                label="Resolved By"
-                options={[{ id: '', label: 'Not Set' }, ...collaboratorOptions]}
-                value={resolvedBy ?? ''}
-                onChange={(value) => setResolvedBy(value || null)}
-                placeholder="Search resolver..."
-                isSuperscript={isSuperscriptLabels}
-              />
-            )}
-
-            {/* Page URL */}
             <div className={isSuperscriptLabels ? 'relative' : ''}>
-              <label
-                className={
-                  isSuperscriptLabels
-                    ? 'absolute -top-[9px] left-[10px] bg-white px-1.5 text-xs leading-4 rounded-md pointer-events-none z-[2] text-gray-700'
-                    : 'block text-sm mb-1 text-gray-700'
-                }
-              >
-                Page URL
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  className={`w-full rounded-md border border-gray-200 px-3 py-1.5 pr-10 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none hover:border-gray-400 ${
-                    !existingReport ? 'bg-gray-50 cursor-not-allowed' : ''
-                  }`}
-                  value={reportPageUrl}
-                  onChange={(e) => setReportPageUrl(e.target.value)}
-                  readOnly={!existingReport}
-                />
-                <a
-                  href={composePageUrlWithTab(reportPageUrl)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600"
-                  title="Open in new tab"
-                >
-                  <FiExternalLink size={14} />
-                </a>
+              <label className={floatingLabelClass(isSuperscriptLabels)}>Page URL</label>
+              <div className={FIELD_SURFACE_CLASS}>
+                <div className="relative flex items-center">
+                  <input
+                    type="text"
+                    className={`w-full border-0 bg-transparent py-2 pl-3 pr-10 text-sm text-slate-900 outline-none placeholder:text-slate-400 ${
+                      !existingReport ? 'cursor-not-allowed text-slate-500' : ''
+                    }`}
+                    value={reportPageUrl}
+                    onChange={(e) => setReportPageUrl(e.target.value)}
+                    readOnly={!existingReport}
+                  />
+                  <a
+                    href={composePageUrlWithTab(reportPageUrl)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                    title="Open in new tab"
+                  >
+                    <FiExternalLink size={14} />
+                  </a>
+                </div>
               </div>
             </div>
           </div>
+        </section>
 
-          {/* Discussion */}
-          {existingReport && <DevNotesDiscussion report={existingReport} />}
-        </div>
+        {existingReport && (
+          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-900/5">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <span className={sectionLabelClass}>Discussion</span>
+              <span className="text-xs text-slate-500">Visible to collaborators with access</span>
+            </div>
+            <DevNotesDiscussion report={existingReport} />
+          </section>
+        )}
 
-        {/* Action Buttons */}
-        <div className="flex justify-between pt-2">
-          <div className="relative flex items-center gap-4 flex-wrap">
+        <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative flex flex-wrap items-center gap-3">
             {isAdmin && (
-              <>
-                <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
-                  aiReady ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-500'
-                }`}>
-                  {aiReady ? 'AI Ready' : 'AI Not Ready'}
-                </span>
-              </>
+              <span
+                className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
+                  aiReady ? 'bg-violet-100 text-violet-800' : 'bg-slate-100 text-slate-500'
+                }`}
+              >
+                {aiReady ? 'AI Ready' : 'AI Not Ready'}
+              </span>
             )}
             {existingReport && (onDelete || onArchive) ? (
               <>
                 {onArchive && (
                   <button
                     type="button"
-                    className="p-1.5 rounded text-gray-500 hover:bg-gray-100 disabled:opacity-50"
+                    className={ACTION_ICON_BUTTON_CLASS}
                     onClick={() => setPendingDestructiveAction('archive')}
                     disabled={loading}
                     aria-label="Archive"
@@ -1460,7 +1450,7 @@ export default function DevNotesForm({
                 {onDelete && (
                   <button
                     type="button"
-                    className="p-1.5 rounded text-red-500 hover:bg-red-50 disabled:opacity-50"
+                    className={`${ACTION_ICON_BUTTON_CLASS} text-rose-500 hover:text-rose-700`}
                     onClick={() => setPendingDestructiveAction('delete')}
                     disabled={loading}
                     aria-label="Delete"
@@ -1470,8 +1460,8 @@ export default function DevNotesForm({
                   </button>
                 )}
                 {pendingDestructiveAction && (
-                  <div className="absolute bottom-[calc(100%+8px)] left-0 z-30 min-w-[240px] rounded-md border border-gray-200 bg-white p-3 shadow-lg">
-                    <p className="text-sm text-gray-800">
+                  <div className="absolute bottom-[calc(100%+8px)] left-0 z-30 min-w-[260px] rounded-2xl border border-slate-200 bg-white p-3 shadow-xl shadow-slate-900/10">
+                    <p className="text-sm text-slate-800">
                       {pendingDestructiveAction === 'delete'
                         ? 'Delete this dev note permanently?'
                         : 'Archive this dev note by setting its status to Closed?'}
@@ -1479,17 +1469,17 @@ export default function DevNotesForm({
                     <div className="mt-3 flex justify-end gap-2">
                       <button
                         type="button"
-                        className="rounded px-2 py-1 text-xs text-gray-600 hover:bg-gray-100"
+                        className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50"
                         onClick={() => setPendingDestructiveAction(null)}
                       >
                         Cancel
                       </button>
                       <button
                         type="button"
-                        className={`rounded px-2 py-1 text-xs text-white ${
+                        className={`rounded-full px-3 py-1.5 text-xs font-medium text-white transition ${
                           pendingDestructiveAction === 'delete'
-                            ? 'bg-red-500 hover:bg-red-600'
-                            : 'bg-gray-700 hover:bg-gray-800'
+                            ? 'bg-rose-500 hover:bg-rose-600'
+                            : 'bg-slate-700 hover:bg-slate-800'
                         }`}
                         onClick={async () => {
                           const action = pendingDestructiveAction;
@@ -1512,7 +1502,7 @@ export default function DevNotesForm({
           <div className="flex items-center gap-2">
             <button
               type="button"
-              className="p-1.5 rounded hover:bg-gray-100 text-gray-500"
+              className={ACTION_ICON_BUTTON_CLASS}
               onClick={onCancel}
               aria-label="Cancel"
               title="Cancel"
