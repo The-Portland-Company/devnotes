@@ -25,6 +25,11 @@ import {
   deriveRouteLabelFromUrl,
 } from './internal/captureContext';
 import { buildAiFixPayload, formatAiFixPayloadForCopy } from './internal/aiPayload';
+import {
+  getInitialNarrativeTab,
+  getInitialTaskStatus,
+  shouldRequireExplicitStatusSelection,
+} from './internal/formState';
 import type { BugReport, BugReportType } from './types';
 
 type DevNotesFormProps = {
@@ -56,6 +61,8 @@ type SearchableSingleSelectProps = {
   wrapperClassName?: string;
   minInputWidthClassName?: string;
 };
+
+type NarrativeTab = 'description' | 'issue-details';
 
 const COMPACT_BEHAVIOR_HEIGHT = 56;
 const EXPANDED_BEHAVIOR_MIN_HEIGHT = 92;
@@ -276,7 +283,12 @@ export default function DevNotesForm({
     existingReport?.expected_behavior || ''
   );
   const [actualBehavior, setActualBehavior] = useState(existingReport?.actual_behavior || '');
-  const [status, setStatus] = useState<BugReport['status'] | null>(existingReport?.status || null);
+  const [status, setStatus] = useState<BugReport['status'] | null>(
+    getInitialTaskStatus(existingReport?.status)
+  );
+  useEffect(() => {
+    setStatus(getInitialTaskStatus(existingReport?.status));
+  }, [existingReport?.id, existingReport?.status]);
   const [assignedTo, setAssignedTo] = useState<string | null>(existingReport?.assigned_to || null);
   const [resolvedBy, setResolvedBy] = useState<string | null>(existingReport?.resolved_by || null);
   const [aiReady, setAiReady] = useState(existingReport?.ai_ready || false);
@@ -314,6 +326,9 @@ export default function DevNotesForm({
     `${actualBehavior.trim() ? EXPANDED_BEHAVIOR_MIN_HEIGHT : COMPACT_BEHAVIOR_HEIGHT}px`
   );
   const [showAiChat, setShowAiChat] = useState(false);
+  const [activeNarrativeTab, setActiveNarrativeTab] = useState<NarrativeTab>(
+    getInitialNarrativeTab()
+  );
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [pendingDestructiveAction, setPendingDestructiveAction] = useState<'delete' | 'archive' | null>(null);
   const capturedContext = useMemo(
@@ -623,7 +638,8 @@ export default function DevNotesForm({
   const trimmedExpectedBehavior = expectedBehavior.trim();
   const trimmedActualBehavior = actualBehavior.trim();
   const statusValue = status || 'Open';
-  const statusRequired = !status;
+  const statusRequired =
+    shouldRequireExplicitStatusSelection(Boolean(existingReport)) && !status;
   const hasDescription = trimmedDescription.length > 0;
   const hasBehavior =
     trimmedExpectedBehavior.length > 0 || trimmedActualBehavior.length > 0;
@@ -645,6 +661,18 @@ export default function DevNotesForm({
       ? [trimmedExpectedBehavior, trimmedActualBehavior].filter(Boolean).join('\n')
       : title.trim();
   const canReviewDescriptionWithAi = Boolean(aiProvider && trimmedDescription);
+  const narrativeTabs: Array<{ id: NarrativeTab; label: string; hint: string }> = [
+    {
+      id: 'description',
+      label: 'Standard Description',
+      hint: 'Single narrative field',
+    },
+    {
+      id: 'issue-details',
+      label: 'Issue Details',
+      hint: 'Expected vs actual',
+    },
+  ];
 
   const saveReport = async (overrides?: {
     description?: string | null;
@@ -698,7 +726,7 @@ export default function DevNotesForm({
   const handleSubmit = async () => {
     setSubmitAttempted(true);
     if (!title.trim() || !taskListId || selectedTypes.length === 0 || !hasNarrative) return;
-    if (!status) return;
+    if (statusRequired) return;
 
     if (requiresAiBeforeCreate) {
       setShowAiChat(true);
@@ -940,95 +968,122 @@ export default function DevNotesForm({
             )}
           </div>
 
-          <div className="space-y-4">
-            <div className={isSuperscriptLabels ? 'relative' : ''}>
-              <label className={floatingLabelClass(isSuperscriptLabels)}>
-                Title <span className="text-rose-500">*</span>
-              </label>
-              <input
-                type="text"
-                className={`${FIELD_SURFACE_CLASS} ${CONTROL_INPUT_CLASS}`}
-                placeholder="Brief description of the issue"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-            </div>
-
-            <div className={isSuperscriptLabels ? 'relative' : ''}>
-              <label className={floatingLabelClass(isSuperscriptLabels)}>Description</label>
-              <textarea
-                ref={descriptionRef}
-                className={`${FIELD_SURFACE_CLASS} ${CONTROL_TEXTAREA_CLASS}`}
-                placeholder="Detailed description (optional)"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                onInput={resizeDescriptionField}
-                rows={5}
-                style={{ minHeight: '120px', height: descriptionHeight }}
-              />
-            </div>
+          <div className={isSuperscriptLabels ? 'relative' : ''}>
+            <label className={floatingLabelClass(isSuperscriptLabels)}>
+              Title <span className="text-rose-500">*</span>
+            </label>
+            <input
+              type="text"
+              className={`${FIELD_SURFACE_CLASS} ${CONTROL_INPUT_CLASS}`}
+              placeholder="Brief description of the issue"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
           </div>
         </section>
 
-        <div className="flex items-center gap-3">
-          <div className="h-px flex-1 bg-slate-200" />
-          <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 shadow-sm shadow-slate-900/5">
-            Choose narrative path
-          </span>
-          <div className="h-px flex-1 bg-slate-200" />
-        </div>
-
         <section className={SECTION_CARD_CLASS}>
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <span className={sectionLabelClass}>Issue details</span>
-            <span className="text-xs text-slate-500">Use one or both fields below</span>
-          </div>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className={isSuperscriptLabels ? 'relative' : ''}>
-              <label className={floatingLabelClass(isSuperscriptLabels)}>Expected Behavior</label>
-              <textarea
-                ref={expectedBehaviorRef}
-                className={`${FIELD_SURFACE_CLASS} ${CONTROL_TEXTAREA_CLASS}`}
-                placeholder="What should have happened?"
-                value={expectedBehavior}
-                onChange={(e) => setExpectedBehavior(e.target.value)}
-                onInput={(e) =>
-                  resizeBehaviorField(
-                    e.currentTarget,
-                    e.currentTarget.value,
-                    setExpectedBehaviorHeight
-                  )
-                }
-                rows={2}
-                style={{
-                  minHeight: `${COMPACT_BEHAVIOR_HEIGHT}px`,
-                  height: expectedBehaviorHeight,
-                }}
-              />
-            </div>
-            <div className={isSuperscriptLabels ? 'relative' : ''}>
-              <label className={floatingLabelClass(isSuperscriptLabels)}>Actual Behavior</label>
-              <textarea
-                ref={actualBehaviorRef}
-                className={`${FIELD_SURFACE_CLASS} ${CONTROL_TEXTAREA_CLASS}`}
-                placeholder="What actually happened?"
-                value={actualBehavior}
-                onChange={(e) => setActualBehavior(e.target.value)}
-                onInput={(e) =>
-                  resizeBehaviorField(
-                    e.currentTarget,
-                    e.currentTarget.value,
-                    setActualBehaviorHeight
-                  )
-                }
-                rows={2}
-                style={{
-                  minHeight: `${COMPACT_BEHAVIOR_HEIGHT}px`,
-                  height: actualBehaviorHeight,
-                }}
-              />
+          <div className="mb-4 border-b border-slate-200">
+            <div className="flex flex-wrap items-end gap-2">
+              {narrativeTabs.map((tab) => {
+                const isActive = activeNarrativeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    className={`rounded-t-2xl border px-4 py-2 text-left transition ${
+                      isActive
+                        ? 'border-slate-300 border-b-slate-50 bg-slate-50 text-slate-900 shadow-sm shadow-slate-900/5'
+                        : 'border-transparent bg-transparent text-slate-500 hover:border-slate-200 hover:bg-white hover:text-slate-700'
+                    }`}
+                    onClick={() => setActiveNarrativeTab(tab.id)}
+                    aria-pressed={isActive}
+                  >
+                    <span className="block text-[11px] font-semibold uppercase tracking-[0.16em]">
+                      Description
+                    </span>
+                    <span className="mt-1 block text-sm font-medium">{tab.label}</span>
+                    <span className="mt-1 block text-xs text-slate-500">{tab.hint}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
+
+          {activeNarrativeTab === 'description' ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between gap-3">
+                <span className={sectionLabelClass}>Standard description</span>
+                <span className="text-xs text-slate-500">Use one clear narrative field</span>
+              </div>
+              <div className={isSuperscriptLabels ? 'relative' : ''}>
+                <label className={floatingLabelClass(isSuperscriptLabels)}>Description</label>
+                <textarea
+                  ref={descriptionRef}
+                  className={`${FIELD_SURFACE_CLASS} ${CONTROL_TEXTAREA_CLASS}`}
+                  placeholder="Detailed description (optional)"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  onInput={resizeDescriptionField}
+                  rows={5}
+                  style={{ minHeight: '120px', height: descriptionHeight }}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between gap-3">
+                <span className={sectionLabelClass}>Issue details</span>
+                <span className="text-xs text-slate-500">Use one or both fields below</span>
+              </div>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className={isSuperscriptLabels ? 'relative' : ''}>
+                  <label className={floatingLabelClass(isSuperscriptLabels)}>Expected Behavior</label>
+                  <textarea
+                    ref={expectedBehaviorRef}
+                    className={`${FIELD_SURFACE_CLASS} ${CONTROL_TEXTAREA_CLASS}`}
+                    placeholder="What should have happened?"
+                    value={expectedBehavior}
+                    onChange={(e) => setExpectedBehavior(e.target.value)}
+                    onInput={(e) =>
+                      resizeBehaviorField(
+                        e.currentTarget,
+                        e.currentTarget.value,
+                        setExpectedBehaviorHeight
+                      )
+                    }
+                    rows={2}
+                    style={{
+                      minHeight: `${COMPACT_BEHAVIOR_HEIGHT}px`,
+                      height: expectedBehaviorHeight,
+                    }}
+                  />
+                </div>
+                <div className={isSuperscriptLabels ? 'relative' : ''}>
+                  <label className={floatingLabelClass(isSuperscriptLabels)}>Actual Behavior</label>
+                  <textarea
+                    ref={actualBehaviorRef}
+                    className={`${FIELD_SURFACE_CLASS} ${CONTROL_TEXTAREA_CLASS}`}
+                    placeholder="What actually happened?"
+                    value={actualBehavior}
+                    onChange={(e) => setActualBehavior(e.target.value)}
+                    onInput={(e) =>
+                      resizeBehaviorField(
+                        e.currentTarget,
+                        e.currentTarget.value,
+                        setActualBehaviorHeight
+                      )
+                    }
+                    rows={2}
+                    style={{
+                      minHeight: `${COMPACT_BEHAVIOR_HEIGHT}px`,
+                      height: actualBehaviorHeight,
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
           {submitAttempted && !hasNarrative && (
             <p className="mt-3 text-xs font-medium text-rose-600">
               Add a description, expected behavior, or actual behavior.

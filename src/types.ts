@@ -10,6 +10,7 @@ export type {
   DevNotesRole,
   NotifyEvent,
   AiProvider,
+  AiProviderOption,
   AiConversationMessage,
   AiAssistResult,
   BugReport,

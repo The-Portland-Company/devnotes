@@ -12,8 +12,8 @@ import {
 import { useDevNotes } from './DevNotesProvider';
 
 type DevNotesMenuProps = {
-  /** Called when user clicks "See All Tasks" */
-  onViewTasks?: () => void;
+  /** Called when user clicks "View All Tasks" — always rendered, opens the built-in modal */
+  onViewTasks: () => void;
   /** Called when user clicks "Settings" */
   onSettings?: () => void;
   /** Custom icon component for the menu trigger */
@@ -204,49 +204,75 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
             </span>
           </button>
 
-          {(onViewTasks || onSettings) && (
-            <>
-              <div className="my-1 border-t border-gray-200" />
+          <div className="my-1 border-t border-gray-200" />
 
-              {onViewTasks && (
-                <button
-                  type="button"
-                  data-menu-item
-                  onClick={() => {
-                    setOpen(false);
-                    onViewTasks();
-                  }}
-                  className="flex w-full items-center justify-between gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50"
-                >
-                  <span className="inline-flex items-center gap-2 whitespace-nowrap">
-                    <FiList className="flex-shrink-0" />
-                    View All Tasks
-                  </span>
-                  {openBugCount > 0 && (
-                    <span className="inline-flex min-w-[20px] items-center justify-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
-                      {openBugCount}
-                    </span>
-                  )}
-                </button>
-              )}
+          {/* Always-on, inline-styled trigger for the built-in self-contained task modal */}
+          <button
+            type="button"
+            data-menu-item
+            onClick={() => {
+              setOpen(false);
+              onViewTasks();
+            }}
+            style={{
+              display: 'flex',
+              width: '100%',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 12,
+              padding: '8px 12px',
+              fontSize: 14,
+              color: '#1f2937',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.background = '#f9fafb';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
+            }}
+          >
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}>
+              <FiList style={{ flexShrink: 0 }} />
+              View All Tasks
+            </span>
+            {openBugCount > 0 && (
+              <span
+                style={{
+                  display: 'inline-flex',
+                  minWidth: 20,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 9999,
+                  background: '#fee2e2',
+                  padding: '2px 8px',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: '#b91c1c',
+                }}
+              >
+                {openBugCount}
+              </span>
+            )}
+          </button>
 
-              {onSettings && (
-                <button
-                  type="button"
-                  data-menu-item
-                  onClick={() => {
-                    setOpen(false);
-                    onSettings();
-                  }}
-                  className="flex w-full items-center gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50"
-                >
-                  <span className="inline-flex items-center gap-2 whitespace-nowrap">
-                    <FiSettings className="flex-shrink-0" />
-                    Settings
-                  </span>
-                </button>
-              )}
-            </>
+          {onSettings && (
+            <button
+              type="button"
+              data-menu-item
+              onClick={() => {
+                setOpen(false);
+                onSettings();
+              }}
+              className="flex w-full items-center gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50"
+            >
+              <span className="inline-flex items-center gap-2 whitespace-nowrap">
+                <FiSettings className="flex-shrink-0" />
+                Settings
+              </span>
+            </button>
           )}
         </div>
       )}

@@ -2,14 +2,12 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import DevNotesMenu from './DevNotesMenu';
 import DevNotesOverlay from './DevNotesOverlay';
-import DevNotesTaskList from './DevNotesTaskList';
+import DevNotesTaskListModal from './DevNotesTaskListModal';
 import { useDevNotes } from './DevNotesProvider';
 
 type DevNotesButtonProps = {
   /** Position of the floating button */
   position?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
-  /** Called when user clicks "See All Tasks" in the menu. If omitted, a built-in task panel opens. */
-  onViewTasks?: () => void;
   /** Called when user clicks "Settings" in the menu */
   onSettings?: () => void;
   /** Custom icon component for the menu trigger */
@@ -31,7 +29,6 @@ const positionStyles: Record<string, React.CSSProperties> = {
 
 export default function DevNotesButton({
   position = 'bottom-right',
-  onViewTasks,
   onSettings,
   icon,
   openReportId,
@@ -49,7 +46,7 @@ export default function DevNotesButton({
     setShowTaskPanel(true);
   };
 
-  const handleViewTasks = onViewTasks || (() => openBuiltInTaskPanel('All Tasks'));
+  const handleViewTasks = () => openBuiltInTaskPanel('All Tasks');
   const handleSettings = onSettings || (() => openBuiltInTaskPanel('Task Settings'));
 
   const buttonContent = (
@@ -67,33 +64,13 @@ export default function DevNotesButton({
         />
       </div>
 
-      {/* Built-in panel fallback (used when callbacks are not provided by host app) */}
-      {showTaskPanel && (
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: 9998,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            pointerEvents: 'auto',
-            padding: 16,
-          }}
-        >
-          <div
-            style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.3)' }}
-            onClick={() => setShowTaskPanel(false)}
-          />
-          <div className="relative w-full max-w-5xl max-h-[calc(100vh-32px)] overflow-y-auto rounded-xl bg-white p-6 shadow-2xl animate-[slideIn_0.2s_ease-out]">
-            <DevNotesTaskList
-              title={taskPanelTitle}
-              onClose={() => setShowTaskPanel(false)}
-              onNavigateToPage={onNavigateToPage}
-            />
-          </div>
-        </div>
-      )}
+      {/* Built-in, self-contained task modal (no external stylesheet dependency) */}
+      <DevNotesTaskListModal
+        open={showTaskPanel}
+        title={taskPanelTitle}
+        onClose={() => setShowTaskPanel(false)}
+        onNavigateToPage={onNavigateToPage}
+      />
     </>
   );
 

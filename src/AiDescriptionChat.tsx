@@ -34,8 +34,26 @@ export default function AiDescriptionChat({
   const [finalizedDescription, setFinalizedDescription] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editDraft, setEditDraft] = useState('');
+  const providerOptions = aiProvider.options?.length
+    ? aiProvider.options
+    : [{ id: 'default', label: 'AI' }];
+  const [selectedProviderId, setSelectedProviderId] = useState(
+    () =>
+      (typeof window !== 'undefined'
+        ? window.localStorage.getItem('devnotes_ai_provider')
+        : null) ||
+      aiProvider.defaultOptionId ||
+      providerOptions[0]?.id ||
+      'default'
+  );
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (!providerOptions.some((option) => option.id === selectedProviderId)) {
+      setSelectedProviderId(aiProvider.defaultOptionId || providerOptions[0]?.id || 'default');
+    }
+  }, [aiProvider.defaultOptionId, providerOptions, selectedProviderId]);
 
   const scrollToBottom = useCallback(() => {
     if (scrollRef.current) {
@@ -56,6 +74,7 @@ export default function AiDescriptionChat({
         const result = await aiProvider.refineDescription({
           description: initialDescription,
           conversationHistory: history,
+          providerId: selectedProviderId,
           context,
         });
 
@@ -83,7 +102,7 @@ export default function AiDescriptionChat({
         setIsLoading(false);
       }
     },
-    [initialDescription, context, aiProvider]
+    [initialDescription, context, aiProvider, selectedProviderId]
   );
 
   const [hasStarted, setHasStarted] = useState(false);
@@ -95,6 +114,12 @@ export default function AiDescriptionChat({
       callAiAssist([]);
     }
   }, [initialDescription, hasStarted]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('devnotes_ai_provider', selectedProviderId);
+    }
+  }, [selectedProviderId]);
 
   const handleSendReply = async () => {
     const trimmed = userInput.trim();
@@ -156,9 +181,19 @@ export default function AiDescriptionChat({
           <span className="text-sm font-semibold text-purple-700">
             AI Description Review
           </span>
-          <span className="text-[0.65rem] px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 font-semibold">
-            GPT-4
-          </span>
+          <select
+            aria-label="AI provider"
+            className="rounded-full border border-purple-200 bg-purple-100 px-2 py-1 text-[0.65rem] font-semibold text-purple-700 outline-none"
+            value={selectedProviderId}
+            onChange={(e) => setSelectedProviderId(e.target.value)}
+            disabled={isLoading}
+          >
+            {providerOptions.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
+              </option>
+            ))}
+          </select>
         </div>
         <button
           type="button"

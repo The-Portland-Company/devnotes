@@ -187,9 +187,12 @@ export default function DevNotesDot({ report }: DevNotesDotProps) {
         setPendingMove({ clientX: event.clientX, clientY: event.clientY });
       } else {
         setDragPosition(null);
+        if (!pendingMove) {
+          setIsFormOpen(true);
+        }
       }
     },
-    [isDragging]
+    [isDragging, pendingMove]
   );
 
   const confirmMove = useCallback(async () => {
@@ -265,7 +268,9 @@ export default function DevNotesDot({ report }: DevNotesDotProps) {
               : 'shadow-[0_2px_8px_rgba(0,0,0,0.3)] cursor-pointer hover:scale-[1.2] hover:shadow-[0_4px_12px_rgba(0,0,0,0.4)]'
           }`}
           onMouseDown={handleDragStart}
-          onClick={() => {
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
             if (didDragRef.current) {
               didDragRef.current = false;
               return;
@@ -362,7 +367,7 @@ export default function DevNotesDot({ report }: DevNotesDotProps) {
             onClick={() => setIsFormOpen(false)}
           />
           <div style={{ position: 'absolute', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', padding: 16 }}>
-            <div className="pointer-events-auto max-h-[calc(100vh-32px)] overflow-y-auto rounded-lg shadow-xl">
+            <div className="pointer-events-auto max-h-[calc(100vh-32px)] overflow-y-auto rounded-lg shadow-xl" data-bug-form>
               <DevNotesForm
                 pageUrl={report.page_url}
                 xPosition={report.x_position}

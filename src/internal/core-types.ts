@@ -43,6 +43,8 @@ export type Task = {
   severity: 'Critical' | 'High' | 'Medium' | 'Low';
   title: string;
   description: string | null;
+  devnotes_meta?: string | null;
+  devnotesMeta?: string | null;
   expected_behavior?: string | null;
   actual_behavior?: string | null;
   capture_context?: TaskCaptureContext | null;
@@ -105,10 +107,18 @@ export type AiAssistResult =
   | { type: 'finalized'; description: string }
   | { type: 'error'; message: string };
 
+export type AiProviderOption = {
+  id: string;
+  label: string;
+};
+
 export type AiProvider = {
+  options?: AiProviderOption[];
+  defaultOptionId?: string;
   refineDescription(params: {
     description: string;
     conversationHistory: AiConversationMessage[];
+    providerId?: string;
     context: {
       title?: string;
       page_url?: string;

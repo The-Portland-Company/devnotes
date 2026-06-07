@@ -1,7 +1,7 @@
 import * as react_jsx_runtime from 'react/jsx-runtime';
 import { ReactNode } from 'react';
-import { D as DevNotesClientAdapter, a as DevNotesUser, b as DevNotesConfig, B as BugReport, c as BugReportType, T as TaskList, d as BugReportCreator, N as NotifyEvent, A as AiProvider, e as DevNotesRole, f as Task, g as TaskCaptureContext } from './types-DwvhmJrB.js';
-export { h as AiAssistResult, i as AiConversationMessage, j as BugCaptureContext, k as BugReportCreateData, l as BugReportMessage, m as TaskCreateData, n as TaskCreator, o as TaskMessage, p as TaskType } from './types-DwvhmJrB.js';
+import { D as DevNotesClientAdapter, a as DevNotesUser, b as DevNotesConfig, B as BugReport, c as BugReportType, T as TaskList, d as BugReportCreator, N as NotifyEvent, A as AiProvider, e as DevNotesRole, f as Task, g as TaskCaptureContext } from './types-CnCGjCRT.js';
+export { h as AiAssistResult, i as AiConversationMessage, j as AiProviderOption, k as BugCaptureContext, l as BugReportCreateData, m as BugReportMessage, n as TaskCreateData, o as TaskCreator, p as TaskMessage, q as TaskType } from './types-CnCGjCRT.js';
 import { D as DevNotesCapabilities, a as DevNotesAppLinkStatus, b as DevNotesClientOptions } from './types-DPJ2ViSN.js';
 export { c as DevNotesLinkAppInput } from './types-DPJ2ViSN.js';
 
@@ -72,8 +72,6 @@ declare function useDevNotes(): DevNotesContextValue;
 type DevNotesButtonProps = {
     /** Position of the floating button */
     position?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
-    /** Called when user clicks "See All Tasks" in the menu. If omitted, a built-in task panel opens. */
-    onViewTasks?: () => void;
     /** Called when user clicks "Settings" in the menu */
     onSettings?: () => void;
     /** Custom icon component for the menu trigger */
@@ -88,7 +86,7 @@ type DevNotesButtonProps = {
     /** Called when user wants to navigate to a report's page (used by built-in task list) */
     onNavigateToPage?: (pageUrl: string, reportId: string) => void;
 };
-declare function DevNotesButton({ position, onViewTasks, onSettings, icon, openReportId, onOpenReportClose, onNavigateToPage, }: DevNotesButtonProps): react_jsx_runtime.JSX.Element | null;
+declare function DevNotesButton({ position, onSettings, icon, openReportId, onOpenReportClose, onNavigateToPage, }: DevNotesButtonProps): react_jsx_runtime.JSX.Element | null;
 
 type DevNotesOverlayProps = {
     /** Optional: ID of a report to open immediately */
@@ -99,8 +97,8 @@ type DevNotesOverlayProps = {
 declare function DevNotesOverlay({ openReportId, onOpenReportClose, }?: DevNotesOverlayProps): react_jsx_runtime.JSX.Element | null;
 
 type DevNotesMenuProps = {
-    /** Called when user clicks "See All Tasks" */
-    onViewTasks?: () => void;
+    /** Called when user clicks "View All Tasks" — always rendered, opens the built-in modal */
+    onViewTasks: () => void;
     /** Called when user clicks "Settings" */
     onSettings?: () => void;
     /** Custom icon component for the menu trigger */
@@ -149,6 +147,18 @@ type DevNotesTaskListProps = {
     title?: string;
 };
 declare function DevNotesTaskList({ onNavigateToPage, onClose, title, }: DevNotesTaskListProps): react_jsx_runtime.JSX.Element;
+
+type DevNotesTaskListModalProps = {
+    /** Whether the modal is shown */
+    open: boolean;
+    /** Called when the modal should close (backdrop, Escape, or the ✕ button) */
+    onClose: () => void;
+    /** Called when the user wants to navigate to the page where a report was filed */
+    onNavigateToPage?: (pageUrl: string, reportId: string) => void;
+    /** Title shown at the top */
+    title?: string;
+};
+declare function DevNotesTaskListModal({ open, onClose, onNavigateToPage, title, }: DevNotesTaskListModalProps): react_jsx_runtime.JSX.Element | null;
 
 declare function createDevNotesClient(options: DevNotesClientOptions): DevNotesClientAdapter;
 
@@ -268,9 +278,14 @@ type BuildAiFixPayloadParams = {
 declare function buildAiFixPayload(params: BuildAiFixPayloadParams): AiFixPayload;
 declare function formatAiFixPayloadForCopy(payload: AiFixPayload): string;
 
+type NarrativeTab = 'description' | 'issue-details';
+declare function getInitialTaskStatus(existingStatus?: Task['status'] | null): Task['status'];
+declare function shouldRequireExplicitStatusSelection(hasExistingReport: boolean): boolean;
+declare function getInitialNarrativeTab(): NarrativeTab;
+
 declare const useBugReportPosition: (report: Task | null) => {
     x: number;
     y: number;
 } | null;
 
-export { type AiFixPayload, AiProvider, BugReport, BugReportCreator, BugReportType, type BuildAiFixPayloadParams, DevNotesAppLinkStatus, DevNotesButton, DevNotesCapabilities, DevNotesClientOptions, DevNotesConfig, DevNotesDiscussion, DevNotesDot, DevNotesForm, DevNotesMenu, DevNotesOverlay, DevNotesProvider, DevNotesRole, DevNotesTaskList, DevNotesUser, NotifyEvent, Task, TaskCaptureContext, TaskList, buildAiFixPayload, buildCaptureContext, calculateBugPositionFromPoint, createDevNotesClient, deriveRouteLabelFromUrl, detectBrowserName, formatAiFixPayloadForCopy, normalizePageUrl, resolveBugReportCoordinates, useBugReportPosition, useDevNotes };
+export { type AiFixPayload, AiProvider, BugReport, BugReportCreator, BugReportType, type BuildAiFixPayloadParams, DevNotesAppLinkStatus, DevNotesButton, DevNotesCapabilities, DevNotesClientOptions, DevNotesConfig, DevNotesDiscussion, DevNotesDot, DevNotesForm, DevNotesMenu, DevNotesOverlay, DevNotesProvider, DevNotesRole, DevNotesTaskList, DevNotesTaskListModal, DevNotesUser, type NarrativeTab, NotifyEvent, Task, TaskCaptureContext, TaskList, buildAiFixPayload, buildCaptureContext, calculateBugPositionFromPoint, createDevNotesClient, deriveRouteLabelFromUrl, detectBrowserName, formatAiFixPayloadForCopy, getInitialNarrativeTab, getInitialTaskStatus, normalizePageUrl, resolveBugReportCoordinates, shouldRequireExplicitStatusSelection, useBugReportPosition, useDevNotes };

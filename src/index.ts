@@ -9,6 +9,7 @@ export { default as DevNotesForm } from './DevNotesForm';
 export { default as DevNotesDot } from './DevNotesDot';
 export { default as DevNotesDiscussion } from './DevNotesDiscussion';
 export { default as DevNotesTaskList } from './DevNotesTaskList';
+export { default as DevNotesTaskListModal } from './DevNotesTaskListModal';
 
 // Client
 export type { TaskCreateData } from './adapters/types';
@@ -32,6 +33,7 @@ export type {
   DevNotesLinkAppInput,
   NotifyEvent,
   AiProvider,
+  AiProviderOption,
   AiConversationMessage,
   AiAssistResult,
   BugReport,
@@ -54,6 +56,12 @@ export {
 } from './internal/captureContext';
 export { buildAiFixPayload, formatAiFixPayloadForCopy } from './internal/aiPayload';
 export type { AiFixPayload, BuildAiFixPayloadParams } from './internal/aiPayload';
+export {
+  getInitialTaskStatus,
+  shouldRequireExplicitStatusSelection,
+  getInitialNarrativeTab,
+} from './internal/formState';
+export type { NarrativeTab } from './internal/formState';
 
 // Hooks
 export { useBugReportPosition } from './hooks/useBugReportPosition';

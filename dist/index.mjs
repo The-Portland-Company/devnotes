@@ -669,7 +669,7 @@ import {
   FiToggleLeft,
   FiToggleRight
 } from "react-icons/fi";
-import { Fragment, jsx as jsx2, jsxs } from "react/jsx-runtime";
+import { jsx as jsx2, jsxs } from "react/jsx-runtime";
 function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position = "bottom-right", dropdownDirection = "down" }) {
   const {
     isEnabled,
@@ -842,44 +842,77 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                   ]
                 }
               ),
-              (onViewTasks || onSettings) && /* @__PURE__ */ jsxs(Fragment, { children: [
-                /* @__PURE__ */ jsx2("div", { className: "my-1 border-t border-gray-200" }),
-                onViewTasks && /* @__PURE__ */ jsxs(
-                  "button",
-                  {
-                    type: "button",
-                    "data-menu-item": true,
-                    onClick: () => {
-                      setOpen(false);
-                      onViewTasks();
-                    },
-                    className: "flex w-full items-center justify-between gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50",
-                    children: [
-                      /* @__PURE__ */ jsxs("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
-                        /* @__PURE__ */ jsx2(FiList, { className: "flex-shrink-0" }),
-                        "View All Tasks"
-                      ] }),
-                      openBugCount > 0 && /* @__PURE__ */ jsx2("span", { className: "inline-flex min-w-[20px] items-center justify-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700", children: openBugCount })
-                    ]
-                  }
-                ),
-                onSettings && /* @__PURE__ */ jsx2(
-                  "button",
-                  {
-                    type: "button",
-                    "data-menu-item": true,
-                    onClick: () => {
-                      setOpen(false);
-                      onSettings();
-                    },
-                    className: "flex w-full items-center gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50",
-                    children: /* @__PURE__ */ jsxs("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
-                      /* @__PURE__ */ jsx2(FiSettings, { className: "flex-shrink-0" }),
-                      "Settings"
-                    ] })
-                  }
-                )
-              ] })
+              /* @__PURE__ */ jsx2("div", { className: "my-1 border-t border-gray-200" }),
+              /* @__PURE__ */ jsxs(
+                "button",
+                {
+                  type: "button",
+                  "data-menu-item": true,
+                  onClick: () => {
+                    setOpen(false);
+                    onViewTasks();
+                  },
+                  style: {
+                    display: "flex",
+                    width: "100%",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    padding: "8px 12px",
+                    fontSize: 14,
+                    color: "#1f2937",
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer"
+                  },
+                  onMouseEnter: (e) => {
+                    e.currentTarget.style.background = "#f9fafb";
+                  },
+                  onMouseLeave: (e) => {
+                    e.currentTarget.style.background = "transparent";
+                  },
+                  children: [
+                    /* @__PURE__ */ jsxs("span", { style: { display: "inline-flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" }, children: [
+                      /* @__PURE__ */ jsx2(FiList, { style: { flexShrink: 0 } }),
+                      "View All Tasks"
+                    ] }),
+                    openBugCount > 0 && /* @__PURE__ */ jsx2(
+                      "span",
+                      {
+                        style: {
+                          display: "inline-flex",
+                          minWidth: 20,
+                          alignItems: "center",
+                          justifyContent: "center",
+                          borderRadius: 9999,
+                          background: "#fee2e2",
+                          padding: "2px 8px",
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: "#b91c1c"
+                        },
+                        children: openBugCount
+                      }
+                    )
+                  ]
+                }
+              ),
+              onSettings && /* @__PURE__ */ jsx2(
+                "button",
+                {
+                  type: "button",
+                  "data-menu-item": true,
+                  onClick: () => {
+                    setOpen(false);
+                    onSettings();
+                  },
+                  className: "flex w-full items-center gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50",
+                  children: /* @__PURE__ */ jsxs("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
+                    /* @__PURE__ */ jsx2(FiSettings, { className: "flex-shrink-0" }),
+                    "Settings"
+                  ] })
+                }
+              )
             ]
           }
         )
@@ -1444,7 +1477,7 @@ Dev Notes`,
 // src/AiDescriptionChat.tsx
 import { useState as useState5, useEffect as useEffect5, useRef as useRef5, useCallback as useCallback4 } from "react";
 import { FiCheck, FiEdit2 as FiEdit22, FiX, FiZap } from "react-icons/fi";
-import { Fragment as Fragment2, jsx as jsx4, jsxs as jsxs3 } from "react/jsx-runtime";
+import { Fragment, jsx as jsx4, jsxs as jsxs3 } from "react/jsx-runtime";
 function AiDescriptionChat({
   initialDescription,
   context,
@@ -1459,8 +1492,17 @@ function AiDescriptionChat({
   const [finalizedDescription, setFinalizedDescription] = useState5(null);
   const [isEditing, setIsEditing] = useState5(false);
   const [editDraft, setEditDraft] = useState5("");
+  const providerOptions = aiProvider.options?.length ? aiProvider.options : [{ id: "default", label: "AI" }];
+  const [selectedProviderId, setSelectedProviderId] = useState5(
+    () => (typeof window !== "undefined" ? window.localStorage.getItem("devnotes_ai_provider") : null) || aiProvider.defaultOptionId || providerOptions[0]?.id || "default"
+  );
   const scrollRef = useRef5(null);
   const textareaRef = useRef5(null);
+  useEffect5(() => {
+    if (!providerOptions.some((option) => option.id === selectedProviderId)) {
+      setSelectedProviderId(aiProvider.defaultOptionId || providerOptions[0]?.id || "default");
+    }
+  }, [aiProvider.defaultOptionId, providerOptions, selectedProviderId]);
   const scrollToBottom = useCallback4(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -1477,6 +1519,7 @@ function AiDescriptionChat({
         const result = await aiProvider.refineDescription({
           description: initialDescription,
           conversationHistory: history,
+          providerId: selectedProviderId,
           context
         });
         if (result.type === "error") {
@@ -1502,7 +1545,7 @@ function AiDescriptionChat({
         setIsLoading(false);
       }
     },
-    [initialDescription, context, aiProvider]
+    [initialDescription, context, aiProvider, selectedProviderId]
   );
   const [hasStarted, setHasStarted] = useState5(false);
   useEffect5(() => {
@@ -1511,6 +1554,11 @@ function AiDescriptionChat({
       callAiAssist([]);
     }
   }, [initialDescription, hasStarted]);
+  useEffect5(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("devnotes_ai_provider", selectedProviderId);
+    }
+  }, [selectedProviderId]);
   const handleSendReply = async () => {
     const trimmed = userInput.trim();
     if (!trimmed || isLoading) return;
@@ -1557,7 +1605,17 @@ function AiDescriptionChat({
       /* @__PURE__ */ jsxs3("div", { className: "flex items-center gap-2", children: [
         /* @__PURE__ */ jsx4(FiZap, { size: 16, className: "text-purple-600" }),
         /* @__PURE__ */ jsx4("span", { className: "text-sm font-semibold text-purple-700", children: "AI Description Review" }),
-        /* @__PURE__ */ jsx4("span", { className: "text-[0.65rem] px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 font-semibold", children: "GPT-4" })
+        /* @__PURE__ */ jsx4(
+          "select",
+          {
+            "aria-label": "AI provider",
+            className: "rounded-full border border-purple-200 bg-purple-100 px-2 py-1 text-[0.65rem] font-semibold text-purple-700 outline-none",
+            value: selectedProviderId,
+            onChange: (e) => setSelectedProviderId(e.target.value),
+            disabled: isLoading,
+            children: providerOptions.map((option) => /* @__PURE__ */ jsx4("option", { value: option.id, children: option.label }, option.id))
+          }
+        )
       ] }),
       /* @__PURE__ */ jsxs3(
         "button",
@@ -1683,7 +1741,7 @@ function AiDescriptionChat({
                   }
                 )
               ] })
-            ] }) : /* @__PURE__ */ jsxs3(Fragment2, { children: [
+            ] }) : /* @__PURE__ */ jsxs3(Fragment, { children: [
               /* @__PURE__ */ jsx4("p", { className: "text-sm whitespace-pre-wrap text-gray-800", children: finalizedDescription }),
               /* @__PURE__ */ jsxs3("div", { className: "flex justify-end gap-2 mt-3", children: [
                 /* @__PURE__ */ jsxs3(
@@ -2106,8 +2164,19 @@ function formatAiFixPayloadForCopy(payload) {
   ].join("\n");
 }
 
+// src/internal/formState.ts
+function getInitialTaskStatus(existingStatus) {
+  return existingStatus || "Open";
+}
+function shouldRequireExplicitStatusSelection(hasExistingReport) {
+  return hasExistingReport;
+}
+function getInitialNarrativeTab() {
+  return "description";
+}
+
 // src/DevNotesForm.tsx
-import { Fragment as Fragment3, jsx as jsx5, jsxs as jsxs4 } from "react/jsx-runtime";
+import { Fragment as Fragment2, jsx as jsx5, jsxs as jsxs4 } from "react/jsx-runtime";
 var COMPACT_BEHAVIOR_HEIGHT = 56;
 var EXPANDED_BEHAVIOR_MIN_HEIGHT = 92;
 var FIELD_SURFACE_CLASS = "rounded-2xl border border-slate-200 bg-white/95 shadow-sm shadow-slate-900/5 transition-colors focus-within:border-slate-400 focus-within:ring-1 focus-within:ring-slate-200";
@@ -2293,7 +2362,12 @@ function DevNotesForm({
     existingReport?.expected_behavior || ""
   );
   const [actualBehavior, setActualBehavior] = useState6(existingReport?.actual_behavior || "");
-  const [status, setStatus] = useState6(existingReport?.status || null);
+  const [status, setStatus] = useState6(
+    getInitialTaskStatus(existingReport?.status)
+  );
+  useEffect6(() => {
+    setStatus(getInitialTaskStatus(existingReport?.status));
+  }, [existingReport?.id, existingReport?.status]);
   const [assignedTo, setAssignedTo] = useState6(existingReport?.assigned_to || null);
   const [resolvedBy, setResolvedBy] = useState6(existingReport?.resolved_by || null);
   const [aiReady, setAiReady] = useState6(existingReport?.ai_ready || false);
@@ -2331,6 +2405,9 @@ function DevNotesForm({
     `${actualBehavior.trim() ? EXPANDED_BEHAVIOR_MIN_HEIGHT : COMPACT_BEHAVIOR_HEIGHT}px`
   );
   const [showAiChat, setShowAiChat] = useState6(false);
+  const [activeNarrativeTab, setActiveNarrativeTab] = useState6(
+    getInitialNarrativeTab()
+  );
   const [submitAttempted, setSubmitAttempted] = useState6(false);
   const [pendingDestructiveAction, setPendingDestructiveAction] = useState6(null);
   const capturedContext = useMemo3(
@@ -2595,7 +2672,7 @@ function DevNotesForm({
   const trimmedExpectedBehavior = expectedBehavior.trim();
   const trimmedActualBehavior = actualBehavior.trim();
   const statusValue = status || "Open";
-  const statusRequired = !status;
+  const statusRequired = shouldRequireExplicitStatusSelection(Boolean(existingReport)) && !status;
   const hasDescription = trimmedDescription.length > 0;
   const hasBehavior = trimmedExpectedBehavior.length > 0 || trimmedActualBehavior.length > 0;
   const hasNarrative = hasDescription || hasBehavior;
@@ -2604,6 +2681,18 @@ function DevNotesForm({
   const submitTitle = requiresAiBeforeCreate ? "Save will start AI clarification before creating the task" : statusRequired ? "Select a status before saving" : !hasNarrative ? "Add a description, expected behavior, or actual behavior" : existingReport ? "Update" : "Save";
   const aiSeedDescription = hasDescription ? trimmedDescription : hasBehavior ? [trimmedExpectedBehavior, trimmedActualBehavior].filter(Boolean).join("\n") : title.trim();
   const canReviewDescriptionWithAi = Boolean(aiProvider && trimmedDescription);
+  const narrativeTabs = [
+    {
+      id: "description",
+      label: "Standard Description",
+      hint: "Single narrative field"
+    },
+    {
+      id: "issue-details",
+      label: "Issue Details",
+      hint: "Expected vs actual"
+    }
+  ];
   const saveReport = async (overrides) => {
     const reportData = {
       task_list_id: taskListId,
@@ -2648,7 +2737,7 @@ function DevNotesForm({
   const handleSubmit = async () => {
     setSubmitAttempted(true);
     if (!title.trim() || !taskListId || selectedTypes.length === 0 || !hasNarrative) return;
-    if (!status) return;
+    if (statusRequired) return;
     if (requiresAiBeforeCreate) {
       setShowAiChat(true);
       return;
@@ -2864,22 +2953,46 @@ function DevNotesForm({
             }
           )
         ] }),
-        /* @__PURE__ */ jsxs4("div", { className: "space-y-4", children: [
-          /* @__PURE__ */ jsxs4("div", { className: isSuperscriptLabels ? "relative" : "", children: [
-            /* @__PURE__ */ jsxs4("label", { className: floatingLabelClass(isSuperscriptLabels), children: [
-              "Title ",
-              /* @__PURE__ */ jsx5("span", { className: "text-rose-500", children: "*" })
-            ] }),
-            /* @__PURE__ */ jsx5(
-              "input",
-              {
-                type: "text",
-                className: `${FIELD_SURFACE_CLASS} ${CONTROL_INPUT_CLASS}`,
-                placeholder: "Brief description of the issue",
-                value: title,
-                onChange: (e) => setTitle(e.target.value)
-              }
-            )
+        /* @__PURE__ */ jsxs4("div", { className: isSuperscriptLabels ? "relative" : "", children: [
+          /* @__PURE__ */ jsxs4("label", { className: floatingLabelClass(isSuperscriptLabels), children: [
+            "Title ",
+            /* @__PURE__ */ jsx5("span", { className: "text-rose-500", children: "*" })
+          ] }),
+          /* @__PURE__ */ jsx5(
+            "input",
+            {
+              type: "text",
+              className: `${FIELD_SURFACE_CLASS} ${CONTROL_INPUT_CLASS}`,
+              placeholder: "Brief description of the issue",
+              value: title,
+              onChange: (e) => setTitle(e.target.value)
+            }
+          )
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxs4("section", { className: SECTION_CARD_CLASS, children: [
+        /* @__PURE__ */ jsx5("div", { className: "mb-4 border-b border-slate-200", children: /* @__PURE__ */ jsx5("div", { className: "flex flex-wrap items-end gap-2", children: narrativeTabs.map((tab) => {
+          const isActive = activeNarrativeTab === tab.id;
+          return /* @__PURE__ */ jsxs4(
+            "button",
+            {
+              type: "button",
+              className: `rounded-t-2xl border px-4 py-2 text-left transition ${isActive ? "border-slate-300 border-b-slate-50 bg-slate-50 text-slate-900 shadow-sm shadow-slate-900/5" : "border-transparent bg-transparent text-slate-500 hover:border-slate-200 hover:bg-white hover:text-slate-700"}`,
+              onClick: () => setActiveNarrativeTab(tab.id),
+              "aria-pressed": isActive,
+              children: [
+                /* @__PURE__ */ jsx5("span", { className: "block text-[11px] font-semibold uppercase tracking-[0.16em]", children: "Description" }),
+                /* @__PURE__ */ jsx5("span", { className: "mt-1 block text-sm font-medium", children: tab.label }),
+                /* @__PURE__ */ jsx5("span", { className: "mt-1 block text-xs text-slate-500", children: tab.hint })
+              ]
+            },
+            tab.id
+          );
+        }) }) }),
+        activeNarrativeTab === "description" ? /* @__PURE__ */ jsxs4("div", { className: "space-y-4", children: [
+          /* @__PURE__ */ jsxs4("div", { className: "flex items-center justify-between gap-3", children: [
+            /* @__PURE__ */ jsx5("span", { className: sectionLabelClass, children: "Standard description" }),
+            /* @__PURE__ */ jsx5("span", { className: "text-xs text-slate-500", children: "Use one clear narrative field" })
           ] }),
           /* @__PURE__ */ jsxs4("div", { className: isSuperscriptLabels ? "relative" : "", children: [
             /* @__PURE__ */ jsx5("label", { className: floatingLabelClass(isSuperscriptLabels), children: "Description" }),
@@ -2897,64 +3010,58 @@ function DevNotesForm({
               }
             )
           ] })
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxs4("div", { className: "flex items-center gap-3", children: [
-        /* @__PURE__ */ jsx5("div", { className: "h-px flex-1 bg-slate-200" }),
-        /* @__PURE__ */ jsx5("span", { className: "rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 shadow-sm shadow-slate-900/5", children: "Choose narrative path" }),
-        /* @__PURE__ */ jsx5("div", { className: "h-px flex-1 bg-slate-200" })
-      ] }),
-      /* @__PURE__ */ jsxs4("section", { className: SECTION_CARD_CLASS, children: [
-        /* @__PURE__ */ jsxs4("div", { className: "mb-4 flex items-center justify-between gap-3", children: [
-          /* @__PURE__ */ jsx5("span", { className: sectionLabelClass, children: "Issue details" }),
-          /* @__PURE__ */ jsx5("span", { className: "text-xs text-slate-500", children: "Use one or both fields below" })
-        ] }),
-        /* @__PURE__ */ jsxs4("div", { className: "grid grid-cols-1 gap-4 md:grid-cols-2", children: [
-          /* @__PURE__ */ jsxs4("div", { className: isSuperscriptLabels ? "relative" : "", children: [
-            /* @__PURE__ */ jsx5("label", { className: floatingLabelClass(isSuperscriptLabels), children: "Expected Behavior" }),
-            /* @__PURE__ */ jsx5(
-              "textarea",
-              {
-                ref: expectedBehaviorRef,
-                className: `${FIELD_SURFACE_CLASS} ${CONTROL_TEXTAREA_CLASS}`,
-                placeholder: "What should have happened?",
-                value: expectedBehavior,
-                onChange: (e) => setExpectedBehavior(e.target.value),
-                onInput: (e) => resizeBehaviorField(
-                  e.currentTarget,
-                  e.currentTarget.value,
-                  setExpectedBehaviorHeight
-                ),
-                rows: 2,
-                style: {
-                  minHeight: `${COMPACT_BEHAVIOR_HEIGHT}px`,
-                  height: expectedBehaviorHeight
-                }
-              }
-            )
+        ] }) : /* @__PURE__ */ jsxs4("div", { className: "space-y-4", children: [
+          /* @__PURE__ */ jsxs4("div", { className: "flex items-center justify-between gap-3", children: [
+            /* @__PURE__ */ jsx5("span", { className: sectionLabelClass, children: "Issue details" }),
+            /* @__PURE__ */ jsx5("span", { className: "text-xs text-slate-500", children: "Use one or both fields below" })
           ] }),
-          /* @__PURE__ */ jsxs4("div", { className: isSuperscriptLabels ? "relative" : "", children: [
-            /* @__PURE__ */ jsx5("label", { className: floatingLabelClass(isSuperscriptLabels), children: "Actual Behavior" }),
-            /* @__PURE__ */ jsx5(
-              "textarea",
-              {
-                ref: actualBehaviorRef,
-                className: `${FIELD_SURFACE_CLASS} ${CONTROL_TEXTAREA_CLASS}`,
-                placeholder: "What actually happened?",
-                value: actualBehavior,
-                onChange: (e) => setActualBehavior(e.target.value),
-                onInput: (e) => resizeBehaviorField(
-                  e.currentTarget,
-                  e.currentTarget.value,
-                  setActualBehaviorHeight
-                ),
-                rows: 2,
-                style: {
-                  minHeight: `${COMPACT_BEHAVIOR_HEIGHT}px`,
-                  height: actualBehaviorHeight
+          /* @__PURE__ */ jsxs4("div", { className: "grid grid-cols-1 gap-4 md:grid-cols-2", children: [
+            /* @__PURE__ */ jsxs4("div", { className: isSuperscriptLabels ? "relative" : "", children: [
+              /* @__PURE__ */ jsx5("label", { className: floatingLabelClass(isSuperscriptLabels), children: "Expected Behavior" }),
+              /* @__PURE__ */ jsx5(
+                "textarea",
+                {
+                  ref: expectedBehaviorRef,
+                  className: `${FIELD_SURFACE_CLASS} ${CONTROL_TEXTAREA_CLASS}`,
+                  placeholder: "What should have happened?",
+                  value: expectedBehavior,
+                  onChange: (e) => setExpectedBehavior(e.target.value),
+                  onInput: (e) => resizeBehaviorField(
+                    e.currentTarget,
+                    e.currentTarget.value,
+                    setExpectedBehaviorHeight
+                  ),
+                  rows: 2,
+                  style: {
+                    minHeight: `${COMPACT_BEHAVIOR_HEIGHT}px`,
+                    height: expectedBehaviorHeight
+                  }
                 }
-              }
-            )
+              )
+            ] }),
+            /* @__PURE__ */ jsxs4("div", { className: isSuperscriptLabels ? "relative" : "", children: [
+              /* @__PURE__ */ jsx5("label", { className: floatingLabelClass(isSuperscriptLabels), children: "Actual Behavior" }),
+              /* @__PURE__ */ jsx5(
+                "textarea",
+                {
+                  ref: actualBehaviorRef,
+                  className: `${FIELD_SURFACE_CLASS} ${CONTROL_TEXTAREA_CLASS}`,
+                  placeholder: "What actually happened?",
+                  value: actualBehavior,
+                  onChange: (e) => setActualBehavior(e.target.value),
+                  onInput: (e) => resizeBehaviorField(
+                    e.currentTarget,
+                    e.currentTarget.value,
+                    setActualBehaviorHeight
+                  ),
+                  rows: 2,
+                  style: {
+                    minHeight: `${COMPACT_BEHAVIOR_HEIGHT}px`,
+                    height: actualBehaviorHeight
+                  }
+                }
+              )
+            ] })
           ] })
         ] }),
         submitAttempted && !hasNarrative && /* @__PURE__ */ jsx5("p", { className: "mt-3 text-xs font-medium text-rose-600", children: "Add a description, expected behavior, or actual behavior." })
@@ -3339,7 +3446,7 @@ function DevNotesForm({
               children: aiReady ? "AI Ready" : "AI Not Ready"
             }
           ),
-          existingReport && (onDelete || onArchive) ? /* @__PURE__ */ jsxs4(Fragment3, { children: [
+          existingReport && (onDelete || onArchive) ? /* @__PURE__ */ jsxs4(Fragment2, { children: [
             onArchive && /* @__PURE__ */ jsx5(
               "button",
               {
@@ -3508,7 +3615,7 @@ var useBugReportPosition = (report) => {
 };
 
 // src/DevNotesDot.tsx
-import { Fragment as Fragment4, jsx as jsx6, jsxs as jsxs5 } from "react/jsx-runtime";
+import { Fragment as Fragment3, jsx as jsx6, jsxs as jsxs5 } from "react/jsx-runtime";
 var statusConfig = {
   Open: { color: "red", bgClass: "bg-red-500", bgHoverClass: "bg-red-600", icon: FiAlertCircle2 },
   "In Progress": { color: "blue", bgClass: "bg-blue-500", bgHoverClass: "bg-blue-600", icon: FiLoader2 },
@@ -3628,9 +3735,12 @@ function DevNotesDot({ report }) {
         setPendingMove({ clientX: event.clientX, clientY: event.clientY });
       } else {
         setDragPosition(null);
+        if (!pendingMove) {
+          setIsFormOpen(true);
+        }
       }
     },
-    [isDragging]
+    [isDragging, pendingMove]
   );
   const confirmMove = useCallback6(async () => {
     if (!pendingMove) return;
@@ -3670,7 +3780,7 @@ function DevNotesDot({ report }) {
   const createdLabel = new Date(report.created_at).toLocaleString();
   const needsApproval = !report.approved && !report.ai_ready;
   const compensated = compensate(displayPosition.x, displayPosition.y);
-  return /* @__PURE__ */ jsxs5(Fragment4, { children: [
+  return /* @__PURE__ */ jsxs5(Fragment3, { children: [
     /* @__PURE__ */ jsxs5(
       "div",
       {
@@ -3691,7 +3801,9 @@ function DevNotesDot({ report }) {
               ref: dotRef,
               className: `${isDragging ? `${config.bgHoverClass} w-8 h-8` : `${config.bgClass} w-6 h-6`} rounded-full border-[3px] border-white flex items-center justify-center transition-all duration-150 ${isDragging ? "shadow-[0_4px_16px_rgba(0,0,0,0.4)] cursor-grabbing" : "shadow-[0_2px_8px_rgba(0,0,0,0.3)] cursor-pointer hover:scale-[1.2] hover:shadow-[0_4px_12px_rgba(0,0,0,0.4)]"}`,
               onMouseDown: handleDragStart,
-              onClick: () => {
+              onClick: (event) => {
+                event.preventDefault();
+                event.stopPropagation();
                 if (didDragRef.current) {
                   didDragRef.current = false;
                   return;
@@ -3759,7 +3871,7 @@ function DevNotesDot({ report }) {
         ]
       }
     ),
-    isFormOpen && /* @__PURE__ */ jsxs5(Fragment4, { children: [
+    isFormOpen && /* @__PURE__ */ jsxs5(Fragment3, { children: [
       /* @__PURE__ */ jsx6(
         "div",
         {
@@ -3767,7 +3879,7 @@ function DevNotesDot({ report }) {
           onClick: () => setIsFormOpen(false)
         }
       ),
-      /* @__PURE__ */ jsx6("div", { style: { position: "absolute", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", padding: 16 }, children: /* @__PURE__ */ jsx6("div", { className: "pointer-events-auto max-h-[calc(100vh-32px)] overflow-y-auto rounded-lg shadow-xl", children: /* @__PURE__ */ jsx6(
+      /* @__PURE__ */ jsx6("div", { style: { position: "absolute", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", padding: 16 }, children: /* @__PURE__ */ jsx6("div", { className: "pointer-events-auto max-h-[calc(100vh-32px)] overflow-y-auto rounded-lg shadow-xl", "data-bug-form": true, children: /* @__PURE__ */ jsx6(
         DevNotesForm,
         {
           pageUrl: report.page_url,
@@ -3787,7 +3899,7 @@ function DevNotesDot({ report }) {
 }
 
 // src/DevNotesOverlay.tsx
-import { Fragment as Fragment5, jsx as jsx7, jsxs as jsxs6 } from "react/jsx-runtime";
+import { Fragment as Fragment4, jsx as jsx7, jsxs as jsxs6 } from "react/jsx-runtime";
 function DevNotesOverlay({
   openReportId,
   onOpenReportClose
@@ -3981,7 +4093,7 @@ function DevNotesOverlay({
   );
   const renderOpenedReportModal = () => {
     if (!openedReport) return null;
-    return /* @__PURE__ */ jsxs6(Fragment5, { children: [
+    return /* @__PURE__ */ jsxs6(Fragment4, { children: [
       /* @__PURE__ */ jsx7(
         "div",
         {
@@ -4019,9 +4131,9 @@ function DevNotesOverlay({
     if (!showTasksAlways && !openedReport) {
       return null;
     }
-    return /* @__PURE__ */ jsxs6(Fragment5, { children: [
+    return /* @__PURE__ */ jsxs6(Fragment4, { children: [
       showTasksAlways && dotContainer && createPortal(
-        /* @__PURE__ */ jsxs6(Fragment5, { children: [
+        /* @__PURE__ */ jsxs6(Fragment4, { children: [
           visiblePageReports.map((report) => /* @__PURE__ */ jsx7("div", { "data-bug-dot": true, style: { pointerEvents: "auto" }, children: /* @__PURE__ */ jsx7(DevNotesDot, { report }) }, report.id)),
           renderOpenedReportModal()
         ] }),
@@ -4036,7 +4148,7 @@ function DevNotesOverlay({
     pendingDot.y - (typeof window !== "undefined" ? window.scrollY : 0)
   ) : null;
   return createPortal(
-    /* @__PURE__ */ jsxs6(Fragment5, { children: [
+    /* @__PURE__ */ jsxs6(Fragment4, { children: [
       /* @__PURE__ */ jsxs6(
         "div",
         {
@@ -4068,7 +4180,7 @@ function DevNotesOverlay({
           children: /* @__PURE__ */ jsx7(FiMove2, { color: "white", size: 14 })
         }
       ),
-      pendingDot && /* @__PURE__ */ jsxs6(Fragment5, { children: [
+      pendingDot && /* @__PURE__ */ jsxs6(Fragment4, { children: [
         showPendingForm && /* @__PURE__ */ jsx7(
           "div",
           {
@@ -4103,8 +4215,8 @@ function DevNotesOverlay({
   );
 }
 
-// src/DevNotesTaskList.tsx
-import { useState as useState10, useMemo as useMemo5, useEffect as useEffect10 } from "react";
+// src/DevNotesTaskListModal.tsx
+import { useEffect as useEffect11 } from "react";
 import {
   FiSearch as FiSearch2,
   FiExternalLink as FiExternalLink2,
@@ -4114,30 +4226,14 @@ import {
   FiClock as FiClock2,
   FiX as FiX4
 } from "react-icons/fi";
-import { jsx as jsx8, jsxs as jsxs7 } from "react/jsx-runtime";
-var STATUS_COLORS = {
-  Open: "bg-red-100 text-red-700",
-  "In Progress": "bg-blue-100 text-blue-700",
-  "Needs Review": "bg-purple-100 text-purple-700",
-  Resolved: "bg-green-100 text-green-700",
-  Closed: "bg-gray-100 text-gray-600"
-};
-var SEVERITY_COLORS = {
-  Critical: "bg-red-500 text-white",
-  High: "bg-orange-100 text-orange-700",
-  Medium: "bg-yellow-100 text-yellow-700",
-  Low: "bg-gray-100 text-gray-600"
-};
+
+// src/hooks/useTaskListData.ts
+import { useState as useState10, useMemo as useMemo5, useEffect as useEffect10 } from "react";
 var STALE_DAYS = 7;
 var MS_PER_DAY = 24 * 60 * 60 * 1e3;
-function DevNotesTaskList({
-  onNavigateToPage,
-  onClose,
-  title = "All Tasks"
-}) {
+function useTaskListData() {
   const {
     tasks,
-    taskTypes,
     loading,
     userProfiles,
     unreadCounts,
@@ -4179,7 +4275,7 @@ function DevNotesTaskList({
             const messages = await adapter.fetchMessages(report.id);
             return { reportId: report.id, messages };
           } catch (error) {
-            console.error("[DevNotesTaskList] Failed to load messages for report visibility", error);
+            console.error("[useTaskListData] Failed to load messages for report visibility", error);
             return { reportId: report.id, messages: [] };
           }
         })
@@ -4290,15 +4386,682 @@ function DevNotesTaskList({
       setSortDir("desc");
     }
   };
+  return {
+    // raw context passthroughs needed by row actions / detail form
+    tasks,
+    loading,
+    unreadCounts,
+    updateTask,
+    deleteTask,
+    user,
+    // visibility / derived data
+    visibleReportIds,
+    stats,
+    accessibleReports,
+    filteredReports,
+    // filter + sort state
+    searchQuery,
+    setSearchQuery,
+    filterStatus,
+    setFilterStatus,
+    filterSeverity,
+    setFilterSeverity,
+    showClosed,
+    setShowClosed,
+    sortField,
+    sortDir,
+    handleSort,
+    // selection
+    selectedReport,
+    setSelectedReport,
+    // helpers
+    getStaleMeta,
+    getProfileName,
+    getPageLabel,
+    formatDate
+  };
+}
+
+// src/DevNotesTaskListModal.tsx
+import { jsx as jsx8, jsxs as jsxs7 } from "react/jsx-runtime";
+var STATUS_STYLES = {
+  Open: { background: "#fee2e2", color: "#b91c1c" },
+  "In Progress": { background: "#dbeafe", color: "#1d4ed8" },
+  "Needs Review": { background: "#f3e8ff", color: "#7e22ce" },
+  Resolved: { background: "#dcfce7", color: "#15803d" },
+  Closed: { background: "#f3f4f6", color: "#4b5563" }
+};
+var SEVERITY_STYLES = {
+  Critical: { background: "#ef4444", color: "#ffffff" },
+  High: { background: "#ffedd5", color: "#c2410c" },
+  Medium: { background: "#fef9c3", color: "#a16207" },
+  Low: { background: "#f3f4f6", color: "#4b5563" }
+};
+var pill = (extra) => ({
+  display: "inline-block",
+  padding: "2px 8px",
+  borderRadius: 9999,
+  fontSize: 12,
+  fontWeight: 500,
+  whiteSpace: "nowrap",
+  ...extra
+});
+var thStyle = {
+  padding: "8px 12px",
+  fontWeight: 500,
+  fontSize: 11,
+  textTransform: "uppercase",
+  letterSpacing: "0.05em",
+  color: "#6b7280",
+  textAlign: "left"
+};
+var tdStyle = {
+  padding: "10px 12px",
+  borderTop: "1px solid #f3f4f6",
+  verticalAlign: "top"
+};
+var controlStyle = {
+  padding: "8px 8px",
+  fontSize: 14,
+  border: "1px solid #e5e7eb",
+  borderRadius: 6,
+  background: "#ffffff",
+  color: "#111827",
+  outline: "none",
+  boxSizing: "border-box"
+};
+function DevNotesTaskListModal({
+  open,
+  onClose,
+  onNavigateToPage,
+  title = "All Tasks"
+}) {
+  const {
+    loading,
+    unreadCounts,
+    deleteTask,
+    updateTask,
+    user,
+    visibleReportIds,
+    stats,
+    accessibleReports,
+    filteredReports,
+    searchQuery,
+    setSearchQuery,
+    filterStatus,
+    setFilterStatus,
+    filterSeverity,
+    setFilterSeverity,
+    showClosed,
+    setShowClosed,
+    sortField,
+    sortDir,
+    handleSort,
+    selectedReport,
+    setSelectedReport,
+    getStaleMeta,
+    getProfileName,
+    getPageLabel,
+    formatDate,
+    tasks
+  } = useTaskListData();
+  useEffect11(() => {
+    if (!open) return void 0;
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") {
+        if (selectedReport) {
+          setSelectedReport(null);
+        } else {
+          onClose();
+        }
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [open, onClose, selectedReport, setSelectedReport]);
+  if (!open) return null;
   const SortIcon = ({ field }) => {
     if (sortField !== field) return null;
     return sortDir === "desc" ? /* @__PURE__ */ jsx8(FiChevronDown, { size: 12 }) : /* @__PURE__ */ jsx8(FiChevronUp, { size: 12 });
   };
+  const sortableHeader = (label, field, extra) => /* @__PURE__ */ jsx8(
+    "th",
+    {
+      style: { ...thStyle, cursor: "pointer", userSelect: "none", ...extra },
+      onClick: () => handleSort(field),
+      children: /* @__PURE__ */ jsxs7("span", { style: { display: "inline-flex", alignItems: "center", gap: 4 }, children: [
+        label,
+        " ",
+        /* @__PURE__ */ jsx8(SortIcon, { field })
+      ] })
+    }
+  );
+  const renderBody = () => {
+    if (selectedReport) {
+      return /* @__PURE__ */ jsx8(
+        DevNotesForm,
+        {
+          pageUrl: selectedReport.page_url,
+          xPosition: selectedReport.x_position,
+          yPosition: selectedReport.y_position,
+          targetSelector: selectedReport.target_selector ?? null,
+          targetRelativeX: selectedReport.target_relative_x ?? null,
+          targetRelativeY: selectedReport.target_relative_y ?? null,
+          existingReport: selectedReport,
+          onSave: () => setSelectedReport(null),
+          onCancel: () => setSelectedReport(null),
+          onArchive: async () => {
+            await updateTask(selectedReport.id, {
+              status: "Closed",
+              resolved_by: selectedReport.resolved_by || user.id
+            });
+            setSelectedReport(null);
+          },
+          onDelete: async () => {
+            await deleteTask(selectedReport.id);
+            setSelectedReport(null);
+          }
+        }
+      );
+    }
+    if (loading && tasks.length === 0 || visibleReportIds === null) {
+      return /* @__PURE__ */ jsx8("div", { style: { display: "flex", justifyContent: "center", padding: "48px 0" }, children: /* @__PURE__ */ jsx8(
+        "div",
+        {
+          style: {
+            width: 24,
+            height: 24,
+            border: "2px solid #d1d5db",
+            borderTopColor: "#4b5563",
+            borderRadius: "50%",
+            animation: "devnotes-spin 0.8s linear infinite"
+          }
+        }
+      ) });
+    }
+    return /* @__PURE__ */ jsxs7("div", { style: { display: "flex", flexDirection: "column", gap: 16 }, children: [
+      /* @__PURE__ */ jsxs7("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between" }, children: [
+        /* @__PURE__ */ jsx8("h2", { style: { fontSize: 18, fontWeight: 600, color: "#111827", margin: 0 }, children: title }),
+        /* @__PURE__ */ jsx8(
+          "button",
+          {
+            type: "button",
+            onClick: onClose,
+            "aria-label": "Close",
+            style: {
+              padding: 4,
+              borderRadius: 6,
+              border: "none",
+              background: "transparent",
+              color: "#6b7280",
+              cursor: "pointer",
+              display: "inline-flex"
+            },
+            children: /* @__PURE__ */ jsx8(FiX4, { size: 18 })
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsx8(
+        "div",
+        {
+          style: {
+            display: "grid",
+            gridTemplateColumns: "repeat(6, minmax(0, 1fr))",
+            gap: 8
+          },
+          children: [
+            ["Open", stats.open, "#dc2626"],
+            ["In Progress", stats.inProgress, "#2563eb"],
+            ["Review", stats.needsReview, "#9333ea"],
+            ["Resolved", stats.resolved, "#16a34a"],
+            ["Closed", stats.closed, "#6b7280"],
+            ["Total", stats.total, "#374151"]
+          ].map(([label, count, color]) => /* @__PURE__ */ jsxs7(
+            "div",
+            {
+              style: {
+                textAlign: "center",
+                borderRadius: 8,
+                border: "1px solid #f3f4f6",
+                padding: "8px 0"
+              },
+              children: [
+                /* @__PURE__ */ jsx8("div", { style: { fontSize: 20, fontWeight: 700, color }, children: count }),
+                /* @__PURE__ */ jsx8("div", { style: { fontSize: 10.5, color: "#6b7280" }, children: label })
+              ]
+            },
+            label
+          ))
+        }
+      ),
+      /* @__PURE__ */ jsxs7("div", { style: { display: "flex", flexWrap: "wrap", gap: 8 }, children: [
+        /* @__PURE__ */ jsxs7("div", { style: { position: "relative", flex: 1, minWidth: 180 }, children: [
+          /* @__PURE__ */ jsx8(
+            FiSearch2,
+            {
+              size: 14,
+              style: { position: "absolute", left: 10, top: 10, color: "#9ca3af" }
+            }
+          ),
+          /* @__PURE__ */ jsx8(
+            "input",
+            {
+              type: "text",
+              placeholder: "Search tasks...",
+              value: searchQuery,
+              onChange: (e) => setSearchQuery(e.target.value),
+              style: { ...controlStyle, width: "100%", paddingLeft: 32, paddingRight: 12 }
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxs7(
+          "select",
+          {
+            value: filterStatus,
+            onChange: (e) => setFilterStatus(e.target.value),
+            style: controlStyle,
+            children: [
+              /* @__PURE__ */ jsx8("option", { value: "all", children: "All Statuses" }),
+              /* @__PURE__ */ jsx8("option", { value: "Open", children: "Open" }),
+              /* @__PURE__ */ jsx8("option", { value: "In Progress", children: "In Progress" }),
+              /* @__PURE__ */ jsx8("option", { value: "Needs Review", children: "Needs Review" }),
+              /* @__PURE__ */ jsx8("option", { value: "Resolved", children: "Resolved" })
+            ]
+          }
+        ),
+        /* @__PURE__ */ jsxs7(
+          "select",
+          {
+            value: filterSeverity,
+            onChange: (e) => setFilterSeverity(e.target.value),
+            style: controlStyle,
+            children: [
+              /* @__PURE__ */ jsx8("option", { value: "all", children: "All Severities" }),
+              /* @__PURE__ */ jsx8("option", { value: "Critical", children: "Critical" }),
+              /* @__PURE__ */ jsx8("option", { value: "High", children: "High" }),
+              /* @__PURE__ */ jsx8("option", { value: "Medium", children: "Medium" }),
+              /* @__PURE__ */ jsx8("option", { value: "Low", children: "Low" })
+            ]
+          }
+        ),
+        /* @__PURE__ */ jsx8(
+          "button",
+          {
+            type: "button",
+            onClick: () => setShowClosed((v) => !v),
+            style: {
+              padding: "8px 12px",
+              fontSize: 14,
+              borderRadius: 6,
+              cursor: "pointer",
+              border: showClosed ? "1px solid #1f2937" : "1px solid #e5e7eb",
+              background: showClosed ? "#1f2937" : "#ffffff",
+              color: showClosed ? "#ffffff" : "#4b5563"
+            },
+            children: showClosed ? "Show Active" : "Show Closed"
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsxs7("div", { style: { fontSize: 12, color: "#6b7280" }, children: [
+        filteredReports.length,
+        " of ",
+        showClosed ? stats.closed : stats.total - stats.closed,
+        " ",
+        showClosed ? "closed" : "active",
+        " tasks"
+      ] }),
+      filteredReports.length === 0 ? /* @__PURE__ */ jsxs7(
+        "div",
+        {
+          style: {
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            padding: "48px 0",
+            color: "#9ca3af"
+          },
+          children: [
+            /* @__PURE__ */ jsx8(FiAlertTriangle2, { size: 32, style: { marginBottom: 12 } }),
+            /* @__PURE__ */ jsx8("p", { style: { fontSize: 14, margin: 0, textAlign: "center", maxWidth: 420 }, children: accessibleReports.length === 0 ? "No visible tasks yet. You will only see tasks you own, are assigned to, commented on, or were mentioned in." : "No tasks match your filters." })
+          ]
+        }
+      ) : /* @__PURE__ */ jsx8("div", { style: { border: "1px solid #e5e7eb", borderRadius: 8, overflow: "hidden" }, children: /* @__PURE__ */ jsxs7("table", { style: { width: "100%", fontSize: 14, borderCollapse: "collapse" }, children: [
+        /* @__PURE__ */ jsx8("thead", { children: /* @__PURE__ */ jsxs7("tr", { style: { background: "#f9fafb" }, children: [
+          /* @__PURE__ */ jsx8("th", { style: thStyle, children: "Title" }),
+          sortableHeader("Status", "status"),
+          sortableHeader("Severity", "severity"),
+          /* @__PURE__ */ jsx8("th", { style: thStyle, children: "Page" }),
+          /* @__PURE__ */ jsx8("th", { style: thStyle, children: "Assigned" }),
+          sortableHeader("Freshness", "stale"),
+          sortableHeader("Date", "created_at")
+        ] }) }),
+        /* @__PURE__ */ jsx8("tbody", { children: filteredReports.map((report) => {
+          const unread = unreadCounts[report.id] || 0;
+          const stale = getStaleMeta(report);
+          return /* @__PURE__ */ jsxs7(
+            "tr",
+            {
+              style: { cursor: "pointer" },
+              onClick: () => setSelectedReport(report),
+              onMouseEnter: (e) => {
+                e.currentTarget.style.background = "#f9fafb";
+              },
+              onMouseLeave: (e) => {
+                e.currentTarget.style.background = "";
+              },
+              children: [
+                /* @__PURE__ */ jsxs7("td", { style: { ...tdStyle, maxWidth: 280 }, children: [
+                  /* @__PURE__ */ jsxs7("div", { style: { display: "flex", alignItems: "center", gap: 8 }, children: [
+                    /* @__PURE__ */ jsx8(
+                      "span",
+                      {
+                        style: {
+                          fontWeight: 500,
+                          color: "#111827",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap"
+                        },
+                        children: report.title
+                      }
+                    ),
+                    unread > 0 && /* @__PURE__ */ jsx8(
+                      "span",
+                      {
+                        style: pill({
+                          background: "#f3e8ff",
+                          color: "#7e22ce",
+                          fontSize: 10,
+                          fontWeight: 700,
+                          minWidth: 18,
+                          textAlign: "center",
+                          padding: "0 6px"
+                        }),
+                        children: unread
+                      }
+                    ),
+                    stale.isStale && /* @__PURE__ */ jsxs7(
+                      "span",
+                      {
+                        style: {
+                          ...pill({ background: "#fef3c7", color: "#92400e", fontSize: 10, fontWeight: 600 }),
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 4
+                        },
+                        children: [
+                          /* @__PURE__ */ jsx8(FiClock2, { size: 10 }),
+                          "Stale ",
+                          stale.ageDays,
+                          "d"
+                        ]
+                      }
+                    )
+                  ] }),
+                  report.types.length > 0 && /* @__PURE__ */ jsx8("div", { style: { display: "flex", gap: 4, marginTop: 2 }, children: report.types.slice(0, 2).map((t) => /* @__PURE__ */ jsx8(
+                    "span",
+                    {
+                      style: {
+                        fontSize: 9.6,
+                        padding: "2px 6px",
+                        borderRadius: 4,
+                        background: "#f3f4f6",
+                        color: "#6b7280"
+                      },
+                      children: t
+                    },
+                    t
+                  )) })
+                ] }),
+                /* @__PURE__ */ jsx8("td", { style: tdStyle, children: /* @__PURE__ */ jsx8("span", { style: pill(STATUS_STYLES[report.status] || { background: "#f3f4f6", color: "#4b5563" }), children: report.status }) }),
+                /* @__PURE__ */ jsx8("td", { style: tdStyle, children: /* @__PURE__ */ jsx8("span", { style: pill(SEVERITY_STYLES[report.severity] || { background: "#f3f4f6", color: "#4b5563" }), children: report.severity }) }),
+                /* @__PURE__ */ jsx8("td", { style: tdStyle, children: /* @__PURE__ */ jsxs7("div", { style: { display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#6b7280" }, children: [
+                  /* @__PURE__ */ jsx8(
+                    "span",
+                    {
+                      style: {
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        maxWidth: 140
+                      },
+                      children: getPageLabel(report.page_url)
+                    }
+                  ),
+                  onNavigateToPage && /* @__PURE__ */ jsx8(
+                    "button",
+                    {
+                      type: "button",
+                      title: "Go to page",
+                      onClick: (e) => {
+                        e.stopPropagation();
+                        onNavigateToPage(report.page_url, report.id);
+                      },
+                      style: {
+                        flexShrink: 0,
+                        padding: 2,
+                        borderRadius: 4,
+                        border: "none",
+                        background: "transparent",
+                        color: "#9ca3af",
+                        cursor: "pointer",
+                        display: "inline-flex"
+                      },
+                      children: /* @__PURE__ */ jsx8(FiExternalLink2, { size: 12 })
+                    }
+                  )
+                ] }) }),
+                /* @__PURE__ */ jsx8("td", { style: { ...tdStyle, fontSize: 12, color: "#6b7280" }, children: getProfileName(report.assigned_to) || "\u2014" }),
+                /* @__PURE__ */ jsx8("td", { style: tdStyle, children: stale.isStale ? /* @__PURE__ */ jsxs7(
+                  "span",
+                  {
+                    style: {
+                      ...pill({ background: "#fef3c7", color: "#92400e" }),
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4
+                    },
+                    children: [
+                      /* @__PURE__ */ jsx8(FiClock2, { size: 11 }),
+                      stale.ageDays,
+                      "d stale"
+                    ]
+                  }
+                ) : /* @__PURE__ */ jsx8("span", { style: pill({ background: "#ecfdf5", color: "#047857" }), children: "Fresh" }) }),
+                /* @__PURE__ */ jsx8("td", { style: { ...tdStyle, fontSize: 12, color: "#6b7280", whiteSpace: "nowrap" }, children: formatDate(report.created_at) })
+              ]
+            },
+            report.id
+          );
+        }) })
+      ] }) })
+    ] });
+  };
+  return /* @__PURE__ */ jsxs7(
+    "div",
+    {
+      style: {
+        position: "absolute",
+        inset: 0,
+        zIndex: 9998,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        pointerEvents: "auto",
+        padding: 16
+      },
+      children: [
+        /* @__PURE__ */ jsx8("style", { children: "@keyframes devnotes-spin{to{transform:rotate(360deg)}}" }),
+        /* @__PURE__ */ jsx8(
+          "div",
+          {
+            style: { position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)" },
+            onClick: () => selectedReport ? setSelectedReport(null) : onClose()
+          }
+        ),
+        /* @__PURE__ */ jsx8(
+          "div",
+          {
+            role: "dialog",
+            "aria-modal": "true",
+            style: {
+              position: "relative",
+              width: "100%",
+              maxWidth: 1024,
+              maxHeight: "calc(100vh - 32px)",
+              overflowY: "auto",
+              borderRadius: 12,
+              background: "#ffffff",
+              padding: 24,
+              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
+              boxSizing: "border-box"
+            },
+            children: renderBody()
+          }
+        )
+      ]
+    }
+  );
+}
+
+// src/DevNotesButton.tsx
+import { Fragment as Fragment5, jsx as jsx9, jsxs as jsxs8 } from "react/jsx-runtime";
+var positionStyles = {
+  "bottom-right": { position: "absolute", bottom: 16, right: 16 },
+  "bottom-left": { position: "absolute", bottom: 16, left: 16 },
+  "top-right": { position: "absolute", top: 16, right: 16 },
+  "top-left": { position: "absolute", top: 16, left: 16 }
+};
+function DevNotesButton({
+  position = "bottom-right",
+  onSettings,
+  icon,
+  openReportId,
+  onOpenReportClose,
+  onNavigateToPage
+}) {
+  const { dotContainer, role } = useDevNotes();
+  const [showTaskPanel, setShowTaskPanel] = useState11(false);
+  const [taskPanelTitle, setTaskPanelTitle] = useState11("All Tasks");
+  if (role === "none") return null;
+  const openBuiltInTaskPanel = (title) => {
+    setTaskPanelTitle(title);
+    setShowTaskPanel(true);
+  };
+  const handleViewTasks = () => openBuiltInTaskPanel("All Tasks");
+  const handleSettings = onSettings || (() => openBuiltInTaskPanel("Task Settings"));
+  const buttonContent = /* @__PURE__ */ jsxs8(Fragment5, { children: [
+    /* @__PURE__ */ jsx9(
+      "div",
+      {
+        style: { ...positionStyles[position] || positionStyles["bottom-right"], zIndex: 9990, pointerEvents: "auto" },
+        "data-bug-menu": true,
+        children: /* @__PURE__ */ jsx9(
+          DevNotesMenu,
+          {
+            onViewTasks: handleViewTasks,
+            onSettings: handleSettings,
+            icon,
+            position,
+            dropdownDirection: position?.includes("bottom") ? "up" : "down"
+          }
+        )
+      }
+    ),
+    /* @__PURE__ */ jsx9(
+      DevNotesTaskListModal,
+      {
+        open: showTaskPanel,
+        title: taskPanelTitle,
+        onClose: () => setShowTaskPanel(false),
+        onNavigateToPage
+      }
+    )
+  ] });
+  return /* @__PURE__ */ jsxs8(Fragment5, { children: [
+    dotContainer ? createPortal2(buttonContent, dotContainer) : buttonContent,
+    /* @__PURE__ */ jsx9(
+      DevNotesOverlay,
+      {
+        openReportId,
+        onOpenReportClose
+      }
+    )
+  ] });
+}
+
+// src/DevNotesTaskList.tsx
+import {
+  FiSearch as FiSearch3,
+  FiExternalLink as FiExternalLink3,
+  FiChevronDown as FiChevronDown2,
+  FiChevronUp as FiChevronUp2,
+  FiAlertTriangle as FiAlertTriangle3,
+  FiClock as FiClock3,
+  FiX as FiX5
+} from "react-icons/fi";
+import { jsx as jsx10, jsxs as jsxs9 } from "react/jsx-runtime";
+var STATUS_COLORS = {
+  Open: "bg-red-100 text-red-700",
+  "In Progress": "bg-blue-100 text-blue-700",
+  "Needs Review": "bg-purple-100 text-purple-700",
+  Resolved: "bg-green-100 text-green-700",
+  Closed: "bg-gray-100 text-gray-600"
+};
+var SEVERITY_COLORS = {
+  Critical: "bg-red-500 text-white",
+  High: "bg-orange-100 text-orange-700",
+  Medium: "bg-yellow-100 text-yellow-700",
+  Low: "bg-gray-100 text-gray-600"
+};
+function DevNotesTaskList({
+  onNavigateToPage,
+  onClose,
+  title = "All Tasks"
+}) {
+  const {
+    loading,
+    unreadCounts,
+    deleteTask,
+    updateTask,
+    user,
+    visibleReportIds,
+    stats,
+    accessibleReports,
+    filteredReports,
+    searchQuery,
+    setSearchQuery,
+    filterStatus,
+    setFilterStatus,
+    filterSeverity,
+    setFilterSeverity,
+    showClosed,
+    setShowClosed,
+    sortField,
+    sortDir,
+    handleSort,
+    selectedReport,
+    setSelectedReport,
+    getStaleMeta,
+    getProfileName,
+    getPageLabel,
+    formatDate,
+    tasks
+  } = useTaskListData();
+  const SortIcon = ({ field }) => {
+    if (sortField !== field) return null;
+    return sortDir === "desc" ? /* @__PURE__ */ jsx10(FiChevronDown2, { size: 12 }) : /* @__PURE__ */ jsx10(FiChevronUp2, { size: 12 });
+  };
   if (selectedReport) {
-    return /* @__PURE__ */ jsx8("div", { className: "flex flex-col h-full", children: /* @__PURE__ */ jsx8(
+    return /* @__PURE__ */ jsx10("div", { className: "flex flex-col h-full", children: /* @__PURE__ */ jsx10(
       DevNotesForm,
       {
         pageUrl: selectedReport.page_url,
+        xPosition: selectedReport.x_position,
+        yPosition: selectedReport.y_position,
+        targetSelector: selectedReport.target_selector ?? null,
+        targetRelativeX: selectedReport.target_relative_x ?? null,
+        targetRelativeY: selectedReport.target_relative_y ?? null,
         existingReport: selectedReport,
         onSave: () => setSelectedReport(null),
         onCancel: () => setSelectedReport(null),
@@ -4317,36 +5080,36 @@ function DevNotesTaskList({
     ) });
   }
   if (loading && tasks.length === 0 || visibleReportIds === null) {
-    return /* @__PURE__ */ jsx8("div", { className: "flex items-center justify-center py-12", children: /* @__PURE__ */ jsx8("div", { className: "w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" }) });
+    return /* @__PURE__ */ jsx10("div", { className: "flex items-center justify-center py-12", children: /* @__PURE__ */ jsx10("div", { className: "w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" }) });
   }
-  return /* @__PURE__ */ jsxs7("div", { className: "flex flex-col gap-4", children: [
-    /* @__PURE__ */ jsxs7("div", { className: "flex items-center justify-between", children: [
-      /* @__PURE__ */ jsx8("h2", { className: "text-lg font-semibold text-gray-900", children: title }),
-      onClose && /* @__PURE__ */ jsx8(
+  return /* @__PURE__ */ jsxs9("div", { className: "flex flex-col gap-4", children: [
+    /* @__PURE__ */ jsxs9("div", { className: "flex items-center justify-between", children: [
+      /* @__PURE__ */ jsx10("h2", { className: "text-lg font-semibold text-gray-900", children: title }),
+      onClose && /* @__PURE__ */ jsx10(
         "button",
         {
           type: "button",
           onClick: onClose,
           className: "p-1 rounded hover:bg-gray-100 text-gray-500",
-          children: /* @__PURE__ */ jsx8(FiX4, { size: 18 })
+          children: /* @__PURE__ */ jsx10(FiX5, { size: 18 })
         }
       )
     ] }),
-    /* @__PURE__ */ jsx8("div", { className: "grid grid-cols-3 sm:grid-cols-6 gap-2", children: [
+    /* @__PURE__ */ jsx10("div", { className: "grid grid-cols-3 sm:grid-cols-6 gap-2", children: [
       ["Open", stats.open, "text-red-600"],
       ["In Progress", stats.inProgress, "text-blue-600"],
       ["Review", stats.needsReview, "text-purple-600"],
       ["Resolved", stats.resolved, "text-green-600"],
       ["Closed", stats.closed, "text-gray-500"],
       ["Total", stats.total, "text-gray-700"]
-    ].map(([label, count, color]) => /* @__PURE__ */ jsxs7("div", { className: "text-center rounded-lg border border-gray-100 py-2", children: [
-      /* @__PURE__ */ jsx8("div", { className: `text-xl font-bold ${color}`, children: count }),
-      /* @__PURE__ */ jsx8("div", { className: "text-[0.65rem] text-gray-500", children: label })
+    ].map(([label, count, color]) => /* @__PURE__ */ jsxs9("div", { className: "text-center rounded-lg border border-gray-100 py-2", children: [
+      /* @__PURE__ */ jsx10("div", { className: `text-xl font-bold ${color}`, children: count }),
+      /* @__PURE__ */ jsx10("div", { className: "text-[0.65rem] text-gray-500", children: label })
     ] }, label)) }),
-    /* @__PURE__ */ jsxs7("div", { className: "flex flex-wrap gap-2", children: [
-      /* @__PURE__ */ jsxs7("div", { className: "relative flex-1 min-w-[180px]", children: [
-        /* @__PURE__ */ jsx8(FiSearch2, { className: "absolute left-2.5 top-2.5 text-gray-400", size: 14 }),
-        /* @__PURE__ */ jsx8(
+    /* @__PURE__ */ jsxs9("div", { className: "flex flex-wrap gap-2", children: [
+      /* @__PURE__ */ jsxs9("div", { className: "relative flex-1 min-w-[180px]", children: [
+        /* @__PURE__ */ jsx10(FiSearch3, { className: "absolute left-2.5 top-2.5 text-gray-400", size: 14 }),
+        /* @__PURE__ */ jsx10(
           "input",
           {
             type: "text",
@@ -4357,37 +5120,37 @@ function DevNotesTaskList({
           }
         )
       ] }),
-      /* @__PURE__ */ jsxs7(
+      /* @__PURE__ */ jsxs9(
         "select",
         {
           value: filterStatus,
           onChange: (e) => setFilterStatus(e.target.value),
           className: "px-2 py-2 text-sm border border-gray-200 rounded-md bg-white",
           children: [
-            /* @__PURE__ */ jsx8("option", { value: "all", children: "All Statuses" }),
-            /* @__PURE__ */ jsx8("option", { value: "Open", children: "Open" }),
-            /* @__PURE__ */ jsx8("option", { value: "In Progress", children: "In Progress" }),
-            /* @__PURE__ */ jsx8("option", { value: "Needs Review", children: "Needs Review" }),
-            /* @__PURE__ */ jsx8("option", { value: "Resolved", children: "Resolved" })
+            /* @__PURE__ */ jsx10("option", { value: "all", children: "All Statuses" }),
+            /* @__PURE__ */ jsx10("option", { value: "Open", children: "Open" }),
+            /* @__PURE__ */ jsx10("option", { value: "In Progress", children: "In Progress" }),
+            /* @__PURE__ */ jsx10("option", { value: "Needs Review", children: "Needs Review" }),
+            /* @__PURE__ */ jsx10("option", { value: "Resolved", children: "Resolved" })
           ]
         }
       ),
-      /* @__PURE__ */ jsxs7(
+      /* @__PURE__ */ jsxs9(
         "select",
         {
           value: filterSeverity,
           onChange: (e) => setFilterSeverity(e.target.value),
           className: "px-2 py-2 text-sm border border-gray-200 rounded-md bg-white",
           children: [
-            /* @__PURE__ */ jsx8("option", { value: "all", children: "All Severities" }),
-            /* @__PURE__ */ jsx8("option", { value: "Critical", children: "Critical" }),
-            /* @__PURE__ */ jsx8("option", { value: "High", children: "High" }),
-            /* @__PURE__ */ jsx8("option", { value: "Medium", children: "Medium" }),
-            /* @__PURE__ */ jsx8("option", { value: "Low", children: "Low" })
+            /* @__PURE__ */ jsx10("option", { value: "all", children: "All Severities" }),
+            /* @__PURE__ */ jsx10("option", { value: "Critical", children: "Critical" }),
+            /* @__PURE__ */ jsx10("option", { value: "High", children: "High" }),
+            /* @__PURE__ */ jsx10("option", { value: "Medium", children: "Medium" }),
+            /* @__PURE__ */ jsx10("option", { value: "Low", children: "Low" })
           ]
         }
       ),
-      /* @__PURE__ */ jsx8(
+      /* @__PURE__ */ jsx10(
         "button",
         {
           type: "button",
@@ -4397,7 +5160,7 @@ function DevNotesTaskList({
         }
       )
     ] }),
-    /* @__PURE__ */ jsxs7("div", { className: "text-xs text-gray-500", children: [
+    /* @__PURE__ */ jsxs9("div", { className: "text-xs text-gray-500", children: [
       filteredReports.length,
       " of ",
       showClosed ? stats.closed : stats.total - stats.closed,
@@ -4405,80 +5168,80 @@ function DevNotesTaskList({
       showClosed ? "closed" : "active",
       " tasks"
     ] }),
-    filteredReports.length === 0 ? /* @__PURE__ */ jsxs7("div", { className: "flex flex-col items-center py-12 text-gray-400", children: [
-      /* @__PURE__ */ jsx8(FiAlertTriangle2, { size: 32, className: "mb-3" }),
-      /* @__PURE__ */ jsx8("p", { className: "text-sm", children: accessibleReports.length === 0 ? "No visible tasks yet. You will only see tasks you own, are assigned to, commented on, or were mentioned in." : "No tasks match your filters." })
-    ] }) : /* @__PURE__ */ jsx8("div", { className: "border border-gray-200 rounded-lg overflow-hidden", children: /* @__PURE__ */ jsxs7("table", { className: "w-full text-sm", children: [
-      /* @__PURE__ */ jsx8("thead", { children: /* @__PURE__ */ jsxs7("tr", { className: "bg-gray-50 text-left text-xs text-gray-500 uppercase tracking-wide", children: [
-        /* @__PURE__ */ jsx8("th", { className: "px-3 py-2 font-medium", children: "Title" }),
-        /* @__PURE__ */ jsx8(
+    filteredReports.length === 0 ? /* @__PURE__ */ jsxs9("div", { className: "flex flex-col items-center py-12 text-gray-400", children: [
+      /* @__PURE__ */ jsx10(FiAlertTriangle3, { size: 32, className: "mb-3" }),
+      /* @__PURE__ */ jsx10("p", { className: "text-sm", children: accessibleReports.length === 0 ? "No visible tasks yet. You will only see tasks you own, are assigned to, commented on, or were mentioned in." : "No tasks match your filters." })
+    ] }) : /* @__PURE__ */ jsx10("div", { className: "border border-gray-200 rounded-lg overflow-hidden", children: /* @__PURE__ */ jsxs9("table", { className: "w-full text-sm", children: [
+      /* @__PURE__ */ jsx10("thead", { children: /* @__PURE__ */ jsxs9("tr", { className: "bg-gray-50 text-left text-xs text-gray-500 uppercase tracking-wide", children: [
+        /* @__PURE__ */ jsx10("th", { className: "px-3 py-2 font-medium", children: "Title" }),
+        /* @__PURE__ */ jsx10(
           "th",
           {
             className: "px-3 py-2 font-medium cursor-pointer select-none",
             onClick: () => handleSort("status"),
-            children: /* @__PURE__ */ jsxs7("span", { className: "inline-flex items-center gap-1", children: [
+            children: /* @__PURE__ */ jsxs9("span", { className: "inline-flex items-center gap-1", children: [
               "Status ",
-              /* @__PURE__ */ jsx8(SortIcon, { field: "status" })
+              /* @__PURE__ */ jsx10(SortIcon, { field: "status" })
             ] })
           }
         ),
-        /* @__PURE__ */ jsx8(
+        /* @__PURE__ */ jsx10(
           "th",
           {
             className: "px-3 py-2 font-medium cursor-pointer select-none",
             onClick: () => handleSort("severity"),
-            children: /* @__PURE__ */ jsxs7("span", { className: "inline-flex items-center gap-1", children: [
+            children: /* @__PURE__ */ jsxs9("span", { className: "inline-flex items-center gap-1", children: [
               "Severity ",
-              /* @__PURE__ */ jsx8(SortIcon, { field: "severity" })
+              /* @__PURE__ */ jsx10(SortIcon, { field: "severity" })
             ] })
           }
         ),
-        /* @__PURE__ */ jsx8("th", { className: "px-3 py-2 font-medium hidden md:table-cell", children: "Page" }),
-        /* @__PURE__ */ jsx8("th", { className: "px-3 py-2 font-medium hidden lg:table-cell", children: "Assigned" }),
-        /* @__PURE__ */ jsx8(
+        /* @__PURE__ */ jsx10("th", { className: "px-3 py-2 font-medium hidden md:table-cell", children: "Page" }),
+        /* @__PURE__ */ jsx10("th", { className: "px-3 py-2 font-medium hidden lg:table-cell", children: "Assigned" }),
+        /* @__PURE__ */ jsx10(
           "th",
           {
             className: "px-3 py-2 font-medium cursor-pointer select-none hidden md:table-cell",
             onClick: () => handleSort("stale"),
-            children: /* @__PURE__ */ jsxs7("span", { className: "inline-flex items-center gap-1", children: [
+            children: /* @__PURE__ */ jsxs9("span", { className: "inline-flex items-center gap-1", children: [
               "Freshness ",
-              /* @__PURE__ */ jsx8(SortIcon, { field: "stale" })
+              /* @__PURE__ */ jsx10(SortIcon, { field: "stale" })
             ] })
           }
         ),
-        /* @__PURE__ */ jsx8(
+        /* @__PURE__ */ jsx10(
           "th",
           {
             className: "px-3 py-2 font-medium cursor-pointer select-none",
             onClick: () => handleSort("created_at"),
-            children: /* @__PURE__ */ jsxs7("span", { className: "inline-flex items-center gap-1", children: [
+            children: /* @__PURE__ */ jsxs9("span", { className: "inline-flex items-center gap-1", children: [
               "Date ",
-              /* @__PURE__ */ jsx8(SortIcon, { field: "created_at" })
+              /* @__PURE__ */ jsx10(SortIcon, { field: "created_at" })
             ] })
           }
         )
       ] }) }),
-      /* @__PURE__ */ jsx8("tbody", { className: "divide-y divide-gray-100", children: filteredReports.map((report) => {
+      /* @__PURE__ */ jsx10("tbody", { className: "divide-y divide-gray-100", children: filteredReports.map((report) => {
         const unread = unreadCounts[report.id] || 0;
         const stale = getStaleMeta(report);
-        return /* @__PURE__ */ jsxs7(
+        return /* @__PURE__ */ jsxs9(
           "tr",
           {
             className: "hover:bg-gray-50 cursor-pointer transition",
             onClick: () => setSelectedReport(report),
             children: [
-              /* @__PURE__ */ jsxs7("td", { className: "px-3 py-2.5 max-w-[280px]", children: [
-                /* @__PURE__ */ jsxs7("div", { className: "flex items-center gap-2", children: [
-                  /* @__PURE__ */ jsx8("span", { className: "font-medium text-gray-900 truncate", children: report.title }),
-                  unread > 0 && /* @__PURE__ */ jsx8("span", { className: "inline-flex min-w-[18px] items-center justify-center rounded-full bg-purple-100 px-1.5 text-[10px] font-bold text-purple-700", children: unread }),
-                  stale.isStale && /* @__PURE__ */ jsxs7("span", { className: "inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800", children: [
-                    /* @__PURE__ */ jsx8(FiClock2, { size: 10 }),
+              /* @__PURE__ */ jsxs9("td", { className: "px-3 py-2.5 max-w-[280px]", children: [
+                /* @__PURE__ */ jsxs9("div", { className: "flex items-center gap-2", children: [
+                  /* @__PURE__ */ jsx10("span", { className: "font-medium text-gray-900 truncate", children: report.title }),
+                  unread > 0 && /* @__PURE__ */ jsx10("span", { className: "inline-flex min-w-[18px] items-center justify-center rounded-full bg-purple-100 px-1.5 text-[10px] font-bold text-purple-700", children: unread }),
+                  stale.isStale && /* @__PURE__ */ jsxs9("span", { className: "inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800", children: [
+                    /* @__PURE__ */ jsx10(FiClock3, { size: 10 }),
                     "Stale ",
                     stale.ageDays,
                     "d"
                   ] })
                 ] }),
-                report.types.length > 0 && /* @__PURE__ */ jsx8("div", { className: "flex gap-1 mt-0.5", children: report.types.slice(0, 2).map((t) => /* @__PURE__ */ jsx8(
+                report.types.length > 0 && /* @__PURE__ */ jsx10("div", { className: "flex gap-1 mt-0.5", children: report.types.slice(0, 2).map((t) => /* @__PURE__ */ jsx10(
                   "span",
                   {
                     className: "text-[0.6rem] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500",
@@ -4487,23 +5250,23 @@ function DevNotesTaskList({
                   t
                 )) })
               ] }),
-              /* @__PURE__ */ jsx8("td", { className: "px-3 py-2.5", children: /* @__PURE__ */ jsx8(
+              /* @__PURE__ */ jsx10("td", { className: "px-3 py-2.5", children: /* @__PURE__ */ jsx10(
                 "span",
                 {
                   className: `inline-block px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[report.status] || "bg-gray-100 text-gray-600"}`,
                   children: report.status
                 }
               ) }),
-              /* @__PURE__ */ jsx8("td", { className: "px-3 py-2.5", children: /* @__PURE__ */ jsx8(
+              /* @__PURE__ */ jsx10("td", { className: "px-3 py-2.5", children: /* @__PURE__ */ jsx10(
                 "span",
                 {
                   className: `inline-block px-2 py-0.5 rounded-full text-xs font-medium ${SEVERITY_COLORS[report.severity] || "bg-gray-100 text-gray-600"}`,
                   children: report.severity
                 }
               ) }),
-              /* @__PURE__ */ jsx8("td", { className: "px-3 py-2.5 hidden md:table-cell", children: /* @__PURE__ */ jsxs7("div", { className: "flex items-center gap-1 text-xs text-gray-500", children: [
-                /* @__PURE__ */ jsx8("span", { className: "truncate max-w-[140px]", children: getPageLabel(report.page_url) }),
-                onNavigateToPage && /* @__PURE__ */ jsx8(
+              /* @__PURE__ */ jsx10("td", { className: "px-3 py-2.5 hidden md:table-cell", children: /* @__PURE__ */ jsxs9("div", { className: "flex items-center gap-1 text-xs text-gray-500", children: [
+                /* @__PURE__ */ jsx10("span", { className: "truncate max-w-[140px]", children: getPageLabel(report.page_url) }),
+                onNavigateToPage && /* @__PURE__ */ jsx10(
                   "button",
                   {
                     type: "button",
@@ -4513,113 +5276,23 @@ function DevNotesTaskList({
                       onNavigateToPage(report.page_url, report.id);
                     },
                     title: "Go to page",
-                    children: /* @__PURE__ */ jsx8(FiExternalLink2, { size: 12 })
+                    children: /* @__PURE__ */ jsx10(FiExternalLink3, { size: 12 })
                   }
                 )
               ] }) }),
-              /* @__PURE__ */ jsx8("td", { className: "px-3 py-2.5 hidden lg:table-cell text-xs text-gray-500", children: getProfileName(report.assigned_to) || "\u2014" }),
-              /* @__PURE__ */ jsx8("td", { className: "px-3 py-2.5 hidden md:table-cell", children: stale.isStale ? /* @__PURE__ */ jsxs7("span", { className: "inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800", children: [
-                /* @__PURE__ */ jsx8(FiClock2, { size: 11 }),
+              /* @__PURE__ */ jsx10("td", { className: "px-3 py-2.5 hidden lg:table-cell text-xs text-gray-500", children: getProfileName(report.assigned_to) || "\u2014" }),
+              /* @__PURE__ */ jsx10("td", { className: "px-3 py-2.5 hidden md:table-cell", children: stale.isStale ? /* @__PURE__ */ jsxs9("span", { className: "inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800", children: [
+                /* @__PURE__ */ jsx10(FiClock3, { size: 11 }),
                 stale.ageDays,
                 "d stale"
-              ] }) : /* @__PURE__ */ jsx8("span", { className: "inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700", children: "Fresh" }) }),
-              /* @__PURE__ */ jsx8("td", { className: "px-3 py-2.5 text-xs text-gray-500 whitespace-nowrap", children: formatDate(report.created_at) })
+              ] }) : /* @__PURE__ */ jsx10("span", { className: "inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700", children: "Fresh" }) }),
+              /* @__PURE__ */ jsx10("td", { className: "px-3 py-2.5 text-xs text-gray-500 whitespace-nowrap", children: formatDate(report.created_at) })
             ]
           },
           report.id
         );
       }) })
     ] }) })
-  ] });
-}
-
-// src/DevNotesButton.tsx
-import { Fragment as Fragment6, jsx as jsx9, jsxs as jsxs8 } from "react/jsx-runtime";
-var positionStyles = {
-  "bottom-right": { position: "absolute", bottom: 16, right: 16 },
-  "bottom-left": { position: "absolute", bottom: 16, left: 16 },
-  "top-right": { position: "absolute", top: 16, right: 16 },
-  "top-left": { position: "absolute", top: 16, left: 16 }
-};
-function DevNotesButton({
-  position = "bottom-right",
-  onViewTasks,
-  onSettings,
-  icon,
-  openReportId,
-  onOpenReportClose,
-  onNavigateToPage
-}) {
-  const { dotContainer, role } = useDevNotes();
-  const [showTaskPanel, setShowTaskPanel] = useState11(false);
-  const [taskPanelTitle, setTaskPanelTitle] = useState11("All Tasks");
-  if (role === "none") return null;
-  const openBuiltInTaskPanel = (title) => {
-    setTaskPanelTitle(title);
-    setShowTaskPanel(true);
-  };
-  const handleViewTasks = onViewTasks || (() => openBuiltInTaskPanel("All Tasks"));
-  const handleSettings = onSettings || (() => openBuiltInTaskPanel("Task Settings"));
-  const buttonContent = /* @__PURE__ */ jsxs8(Fragment6, { children: [
-    /* @__PURE__ */ jsx9(
-      "div",
-      {
-        style: { ...positionStyles[position] || positionStyles["bottom-right"], zIndex: 9990, pointerEvents: "auto" },
-        "data-bug-menu": true,
-        children: /* @__PURE__ */ jsx9(
-          DevNotesMenu,
-          {
-            onViewTasks: handleViewTasks,
-            onSettings: handleSettings,
-            icon,
-            position,
-            dropdownDirection: position?.includes("bottom") ? "up" : "down"
-          }
-        )
-      }
-    ),
-    showTaskPanel && /* @__PURE__ */ jsxs8(
-      "div",
-      {
-        style: {
-          position: "absolute",
-          inset: 0,
-          zIndex: 9998,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          pointerEvents: "auto",
-          padding: 16
-        },
-        children: [
-          /* @__PURE__ */ jsx9(
-            "div",
-            {
-              style: { position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)" },
-              onClick: () => setShowTaskPanel(false)
-            }
-          ),
-          /* @__PURE__ */ jsx9("div", { className: "relative w-full max-w-5xl max-h-[calc(100vh-32px)] overflow-y-auto rounded-xl bg-white p-6 shadow-2xl animate-[slideIn_0.2s_ease-out]", children: /* @__PURE__ */ jsx9(
-            DevNotesTaskList,
-            {
-              title: taskPanelTitle,
-              onClose: () => setShowTaskPanel(false),
-              onNavigateToPage
-            }
-          ) })
-        ]
-      }
-    )
-  ] });
-  return /* @__PURE__ */ jsxs8(Fragment6, { children: [
-    dotContainer ? createPortal2(buttonContent, dotContainer) : buttonContent,
-    /* @__PURE__ */ jsx9(
-      DevNotesOverlay,
-      {
-        openReportId,
-        onOpenReportClose
-      }
-    )
   ] });
 }
 
@@ -4767,6 +5440,7 @@ export {
   DevNotesOverlay,
   DevNotesProvider,
   DevNotesTaskList,
+  DevNotesTaskListModal,
   buildAiFixPayload,
   buildCaptureContext,
   calculateBugPositionFromPoint,
@@ -4774,8 +5448,11 @@ export {
   deriveRouteLabelFromUrl,
   detectBrowserName,
   formatAiFixPayloadForCopy,
+  getInitialNarrativeTab,
+  getInitialTaskStatus,
   normalizePageUrl,
   resolveBugReportCoordinates,
+  shouldRequireExplicitStatusSelection,
   useBugReportPosition,
   useDevNotes
 };
