@@ -1,6 +1,6 @@
 {
   "name": "@the-portland-company/devnotes",
-  "version": "0.5.12",
+  "version": "0.5.14",
   "description": "Forge-backed DevNotes task creation and management for React and Next.js apps",
   "repository": {
     "type": "git",

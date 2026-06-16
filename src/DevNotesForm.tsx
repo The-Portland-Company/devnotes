@@ -326,6 +326,9 @@ export default function DevNotesForm({
     `${actualBehavior.trim() ? EXPANDED_BEHAVIOR_MIN_HEIGHT : COMPACT_BEHAVIOR_HEIGHT}px`
   );
   const [showAiChat, setShowAiChat] = useState(false);
+  // Set when AI refinement is unavailable/errors so the user can still save the
+  // report as-is instead of being permanently blocked behind the AI gate.
+  const [aiUnavailable, setAiUnavailable] = useState(false);
   const [activeNarrativeTab, setActiveNarrativeTab] = useState<NarrativeTab>(
     getInitialNarrativeTab()
   );
@@ -644,7 +647,9 @@ export default function DevNotesForm({
   const hasBehavior =
     trimmedExpectedBehavior.length > 0 || trimmedActualBehavior.length > 0;
   const hasNarrative = hasDescription || hasBehavior;
-  const requiresAiBeforeCreate = Boolean(aiProvider && !existingReport && !aiDescription);
+  const requiresAiBeforeCreate = Boolean(
+    aiProvider && !existingReport && !aiDescription && !aiUnavailable
+  );
   const submitDisabled = loading || !hasNarrative || statusRequired;
   const submitTitle = requiresAiBeforeCreate
     ? 'Save will start AI clarification before creating the task'
@@ -1118,6 +1123,15 @@ export default function DevNotesForm({
                   aiDescription: refined,
                   aiReady: true,
                 });
+              }
+            }}
+            onSaveWithoutAi={async () => {
+              // AI refinement failed or is unavailable — let the user save the
+              // report exactly as they wrote it instead of being stuck.
+              setAiUnavailable(true);
+              setShowAiChat(false);
+              if (!existingReport) {
+                await saveReport({ aiReady: false });
               }
             }}
             onCancel={() => setShowAiChat(false)}

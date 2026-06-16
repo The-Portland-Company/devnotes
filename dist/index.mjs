@@ -658,10 +658,10 @@ import { useState as useState11 } from "react";
 import { createPortal as createPortal2 } from "react-dom";
 
 // src/DevNotesMenu.tsx
-import { useState as useState3, useEffect as useEffect3, useRef as useRef3 } from "react";
+import { useState as useState7, useEffect as useEffect8, useRef as useRef6 } from "react";
 import {
-  FiAlertTriangle,
-  FiEye,
+  FiAlertTriangle as FiAlertTriangle2,
+  FiEye as FiEye2,
   FiEyeOff,
   FiFilter,
   FiList,
@@ -669,265 +669,21 @@ import {
   FiToggleLeft,
   FiToggleRight
 } from "react-icons/fi";
-import { jsx as jsx2, jsxs } from "react/jsx-runtime";
-function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position = "bottom-right", dropdownDirection = "down" }) {
-  const {
-    isEnabled,
-    setIsEnabled,
-    showTasksAlways,
-    setShowTasksAlways,
-    hideResolvedClosed,
-    setHideResolvedClosed,
-    tasks,
-    role
-  } = useDevNotes();
-  const [open, setOpen] = useState3(false);
-  const menuRef = useRef3(null);
-  useEffect3(() => {
-    if (!open) return void 0;
-    const handleClickOutside = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [open]);
-  const openBugCount = tasks.filter(
-    (r) => r.status === "Open" || r.status === "In Progress" || r.status === "Needs Review"
-  ).length;
-  if (role === "none") return null;
-  const handleIconClick = (e) => {
-    if (isEnabled) {
-      e.preventDefault();
-      e.stopPropagation();
-      setIsEnabled(false);
-      return;
-    }
-    setOpen((prev) => !prev);
-  };
-  return /* @__PURE__ */ jsxs(
-    "div",
-    {
-      ref: menuRef,
-      "data-bug-menu": true,
-      className: "relative",
-      style: { zIndex: isEnabled ? 9995 : "auto" },
-      children: [
-        /* @__PURE__ */ jsx2(
-          "button",
-          {
-            type: "button",
-            "aria-label": isEnabled ? "Click to disable task creation" : "Task menu",
-            onClick: handleIconClick,
-            className: "inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-700 transition hover:text-emerald-600",
-            title: "Tasks",
-            children: /* @__PURE__ */ jsxs("span", { className: "relative", children: [
-              IconComponent ? /* @__PURE__ */ jsx2(IconComponent, { size: 20, color: isEnabled ? "#E53E3E" : void 0 }) : /* @__PURE__ */ jsx2(FiAlertTriangle, { size: 20, color: isEnabled ? "#E53E3E" : void 0 }),
-              openBugCount > 0 && /* @__PURE__ */ jsx2("span", { className: "absolute -right-2 -top-1 inline-flex min-w-[16px] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white", children: openBugCount })
-            ] })
-          }
-        ),
-        open && /* @__PURE__ */ jsxs(
-          "div",
-          {
-            style: {
-              position: "absolute",
-              ...position?.includes("left") ? { left: 0 } : { right: 0 },
-              ...dropdownDirection === "up" ? { bottom: "100%", marginBottom: 8 } : { top: "100%", marginTop: 8 },
-              width: 320,
-              zIndex: 50,
-              borderRadius: 8,
-              border: "1px solid #e5e7eb",
-              backgroundColor: "#ffffff",
-              paddingTop: 8,
-              paddingBottom: 8,
-              boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)"
-            },
-            children: [
-              /* @__PURE__ */ jsx2("div", { className: "px-3 py-2", children: /* @__PURE__ */ jsx2("p", { className: "text-xs font-semibold text-gray-500", children: "DEV NOTES" }) }),
-              /* @__PURE__ */ jsx2("div", { className: "my-1 border-t border-gray-200" }),
-              /* @__PURE__ */ jsxs(
-                "button",
-                {
-                  type: "button",
-                  "data-menu-item": true,
-                  onClick: () => {
-                    setIsEnabled(!isEnabled);
-                    setOpen(false);
-                  },
-                  className: "flex w-full items-center justify-between gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50",
-                  children: [
-                    /* @__PURE__ */ jsxs("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
-                      isEnabled ? /* @__PURE__ */ jsx2(FiToggleRight, { className: "text-green-600" }) : /* @__PURE__ */ jsx2(FiToggleLeft, {}),
-                      isEnabled ? "Stop Creating Tasks" : "Create Task"
-                    ] }),
-                    /* @__PURE__ */ jsx2(
-                      "span",
-                      {
-                        role: "switch",
-                        "aria-checked": isEnabled,
-                        className: `relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ${isEnabled ? "bg-green-500" : "bg-gray-300"}`,
-                        children: /* @__PURE__ */ jsx2(
-                          "span",
-                          {
-                            className: `inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${isEnabled ? "translate-x-4" : "translate-x-0.5"} mt-0.5`
-                          }
-                        )
-                      }
-                    )
-                  ]
-                }
-              ),
-              /* @__PURE__ */ jsxs(
-                "button",
-                {
-                  type: "button",
-                  "data-menu-item": true,
-                  onClick: () => setShowTasksAlways(!showTasksAlways),
-                  className: "flex w-full items-center justify-between gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50",
-                  children: [
-                    /* @__PURE__ */ jsxs("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
-                      showTasksAlways ? /* @__PURE__ */ jsx2(FiEye, { className: "text-blue-600" }) : /* @__PURE__ */ jsx2(FiEyeOff, {}),
-                      "Show Tasks Always"
-                    ] }),
-                    /* @__PURE__ */ jsx2(
-                      "span",
-                      {
-                        role: "switch",
-                        "aria-checked": showTasksAlways,
-                        className: `relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ${showTasksAlways ? "bg-green-500" : "bg-gray-300"}`,
-                        children: /* @__PURE__ */ jsx2(
-                          "span",
-                          {
-                            className: `inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${showTasksAlways ? "translate-x-4" : "translate-x-0.5"} mt-0.5`
-                          }
-                        )
-                      }
-                    )
-                  ]
-                }
-              ),
-              /* @__PURE__ */ jsxs(
-                "button",
-                {
-                  type: "button",
-                  "data-menu-item": true,
-                  onClick: () => setHideResolvedClosed(!hideResolvedClosed),
-                  className: "flex w-full items-center justify-between gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50",
-                  children: [
-                    /* @__PURE__ */ jsxs("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
-                      /* @__PURE__ */ jsx2(
-                        FiFilter,
-                        {
-                          className: hideResolvedClosed ? "text-green-600" : "text-gray-500"
-                        }
-                      ),
-                      "Hide Resolved/Closed"
-                    ] }),
-                    /* @__PURE__ */ jsx2(
-                      "span",
-                      {
-                        role: "switch",
-                        "aria-checked": hideResolvedClosed,
-                        className: `relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ${hideResolvedClosed ? "bg-green-500" : "bg-gray-300"}`,
-                        children: /* @__PURE__ */ jsx2(
-                          "span",
-                          {
-                            className: `inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${hideResolvedClosed ? "translate-x-4" : "translate-x-0.5"} mt-0.5`
-                          }
-                        )
-                      }
-                    )
-                  ]
-                }
-              ),
-              /* @__PURE__ */ jsx2("div", { className: "my-1 border-t border-gray-200" }),
-              /* @__PURE__ */ jsxs(
-                "button",
-                {
-                  type: "button",
-                  "data-menu-item": true,
-                  onClick: () => {
-                    setOpen(false);
-                    onViewTasks();
-                  },
-                  style: {
-                    display: "flex",
-                    width: "100%",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 12,
-                    padding: "8px 12px",
-                    fontSize: 14,
-                    color: "#1f2937",
-                    background: "transparent",
-                    border: "none",
-                    cursor: "pointer"
-                  },
-                  onMouseEnter: (e) => {
-                    e.currentTarget.style.background = "#f9fafb";
-                  },
-                  onMouseLeave: (e) => {
-                    e.currentTarget.style.background = "transparent";
-                  },
-                  children: [
-                    /* @__PURE__ */ jsxs("span", { style: { display: "inline-flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" }, children: [
-                      /* @__PURE__ */ jsx2(FiList, { style: { flexShrink: 0 } }),
-                      "View All Tasks"
-                    ] }),
-                    openBugCount > 0 && /* @__PURE__ */ jsx2(
-                      "span",
-                      {
-                        style: {
-                          display: "inline-flex",
-                          minWidth: 20,
-                          alignItems: "center",
-                          justifyContent: "center",
-                          borderRadius: 9999,
-                          background: "#fee2e2",
-                          padding: "2px 8px",
-                          fontSize: 12,
-                          fontWeight: 600,
-                          color: "#b91c1c"
-                        },
-                        children: openBugCount
-                      }
-                    )
-                  ]
-                }
-              ),
-              onSettings && /* @__PURE__ */ jsx2(
-                "button",
-                {
-                  type: "button",
-                  "data-menu-item": true,
-                  onClick: () => {
-                    setOpen(false);
-                    onSettings();
-                  },
-                  className: "flex w-full items-center gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50",
-                  children: /* @__PURE__ */ jsxs("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
-                    /* @__PURE__ */ jsx2(FiSettings, { className: "flex-shrink-0" }),
-                    "Settings"
-                  ] })
-                }
-              )
-            ]
-          }
-        )
-      ]
-    }
-  );
-}
 
-// src/DevNotesOverlay.tsx
-import { useState as useState9, useCallback as useCallback7, useEffect as useEffect9, useRef as useRef8, useMemo as useMemo4 } from "react";
-import { createPortal } from "react-dom";
-import { FiCrosshair, FiMove as FiMove2 } from "react-icons/fi";
+// src/DevNotesTaskListModal.tsx
+import { useEffect as useEffect7 } from "react";
+import {
+  FiSearch as FiSearch2,
+  FiExternalLink as FiExternalLink2,
+  FiChevronDown,
+  FiChevronUp,
+  FiAlertTriangle,
+  FiClock as FiClock2,
+  FiX as FiX3
+} from "react-icons/fi";
 
 // src/DevNotesForm.tsx
-import { useState as useState6, useEffect as useEffect6, useRef as useRef6, useMemo as useMemo3 } from "react";
+import { useState as useState5, useEffect as useEffect5, useRef as useRef5, useMemo as useMemo3 } from "react";
 import {
   FiX as FiX2,
   FiTrash2 as FiTrash22,
@@ -938,7 +694,7 @@ import {
   FiCopy,
   FiAlertCircle,
   FiLoader,
-  FiEye as FiEye2,
+  FiEye,
   FiCheckCircle,
   FiArchive,
   FiZap as FiZap2,
@@ -947,9 +703,9 @@ import {
 } from "react-icons/fi";
 
 // src/DevNotesDiscussion.tsx
-import { useState as useState4, useEffect as useEffect4, useCallback as useCallback3, useMemo as useMemo2, useRef as useRef4 } from "react";
+import { useState as useState3, useEffect as useEffect3, useCallback as useCallback3, useMemo as useMemo2, useRef as useRef3 } from "react";
 import { FiAtSign, FiEdit2, FiMessageSquare, FiSend, FiTrash2 } from "react-icons/fi";
-import { jsx as jsx3, jsxs as jsxs2 } from "react/jsx-runtime";
+import { jsx as jsx2, jsxs } from "react/jsx-runtime";
 var messageCache = /* @__PURE__ */ new Map();
 var MESSAGE_CACHE_MAX = 50;
 var getCachedMessages = (reportId) => {
@@ -985,18 +741,18 @@ var detectActiveMention = (value, cursor) => {
 };
 function DevNotesDiscussion({ report }) {
   const { user, adapter, markMessagesAsRead, userProfiles, collaborators, onNotify } = useDevNotes();
-  const [messages, setMessages] = useState4([]);
-  const [loadingMessages, setLoadingMessages] = useState4(true);
-  const [sending, setSending] = useState4(false);
-  const [newMessage, setNewMessage] = useState4("");
-  const [editingMessageId, setEditingMessageId] = useState4(null);
-  const [editDraft, setEditDraft] = useState4("");
-  const [editLoading, setEditLoading] = useState4(false);
-  const [deletingId, setDeletingId] = useState4(null);
-  const textareaRef = useRef4(null);
-  const [mentionRange, setMentionRange] = useState4(null);
-  const [mentionQuery, setMentionQuery] = useState4("");
-  const [mentionHighlight, setMentionHighlight] = useState4(0);
+  const [messages, setMessages] = useState3([]);
+  const [loadingMessages, setLoadingMessages] = useState3(true);
+  const [sending, setSending] = useState3(false);
+  const [newMessage, setNewMessage] = useState3("");
+  const [editingMessageId, setEditingMessageId] = useState3(null);
+  const [editDraft, setEditDraft] = useState3("");
+  const [editLoading, setEditLoading] = useState3(false);
+  const [deletingId, setDeletingId] = useState3(null);
+  const textareaRef = useRef3(null);
+  const [mentionRange, setMentionRange] = useState3(null);
+  const [mentionQuery, setMentionQuery] = useState3("");
+  const [mentionHighlight, setMentionHighlight] = useState3(0);
   const updateMentionTracking = useCallback3((value, cursor) => {
     const mention = detectActiveMention(value, cursor);
     if (mention) {
@@ -1040,7 +796,7 @@ function DevNotesDiscussion({ report }) {
   }, [mentionCandidates, mentionQuery, mentionRange]);
   const messageCountLabel = messages.length === 1 ? "1 note" : `${messages.length} notes`;
   const hasNoMentionResults = Boolean(mentionRange && mentionOptions.length === 0);
-  useEffect4(() => {
+  useEffect3(() => {
     if (!mentionRange) {
       setMentionHighlight(0);
       return;
@@ -1094,7 +850,7 @@ function DevNotesDiscussion({ report }) {
     },
     [adapter]
   );
-  useEffect4(() => {
+  useEffect3(() => {
     if (!report?.id) {
       setMessages([]);
       setLoadingMessages(false);
@@ -1109,7 +865,7 @@ function DevNotesDiscussion({ report }) {
       loadMessages(report.id);
     }
   }, [report?.id, loadMessages]);
-  useEffect4(() => {
+  useEffect3(() => {
     if (!report?.id || !messages.length) return;
     const unreadMessageIds = messages.filter((message) => message.author_id !== user?.id).map((message) => message.id);
     if (unreadMessageIds.length) {
@@ -1286,11 +1042,11 @@ Dev Notes`,
     }
   };
   if (!report?.id) {
-    return /* @__PURE__ */ jsx3("div", { className: "rounded-2xl border border-slate-200 bg-slate-50/80 p-4 shadow-sm", children: /* @__PURE__ */ jsxs2("div", { className: "flex items-start gap-3 rounded-xl border border-dashed border-slate-200 bg-white/80 p-4", children: [
-      /* @__PURE__ */ jsx3("div", { className: "flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-white", children: /* @__PURE__ */ jsx3(FiMessageSquare, { size: 16 }) }),
-      /* @__PURE__ */ jsxs2("div", { className: "min-w-0", children: [
-        /* @__PURE__ */ jsx3("p", { className: "text-sm font-semibold text-slate-900", children: "Conversation locked" }),
-        /* @__PURE__ */ jsx3("p", { className: "mt-1 text-sm leading-6 text-slate-600", children: "Save this task first to open the note thread." })
+    return /* @__PURE__ */ jsx2("div", { className: "rounded-2xl border border-slate-200 bg-slate-50/80 p-4 shadow-sm", children: /* @__PURE__ */ jsxs("div", { className: "flex items-start gap-3 rounded-xl border border-dashed border-slate-200 bg-white/80 p-4", children: [
+      /* @__PURE__ */ jsx2("div", { className: "flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-white", children: /* @__PURE__ */ jsx2(FiMessageSquare, { size: 16 }) }),
+      /* @__PURE__ */ jsxs("div", { className: "min-w-0", children: [
+        /* @__PURE__ */ jsx2("p", { className: "text-sm font-semibold text-slate-900", children: "Conversation locked" }),
+        /* @__PURE__ */ jsx2("p", { className: "mt-1 text-sm leading-6 text-slate-600", children: "Save this task first to open the note thread." })
       ] })
     ] }) });
   }
@@ -1299,41 +1055,41 @@ Dev Notes`,
     if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
     return name.slice(0, 2).toUpperCase();
   };
-  return /* @__PURE__ */ jsxs2("div", { className: "flex h-full flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50/90 p-4 shadow-sm", children: [
-    /* @__PURE__ */ jsxs2("div", { className: "flex items-center justify-between gap-3 border-b border-slate-200 pb-3", children: [
-      /* @__PURE__ */ jsxs2("div", { children: [
-        /* @__PURE__ */ jsx3("p", { className: "text-sm font-semibold text-slate-900", children: "Discussion" }),
-        /* @__PURE__ */ jsx3("p", { className: "text-xs text-slate-500", children: messageCountLabel })
+  return /* @__PURE__ */ jsxs("div", { className: "flex h-full flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50/90 p-4 shadow-sm", children: [
+    /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between gap-3 border-b border-slate-200 pb-3", children: [
+      /* @__PURE__ */ jsxs("div", { children: [
+        /* @__PURE__ */ jsx2("p", { className: "text-sm font-semibold text-slate-900", children: "Discussion" }),
+        /* @__PURE__ */ jsx2("p", { className: "text-xs text-slate-500", children: messageCountLabel })
       ] }),
-      /* @__PURE__ */ jsx3("p", { className: "text-xs text-slate-500", children: "Mentions notify teammates in real time." })
+      /* @__PURE__ */ jsx2("p", { className: "text-xs text-slate-500", children: "Mentions notify teammates in real time." })
     ] }),
-    /* @__PURE__ */ jsx3("div", { className: "flex-1 min-h-[240px] max-h-[360px] overflow-y-auto pr-1", children: loadingMessages ? /* @__PURE__ */ jsx3("div", { className: "flex justify-center py-12", children: /* @__PURE__ */ jsx3("div", { className: "h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-slate-900" }) }) : messages.length === 0 ? /* @__PURE__ */ jsxs2("div", { className: "flex items-center rounded-xl border border-dashed border-slate-300 bg-white p-4", children: [
-      /* @__PURE__ */ jsx3("div", { className: "flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-700", children: /* @__PURE__ */ jsx3(FiMessageSquare, { size: 16 }) }),
-      /* @__PURE__ */ jsxs2("div", { className: "ml-3", children: [
-        /* @__PURE__ */ jsx3("p", { className: "text-sm font-medium text-slate-900", children: "No notes yet" }),
-        /* @__PURE__ */ jsx3("p", { className: "text-sm text-slate-600", children: "Add context, ask for help, or mention a teammate." })
+    /* @__PURE__ */ jsx2("div", { className: "flex-1 min-h-[240px] max-h-[360px] overflow-y-auto pr-1", children: loadingMessages ? /* @__PURE__ */ jsx2("div", { className: "flex justify-center py-12", children: /* @__PURE__ */ jsx2("div", { className: "h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-slate-900" }) }) : messages.length === 0 ? /* @__PURE__ */ jsxs("div", { className: "flex items-center rounded-xl border border-dashed border-slate-300 bg-white p-4", children: [
+      /* @__PURE__ */ jsx2("div", { className: "flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-700", children: /* @__PURE__ */ jsx2(FiMessageSquare, { size: 16 }) }),
+      /* @__PURE__ */ jsxs("div", { className: "ml-3", children: [
+        /* @__PURE__ */ jsx2("p", { className: "text-sm font-medium text-slate-900", children: "No notes yet" }),
+        /* @__PURE__ */ jsx2("p", { className: "text-sm text-slate-600", children: "Add context, ask for help, or mention a teammate." })
       ] })
-    ] }) : /* @__PURE__ */ jsx3("div", { className: "flex flex-col gap-3", children: messages.map((message) => {
+    ] }) : /* @__PURE__ */ jsx2("div", { className: "flex flex-col gap-3", children: messages.map((message) => {
       const badge = directionBadge(message.author_id);
       const authorLabel = message.author?.full_name || message.author?.email || (message.author_id === report.created_by ? "Reporter" : "Team");
       const canManage = user?.id && message.author_id === user.id;
       const wasUpdated = message.updated_at && new Date(message.updated_at).toISOString() !== new Date(message.created_at).toISOString();
-      return /* @__PURE__ */ jsxs2(
+      return /* @__PURE__ */ jsxs(
         "div",
         {
           className: "rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md",
           children: [
-            /* @__PURE__ */ jsxs2("div", { className: "mb-2 flex items-start justify-between gap-3", children: [
-              /* @__PURE__ */ jsxs2("div", { className: "flex items-center gap-3", children: [
-                /* @__PURE__ */ jsx3("div", { className: "flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white", children: getInitials(authorLabel) }),
-                /* @__PURE__ */ jsxs2("div", { children: [
-                  /* @__PURE__ */ jsxs2("div", { className: "flex items-center gap-2", children: [
-                    /* @__PURE__ */ jsx3("span", { className: "text-sm font-semibold text-slate-900", children: authorLabel }),
-                    /* @__PURE__ */ jsx3("span", { className: `rounded-full px-2 py-0.5 text-[0.65rem] font-medium ${badge.className}`, children: badge.label })
+            /* @__PURE__ */ jsxs("div", { className: "mb-2 flex items-start justify-between gap-3", children: [
+              /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3", children: [
+                /* @__PURE__ */ jsx2("div", { className: "flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white", children: getInitials(authorLabel) }),
+                /* @__PURE__ */ jsxs("div", { children: [
+                  /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
+                    /* @__PURE__ */ jsx2("span", { className: "text-sm font-semibold text-slate-900", children: authorLabel }),
+                    /* @__PURE__ */ jsx2("span", { className: `rounded-full px-2 py-0.5 text-[0.65rem] font-medium ${badge.className}`, children: badge.label })
                   ] }),
-                  /* @__PURE__ */ jsxs2("p", { className: "text-xs text-slate-500", children: [
+                  /* @__PURE__ */ jsxs("p", { className: "text-xs text-slate-500", children: [
                     formatTimestamp(message.created_at),
-                    wasUpdated && /* @__PURE__ */ jsxs2("span", { className: "text-slate-400", children: [
+                    wasUpdated && /* @__PURE__ */ jsxs("span", { className: "text-slate-400", children: [
                       " ",
                       "\xB7 Updated ",
                       formatTimestamp(message.updated_at)
@@ -1341,8 +1097,8 @@ Dev Notes`,
                   ] })
                 ] })
               ] }),
-              canManage && /* @__PURE__ */ jsxs2("div", { className: "flex items-center gap-1", children: [
-                /* @__PURE__ */ jsx3(
+              canManage && /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-1", children: [
+                /* @__PURE__ */ jsx2(
                   "button",
                   {
                     type: "button",
@@ -1350,10 +1106,10 @@ Dev Notes`,
                     onClick: () => startEditing(message),
                     "aria-label": "Edit note",
                     title: "Edit note",
-                    children: /* @__PURE__ */ jsx3(FiEdit2, { size: 14 })
+                    children: /* @__PURE__ */ jsx2(FiEdit2, { size: 14 })
                   }
                 ),
-                /* @__PURE__ */ jsx3(
+                /* @__PURE__ */ jsx2(
                   "button",
                   {
                     type: "button",
@@ -1362,13 +1118,13 @@ Dev Notes`,
                     disabled: deletingId === message.id,
                     "aria-label": "Delete note",
                     title: "Delete note",
-                    children: deletingId === message.id ? /* @__PURE__ */ jsx3("div", { className: "h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" }) : /* @__PURE__ */ jsx3(FiTrash2, { size: 14 })
+                    children: deletingId === message.id ? /* @__PURE__ */ jsx2("div", { className: "h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" }) : /* @__PURE__ */ jsx2(FiTrash2, { size: 14 })
                   }
                 )
               ] })
             ] }),
-            editingMessageId === message.id ? /* @__PURE__ */ jsxs2("div", { className: "mt-3 flex flex-col gap-2", children: [
-              /* @__PURE__ */ jsx3(
+            editingMessageId === message.id ? /* @__PURE__ */ jsxs("div", { className: "mt-3 flex flex-col gap-2", children: [
+              /* @__PURE__ */ jsx2(
                 "textarea",
                 {
                   value: editDraft,
@@ -1377,8 +1133,8 @@ Dev Notes`,
                   className: "w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-3 text-sm text-slate-900 outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900/20"
                 }
               ),
-              /* @__PURE__ */ jsxs2("div", { className: "flex justify-end gap-2", children: [
-                /* @__PURE__ */ jsx3(
+              /* @__PURE__ */ jsxs("div", { className: "flex justify-end gap-2", children: [
+                /* @__PURE__ */ jsx2(
                   "button",
                   {
                     type: "button",
@@ -1387,7 +1143,7 @@ Dev Notes`,
                     children: "Cancel"
                   }
                 ),
-                /* @__PURE__ */ jsx3(
+                /* @__PURE__ */ jsx2(
                   "button",
                   {
                     type: "button",
@@ -1398,15 +1154,15 @@ Dev Notes`,
                   }
                 )
               ] })
-            ] }) : /* @__PURE__ */ jsx3("p", { className: "whitespace-pre-wrap text-sm text-slate-700", children: message.body })
+            ] }) : /* @__PURE__ */ jsx2("p", { className: "whitespace-pre-wrap text-sm text-slate-700", children: message.body })
           ]
         },
         message.id
       );
     }) }) }),
-    /* @__PURE__ */ jsxs2("div", { className: "rounded-2xl border border-slate-200 bg-white p-3 shadow-sm", children: [
-      /* @__PURE__ */ jsxs2("div", { className: "relative", children: [
-        /* @__PURE__ */ jsx3(
+    /* @__PURE__ */ jsxs("div", { className: "rounded-2xl border border-slate-200 bg-white p-3 shadow-sm", children: [
+      /* @__PURE__ */ jsxs("div", { className: "relative", children: [
+        /* @__PURE__ */ jsx2(
           "textarea",
           {
             ref: textareaRef,
@@ -1420,17 +1176,17 @@ Dev Notes`,
             className: "w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-900 focus:ring-1 focus:ring-slate-900/20"
           }
         ),
-        mentionRange && /* @__PURE__ */ jsxs2("div", { className: "absolute bottom-3 left-3 z-[2] min-w-[260px] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg", children: [
-          /* @__PURE__ */ jsxs2("div", { className: "flex items-center gap-2 border-b border-slate-100 px-3 py-2 text-xs font-medium text-slate-500", children: [
-            /* @__PURE__ */ jsx3(FiAtSign, { size: 12 }),
-            /* @__PURE__ */ jsx3("span", { children: "Mentions" }),
-            /* @__PURE__ */ jsx3("span", { className: "ml-auto", children: "Type to filter, Enter to select" })
+        mentionRange && /* @__PURE__ */ jsxs("div", { className: "absolute bottom-3 left-3 z-[2] min-w-[260px] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg", children: [
+          /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2 border-b border-slate-100 px-3 py-2 text-xs font-medium text-slate-500", children: [
+            /* @__PURE__ */ jsx2(FiAtSign, { size: 12 }),
+            /* @__PURE__ */ jsx2("span", { children: "Mentions" }),
+            /* @__PURE__ */ jsx2("span", { className: "ml-auto", children: "Type to filter, Enter to select" })
           ] }),
-          hasNoMentionResults ? /* @__PURE__ */ jsx3("div", { className: "px-3 py-3", children: /* @__PURE__ */ jsxs2("p", { className: "text-sm text-slate-500", children: [
+          hasNoMentionResults ? /* @__PURE__ */ jsx2("div", { className: "px-3 py-3", children: /* @__PURE__ */ jsxs("p", { className: "text-sm text-slate-500", children: [
             'No collaborators match "',
             mentionQuery,
             '"'
-          ] }) }) : mentionOptions.map((collaborator, index) => /* @__PURE__ */ jsxs2(
+          ] }) }) : mentionOptions.map((collaborator, index) => /* @__PURE__ */ jsxs(
             "div",
             {
               className: `cursor-pointer px-3 py-2 transition hover:bg-slate-50 ${mentionHighlight === index ? "bg-slate-100" : ""}`,
@@ -1440,22 +1196,22 @@ Dev Notes`,
                 setMentionHighlight(index);
               },
               children: [
-                /* @__PURE__ */ jsx3("p", { className: "text-sm font-medium text-slate-900", children: collaborator.full_name || collaborator.email || "Unknown" }),
-                collaborator.email && collaborator.full_name && /* @__PURE__ */ jsx3("p", { className: "text-xs text-slate-500", children: collaborator.email })
+                /* @__PURE__ */ jsx2("p", { className: "text-sm font-medium text-slate-900", children: collaborator.full_name || collaborator.email || "Unknown" }),
+                collaborator.email && collaborator.full_name && /* @__PURE__ */ jsx2("p", { className: "text-xs text-slate-500", children: collaborator.email })
               ]
             },
             collaborator.id
           ))
         ] })
       ] }),
-      /* @__PURE__ */ jsxs2("div", { className: "mt-2 flex flex-wrap items-center justify-between gap-3", children: [
-        /* @__PURE__ */ jsxs2("p", { className: "text-xs leading-5 text-slate-500", children: [
+      /* @__PURE__ */ jsxs("div", { className: "mt-2 flex flex-wrap items-center justify-between gap-3", children: [
+        /* @__PURE__ */ jsxs("p", { className: "text-xs leading-5 text-slate-500", children: [
           "Notes are visible to everyone with access to Dev Notes. Use",
           " ",
-          /* @__PURE__ */ jsx3("span", { className: "font-bold", children: "@" }),
+          /* @__PURE__ */ jsx2("span", { className: "font-bold", children: "@" }),
           " to mention a teammate."
         ] }),
-        /* @__PURE__ */ jsxs2(
+        /* @__PURE__ */ jsxs(
           "button",
           {
             type: "button",
@@ -1464,8 +1220,8 @@ Dev Notes`,
             disabled: !newMessage.trim() || sending,
             title: "Send note",
             children: [
-              /* @__PURE__ */ jsx3(FiSend, { size: 14 }),
-              /* @__PURE__ */ jsx3("span", { children: sending ? "Sending..." : "Send" })
+              /* @__PURE__ */ jsx2(FiSend, { size: 14 }),
+              /* @__PURE__ */ jsx2("span", { children: sending ? "Sending..." : "Send" })
             ]
           }
         )
@@ -1475,30 +1231,31 @@ Dev Notes`,
 }
 
 // src/AiDescriptionChat.tsx
-import { useState as useState5, useEffect as useEffect5, useRef as useRef5, useCallback as useCallback4 } from "react";
+import { useState as useState4, useEffect as useEffect4, useRef as useRef4, useCallback as useCallback4 } from "react";
 import { FiCheck, FiEdit2 as FiEdit22, FiX, FiZap } from "react-icons/fi";
-import { Fragment, jsx as jsx4, jsxs as jsxs3 } from "react/jsx-runtime";
+import { Fragment, jsx as jsx3, jsxs as jsxs2 } from "react/jsx-runtime";
 function AiDescriptionChat({
   initialDescription,
   context,
   aiProvider,
   onAccept,
-  onCancel
+  onCancel,
+  onSaveWithoutAi
 }) {
-  const [conversationHistory, setConversationHistory] = useState5([]);
-  const [userInput, setUserInput] = useState5("");
-  const [isLoading, setIsLoading] = useState5(false);
-  const [error, setError] = useState5(null);
-  const [finalizedDescription, setFinalizedDescription] = useState5(null);
-  const [isEditing, setIsEditing] = useState5(false);
-  const [editDraft, setEditDraft] = useState5("");
+  const [conversationHistory, setConversationHistory] = useState4([]);
+  const [userInput, setUserInput] = useState4("");
+  const [isLoading, setIsLoading] = useState4(false);
+  const [error, setError] = useState4(null);
+  const [finalizedDescription, setFinalizedDescription] = useState4(null);
+  const [isEditing, setIsEditing] = useState4(false);
+  const [editDraft, setEditDraft] = useState4("");
   const providerOptions = aiProvider.options?.length ? aiProvider.options : [{ id: "default", label: "AI" }];
-  const [selectedProviderId, setSelectedProviderId] = useState5(
+  const [selectedProviderId, setSelectedProviderId] = useState4(
     () => (typeof window !== "undefined" ? window.localStorage.getItem("devnotes_ai_provider") : null) || aiProvider.defaultOptionId || providerOptions[0]?.id || "default"
   );
-  const scrollRef = useRef5(null);
-  const textareaRef = useRef5(null);
-  useEffect5(() => {
+  const scrollRef = useRef4(null);
+  const textareaRef = useRef4(null);
+  useEffect4(() => {
     if (!providerOptions.some((option) => option.id === selectedProviderId)) {
       setSelectedProviderId(aiProvider.defaultOptionId || providerOptions[0]?.id || "default");
     }
@@ -1508,7 +1265,7 @@ function AiDescriptionChat({
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, []);
-  useEffect5(() => {
+  useEffect4(() => {
     scrollToBottom();
   }, [conversationHistory, finalizedDescription, scrollToBottom]);
   const callAiAssist = useCallback4(
@@ -1547,14 +1304,14 @@ function AiDescriptionChat({
     },
     [initialDescription, context, aiProvider, selectedProviderId]
   );
-  const [hasStarted, setHasStarted] = useState5(false);
-  useEffect5(() => {
+  const [hasStarted, setHasStarted] = useState4(false);
+  useEffect4(() => {
     if (initialDescription.trim() && !hasStarted) {
       setHasStarted(true);
       callAiAssist([]);
     }
   }, [initialDescription, hasStarted]);
-  useEffect5(() => {
+  useEffect4(() => {
     if (typeof window !== "undefined") {
       window.localStorage.setItem("devnotes_ai_provider", selectedProviderId);
     }
@@ -1598,14 +1355,21 @@ function AiDescriptionChat({
     setError(null);
     await callAiAssist(conversationHistory);
   };
+  const handleSaveWithoutAi = () => {
+    if (onSaveWithoutAi) {
+      onSaveWithoutAi();
+    } else {
+      onCancel();
+    }
+  };
   const assistantMessageCount = conversationHistory.filter((m) => m.role === "assistant").length;
   const showFinalizeButton = !finalizedDescription && assistantMessageCount >= 3;
-  return /* @__PURE__ */ jsxs3("div", { className: "flex flex-col gap-3 rounded-xl border-2 border-purple-200 bg-gradient-to-b from-purple-50/50 to-white p-4 min-h-[200px] shadow-[0_0_0_3px_rgba(167,139,250,0.1)]", children: [
-    /* @__PURE__ */ jsxs3("div", { className: "flex justify-between items-center", children: [
-      /* @__PURE__ */ jsxs3("div", { className: "flex items-center gap-2", children: [
-        /* @__PURE__ */ jsx4(FiZap, { size: 16, className: "text-purple-600" }),
-        /* @__PURE__ */ jsx4("span", { className: "text-sm font-semibold text-purple-700", children: "AI Description Review" }),
-        /* @__PURE__ */ jsx4(
+  return /* @__PURE__ */ jsxs2("div", { className: "flex flex-col gap-3 rounded-xl border-2 border-purple-200 bg-gradient-to-b from-purple-50/50 to-white p-4 min-h-[200px] shadow-[0_0_0_3px_rgba(167,139,250,0.1)]", children: [
+    /* @__PURE__ */ jsxs2("div", { className: "flex justify-between items-center", children: [
+      /* @__PURE__ */ jsxs2("div", { className: "flex items-center gap-2", children: [
+        /* @__PURE__ */ jsx3(FiZap, { size: 16, className: "text-purple-600" }),
+        /* @__PURE__ */ jsx3("span", { className: "text-sm font-semibold text-purple-700", children: "AI Description Review" }),
+        /* @__PURE__ */ jsx3(
           "select",
           {
             "aria-label": "AI provider",
@@ -1613,54 +1377,54 @@ function AiDescriptionChat({
             value: selectedProviderId,
             onChange: (e) => setSelectedProviderId(e.target.value),
             disabled: isLoading,
-            children: providerOptions.map((option) => /* @__PURE__ */ jsx4("option", { value: option.id, children: option.label }, option.id))
+            children: providerOptions.map((option) => /* @__PURE__ */ jsx3("option", { value: option.id, children: option.label }, option.id))
           }
         )
       ] }),
-      /* @__PURE__ */ jsxs3(
+      /* @__PURE__ */ jsxs2(
         "button",
         {
           type: "button",
           className: "inline-flex items-center gap-1 px-2 py-1 text-xs rounded hover:bg-gray-200 text-gray-600",
           onClick: onCancel,
           children: [
-            /* @__PURE__ */ jsx4(FiX, { size: 12 }),
+            /* @__PURE__ */ jsx3(FiX, { size: 12 }),
             "Close"
           ]
         }
       )
     ] }),
-    !hasStarted && !initialDescription.trim() && /* @__PURE__ */ jsx4("div", { className: "flex-1 flex items-center justify-center min-h-[120px]", children: /* @__PURE__ */ jsxs3("div", { className: "text-center", children: [
-      /* @__PURE__ */ jsx4(FiZap, { size: 28, className: "mx-auto mb-2 text-purple-300" }),
-      /* @__PURE__ */ jsx4("p", { className: "text-sm text-gray-500", children: "Add a description first, then AI will ask clarifying questions and refine it." })
+    !hasStarted && !initialDescription.trim() && /* @__PURE__ */ jsx3("div", { className: "flex-1 flex items-center justify-center min-h-[120px]", children: /* @__PURE__ */ jsxs2("div", { className: "text-center", children: [
+      /* @__PURE__ */ jsx3(FiZap, { size: 28, className: "mx-auto mb-2 text-purple-300" }),
+      /* @__PURE__ */ jsx3("p", { className: "text-sm text-gray-500", children: "Add a description first, then AI will ask clarifying questions and refine it." })
     ] }) }),
-    hasStarted && /* @__PURE__ */ jsx4(
+    hasStarted && /* @__PURE__ */ jsx3(
       "div",
       {
         ref: scrollRef,
         className: "flex-1 min-h-[200px] max-h-[350px] overflow-y-auto pr-1",
-        children: /* @__PURE__ */ jsxs3("div", { className: "flex flex-col gap-3", children: [
-          /* @__PURE__ */ jsx4("div", { className: "flex justify-end", children: /* @__PURE__ */ jsxs3("div", { className: "bg-purple-50 border border-purple-200 rounded-lg p-3 max-w-[85%]", children: [
-            /* @__PURE__ */ jsx4("p", { className: "text-xs text-purple-600 font-medium mb-1", children: "Your Description" }),
-            /* @__PURE__ */ jsx4("p", { className: "text-sm whitespace-pre-wrap", children: initialDescription })
+        children: /* @__PURE__ */ jsxs2("div", { className: "flex flex-col gap-3", children: [
+          /* @__PURE__ */ jsx3("div", { className: "flex justify-end", children: /* @__PURE__ */ jsxs2("div", { className: "bg-purple-50 border border-purple-200 rounded-lg p-3 max-w-[85%]", children: [
+            /* @__PURE__ */ jsx3("p", { className: "text-xs text-purple-600 font-medium mb-1", children: "Your Description" }),
+            /* @__PURE__ */ jsx3("p", { className: "text-sm whitespace-pre-wrap", children: initialDescription })
           ] }) }),
           conversationHistory.map((msg, idx) => {
             const isAssistant = msg.role === "assistant";
             const isFinalMessage = finalizedDescription && idx === conversationHistory.length - 1;
             if (isFinalMessage) return null;
-            return /* @__PURE__ */ jsxs3(
+            return /* @__PURE__ */ jsxs2(
               "div",
               {
                 className: `flex ${isAssistant ? "justify-start" : "justify-end"}`,
                 children: [
-                  isAssistant && /* @__PURE__ */ jsx4("div", { className: "w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0 mr-2 mt-1", children: "AI" }),
-                  /* @__PURE__ */ jsxs3(
+                  isAssistant && /* @__PURE__ */ jsx3("div", { className: "w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0 mr-2 mt-1", children: "AI" }),
+                  /* @__PURE__ */ jsxs2(
                     "div",
                     {
                       className: `border rounded-lg p-3 max-w-[85%] ${isAssistant ? "bg-white border-gray-200" : "bg-purple-50 border-purple-200"}`,
                       children: [
-                        isAssistant && /* @__PURE__ */ jsx4("p", { className: "text-xs text-purple-600 font-medium mb-1", children: "AI Assistant" }),
-                        /* @__PURE__ */ jsx4("p", { className: "text-sm whitespace-pre-wrap", children: msg.content })
+                        isAssistant && /* @__PURE__ */ jsx3("p", { className: "text-xs text-purple-600 font-medium mb-1", children: "AI Assistant" }),
+                        /* @__PURE__ */ jsx3("p", { className: "text-sm whitespace-pre-wrap", children: msg.content })
                       ]
                     }
                   )
@@ -1669,46 +1433,74 @@ function AiDescriptionChat({
               idx
             );
           }),
-          isLoading && /* @__PURE__ */ jsxs3("div", { className: "flex justify-start", children: [
-            /* @__PURE__ */ jsx4("div", { className: "w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0 mr-2 mt-1", children: "AI" }),
-            /* @__PURE__ */ jsx4("div", { className: "bg-white border border-gray-200 rounded-lg p-3", children: /* @__PURE__ */ jsxs3("div", { className: "flex items-center gap-2", children: [
-              /* @__PURE__ */ jsx4("div", { className: "w-4 h-4 border-2 border-purple-300 border-t-purple-500 rounded-full animate-spin" }),
-              /* @__PURE__ */ jsx4("span", { className: "text-sm text-gray-500", children: "Analyzing..." })
+          isLoading && /* @__PURE__ */ jsxs2("div", { className: "flex justify-start", children: [
+            /* @__PURE__ */ jsx3("div", { className: "w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0 mr-2 mt-1", children: "AI" }),
+            /* @__PURE__ */ jsx3("div", { className: "bg-white border border-gray-200 rounded-lg p-3", children: /* @__PURE__ */ jsxs2("div", { className: "flex items-center gap-2", children: [
+              /* @__PURE__ */ jsx3("div", { className: "w-4 h-4 border-2 border-purple-300 border-t-purple-500 rounded-full animate-spin" }),
+              /* @__PURE__ */ jsx3("span", { className: "text-sm text-gray-500", children: "Analyzing..." })
             ] }) })
           ] }),
           error && !isLoading && (() => {
             const isConfigError = /edge function|fetch|network/i.test(error);
-            return isConfigError ? /* @__PURE__ */ jsxs3("div", { className: "bg-gray-50 border border-gray-200 rounded-lg p-3", children: [
-              /* @__PURE__ */ jsx4("p", { className: "text-sm text-gray-600 mb-2", children: "AI refinement is not available. Your description will be saved as-is." }),
-              /* @__PURE__ */ jsx4(
-                "button",
-                {
-                  type: "button",
-                  className: "px-2 py-1 text-xs rounded border border-gray-300 text-gray-600 hover:bg-gray-100",
-                  onClick: onCancel,
-                  children: "Dismiss"
-                }
-              )
-            ] }) : /* @__PURE__ */ jsxs3("div", { className: "bg-red-50 border border-red-200 rounded-lg p-3", children: [
-              /* @__PURE__ */ jsx4("p", { className: "text-sm text-red-600 mb-2", children: error }),
-              /* @__PURE__ */ jsx4(
-                "button",
-                {
-                  type: "button",
-                  className: "px-2 py-1 text-xs rounded border border-red-300 text-red-600 hover:bg-red-100",
-                  onClick: handleRetry,
-                  children: "Retry"
-                }
-              )
+            return isConfigError ? /* @__PURE__ */ jsxs2("div", { className: "bg-gray-50 border border-gray-200 rounded-lg p-3", children: [
+              /* @__PURE__ */ jsx3("p", { className: "text-sm text-gray-600 mb-2", children: "AI refinement is not available right now. You can save your description as-is, or try again." }),
+              /* @__PURE__ */ jsxs2("div", { className: "flex flex-wrap gap-2", children: [
+                /* @__PURE__ */ jsxs2(
+                  "button",
+                  {
+                    type: "button",
+                    className: "inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded bg-green-600 text-white hover:bg-green-700",
+                    onClick: handleSaveWithoutAi,
+                    children: [
+                      /* @__PURE__ */ jsx3(FiCheck, { size: 14 }),
+                      "Save without AI"
+                    ]
+                  }
+                ),
+                /* @__PURE__ */ jsx3(
+                  "button",
+                  {
+                    type: "button",
+                    className: "px-2 py-1 text-xs rounded border border-gray-300 text-gray-600 hover:bg-gray-100",
+                    onClick: handleRetry,
+                    children: "Retry"
+                  }
+                )
+              ] })
+            ] }) : /* @__PURE__ */ jsxs2("div", { className: "bg-red-50 border border-red-200 rounded-lg p-3", children: [
+              /* @__PURE__ */ jsx3("p", { className: "text-sm text-red-600 mb-2", children: error }),
+              /* @__PURE__ */ jsxs2("div", { className: "flex flex-wrap gap-2", children: [
+                /* @__PURE__ */ jsx3(
+                  "button",
+                  {
+                    type: "button",
+                    className: "px-2 py-1 text-xs rounded border border-red-300 text-red-600 hover:bg-red-100",
+                    onClick: handleRetry,
+                    children: "Retry"
+                  }
+                ),
+                /* @__PURE__ */ jsxs2(
+                  "button",
+                  {
+                    type: "button",
+                    className: "inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded bg-green-600 text-white hover:bg-green-700",
+                    onClick: handleSaveWithoutAi,
+                    children: [
+                      /* @__PURE__ */ jsx3(FiCheck, { size: 14 }),
+                      "Save without AI"
+                    ]
+                  }
+                )
+              ] })
             ] });
           })(),
-          finalizedDescription && /* @__PURE__ */ jsxs3("div", { className: "bg-green-50 border-2 border-green-300 rounded-lg p-4", children: [
-            /* @__PURE__ */ jsx4("div", { className: "flex justify-between items-center mb-2", children: /* @__PURE__ */ jsxs3("div", { className: "flex items-center gap-2", children: [
-              /* @__PURE__ */ jsx4("span", { className: "text-xs font-bold text-green-700", children: "AI-Reviewed Description" }),
-              /* @__PURE__ */ jsx4("span", { className: "text-[0.6rem] px-1.5 py-0.5 rounded bg-green-100 text-green-800", children: "Ready" })
+          finalizedDescription && /* @__PURE__ */ jsxs2("div", { className: "bg-green-50 border-2 border-green-300 rounded-lg p-4", children: [
+            /* @__PURE__ */ jsx3("div", { className: "flex justify-between items-center mb-2", children: /* @__PURE__ */ jsxs2("div", { className: "flex items-center gap-2", children: [
+              /* @__PURE__ */ jsx3("span", { className: "text-xs font-bold text-green-700", children: "AI-Reviewed Description" }),
+              /* @__PURE__ */ jsx3("span", { className: "text-[0.6rem] px-1.5 py-0.5 rounded bg-green-100 text-green-800", children: "Ready" })
             ] }) }),
-            isEditing ? /* @__PURE__ */ jsxs3("div", { className: "flex flex-col gap-2", children: [
-              /* @__PURE__ */ jsx4(
+            isEditing ? /* @__PURE__ */ jsxs2("div", { className: "flex flex-col gap-2", children: [
+              /* @__PURE__ */ jsx3(
                 "textarea",
                 {
                   value: editDraft,
@@ -1717,8 +1509,8 @@ function AiDescriptionChat({
                   className: "w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
                 }
               ),
-              /* @__PURE__ */ jsxs3("div", { className: "flex justify-end gap-2", children: [
-                /* @__PURE__ */ jsx4(
+              /* @__PURE__ */ jsxs2("div", { className: "flex justify-end gap-2", children: [
+                /* @__PURE__ */ jsx3(
                   "button",
                   {
                     type: "button",
@@ -1727,7 +1519,7 @@ function AiDescriptionChat({
                     children: "Cancel Edit"
                   }
                 ),
-                /* @__PURE__ */ jsxs3(
+                /* @__PURE__ */ jsxs2(
                   "button",
                   {
                     type: "button",
@@ -1735,35 +1527,35 @@ function AiDescriptionChat({
                     onClick: handleAccept,
                     disabled: !editDraft.trim(),
                     children: [
-                      /* @__PURE__ */ jsx4(FiCheck, { size: 14 }),
+                      /* @__PURE__ */ jsx3(FiCheck, { size: 14 }),
                       "Accept Edited"
                     ]
                   }
                 )
               ] })
-            ] }) : /* @__PURE__ */ jsxs3(Fragment, { children: [
-              /* @__PURE__ */ jsx4("p", { className: "text-sm whitespace-pre-wrap text-gray-800", children: finalizedDescription }),
-              /* @__PURE__ */ jsxs3("div", { className: "flex justify-end gap-2 mt-3", children: [
-                /* @__PURE__ */ jsxs3(
+            ] }) : /* @__PURE__ */ jsxs2(Fragment, { children: [
+              /* @__PURE__ */ jsx3("p", { className: "text-sm whitespace-pre-wrap text-gray-800", children: finalizedDescription }),
+              /* @__PURE__ */ jsxs2("div", { className: "flex justify-end gap-2 mt-3", children: [
+                /* @__PURE__ */ jsxs2(
                   "button",
                   {
                     type: "button",
                     className: "inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded border border-gray-300 hover:bg-gray-100",
                     onClick: handleEdit,
                     children: [
-                      /* @__PURE__ */ jsx4(FiEdit22, { size: 14 }),
+                      /* @__PURE__ */ jsx3(FiEdit22, { size: 14 }),
                       "Edit"
                     ]
                   }
                 ),
-                /* @__PURE__ */ jsxs3(
+                /* @__PURE__ */ jsxs2(
                   "button",
                   {
                     type: "button",
                     className: "inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded bg-green-600 text-white hover:bg-green-700",
                     onClick: handleAccept,
                     children: [
-                      /* @__PURE__ */ jsx4(FiCheck, { size: 14 }),
+                      /* @__PURE__ */ jsx3(FiCheck, { size: 14 }),
                       "Accept"
                     ]
                   }
@@ -1774,8 +1566,8 @@ function AiDescriptionChat({
         ] })
       }
     ),
-    hasStarted && !finalizedDescription && !isLoading && /* @__PURE__ */ jsxs3("div", { className: "flex flex-col gap-2", children: [
-      /* @__PURE__ */ jsx4(
+    hasStarted && !finalizedDescription && !isLoading && /* @__PURE__ */ jsxs2("div", { className: "flex flex-col gap-2", children: [
+      /* @__PURE__ */ jsx3(
         "textarea",
         {
           ref: textareaRef,
@@ -1787,10 +1579,10 @@ function AiDescriptionChat({
           className: "w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
         }
       ),
-      /* @__PURE__ */ jsxs3("div", { className: "flex justify-between items-center", children: [
-        /* @__PURE__ */ jsx4("span", { className: "text-xs text-gray-500", children: "Ctrl/Cmd + Enter to send" }),
-        /* @__PURE__ */ jsxs3("div", { className: "flex items-center gap-2", children: [
-          showFinalizeButton && /* @__PURE__ */ jsx4(
+      /* @__PURE__ */ jsxs2("div", { className: "flex justify-between items-center", children: [
+        /* @__PURE__ */ jsx3("span", { className: "text-xs text-gray-500", children: "Ctrl/Cmd + Enter to send" }),
+        /* @__PURE__ */ jsxs2("div", { className: "flex items-center gap-2", children: [
+          showFinalizeButton && /* @__PURE__ */ jsx3(
             "button",
             {
               type: "button",
@@ -1799,7 +1591,7 @@ function AiDescriptionChat({
               children: "Finalize Now"
             }
           ),
-          /* @__PURE__ */ jsx4(
+          /* @__PURE__ */ jsx3(
             "button",
             {
               type: "button",
@@ -2176,7 +1968,7 @@ function getInitialNarrativeTab() {
 }
 
 // src/DevNotesForm.tsx
-import { Fragment as Fragment2, jsx as jsx5, jsxs as jsxs4 } from "react/jsx-runtime";
+import { Fragment as Fragment2, jsx as jsx4, jsxs as jsxs3 } from "react/jsx-runtime";
 var COMPACT_BEHAVIOR_HEIGHT = 56;
 var EXPANDED_BEHAVIOR_MIN_HEIGHT = 92;
 var FIELD_SURFACE_CLASS = "rounded-2xl border border-slate-200 bg-white/95 shadow-sm shadow-slate-900/5 transition-colors focus-within:border-slate-400 focus-within:ring-1 focus-within:ring-slate-200";
@@ -2196,8 +1988,8 @@ function SearchableSingleSelect({
   wrapperClassName = "",
   minInputWidthClassName = "min-w-[120px]"
 }) {
-  const [searchTerm, setSearchTerm] = useState6("");
-  const [showDropdown, setShowDropdown] = useState6(false);
+  const [searchTerm, setSearchTerm] = useState5("");
+  const [showDropdown, setShowDropdown] = useState5(false);
   const selectedOption = useMemo3(
     () => options.find((option) => option.id === value) || null,
     [options, value]
@@ -2211,24 +2003,24 @@ function SearchableSingleSelect({
     setSearchTerm("");
     setShowDropdown(false);
   };
-  return /* @__PURE__ */ jsxs4("div", { className: `${isSuperscript ? "relative" : ""} ${wrapperClassName}`.trim(), children: [
-    /* @__PURE__ */ jsx5(
+  return /* @__PURE__ */ jsxs3("div", { className: `${isSuperscript ? "relative" : ""} ${wrapperClassName}`.trim(), children: [
+    /* @__PURE__ */ jsx4(
       "label",
       {
         className: isSuperscript ? floatingLabelClass(true) : floatingLabelClass(false),
         children: label
       }
     ),
-    /* @__PURE__ */ jsxs4("div", { className: "relative", children: [
-      /* @__PURE__ */ jsxs4("div", { className: FIELD_SURFACE_CLASS, children: [
-        /* @__PURE__ */ jsxs4("div", { className: "flex items-center gap-2 px-3 py-2", children: [
-          /* @__PURE__ */ jsx5(FiSearch, { size: 14, className: "shrink-0 text-slate-400" }),
-          /* @__PURE__ */ jsx5("div", { className: "h-4 w-px bg-slate-200" })
+    /* @__PURE__ */ jsxs3("div", { className: "relative", children: [
+      /* @__PURE__ */ jsxs3("div", { className: FIELD_SURFACE_CLASS, children: [
+        /* @__PURE__ */ jsxs3("div", { className: "flex items-center gap-2 px-3 py-2", children: [
+          /* @__PURE__ */ jsx4(FiSearch, { size: 14, className: "shrink-0 text-slate-400" }),
+          /* @__PURE__ */ jsx4("div", { className: "h-4 w-px bg-slate-200" })
         ] }),
-        /* @__PURE__ */ jsxs4("div", { className: "flex min-h-[40px] flex-wrap items-center gap-1 px-3 pb-2 pt-0", children: [
-          selectedOption && /* @__PURE__ */ jsxs4("span", { className: "inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700", children: [
+        /* @__PURE__ */ jsxs3("div", { className: "flex min-h-[40px] flex-wrap items-center gap-1 px-3 pb-2 pt-0", children: [
+          selectedOption && /* @__PURE__ */ jsxs3("span", { className: "inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700", children: [
             selectedOption.label,
-            /* @__PURE__ */ jsx5(
+            /* @__PURE__ */ jsx4(
               "button",
               {
                 type: "button",
@@ -2242,7 +2034,7 @@ function SearchableSingleSelect({
               }
             )
           ] }),
-          /* @__PURE__ */ jsx5(
+          /* @__PURE__ */ jsx4(
             "input",
             {
               type: "text",
@@ -2265,21 +2057,21 @@ function SearchableSingleSelect({
               }
             }
           ),
-          /* @__PURE__ */ jsx5("span", { className: "shrink-0 text-[11px] text-slate-400", children: "Type to search" })
+          /* @__PURE__ */ jsx4("span", { className: "shrink-0 text-[11px] text-slate-400", children: "Type to search" })
         ] })
       ] }),
-      showDropdown && /* @__PURE__ */ jsx5("div", { className: "absolute left-0 right-0 top-[calc(100%+6px)] z-20 max-h-[240px] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10", children: filteredOptions.length > 0 ? filteredOptions.map((option) => /* @__PURE__ */ jsxs4(
+      showDropdown && /* @__PURE__ */ jsx4("div", { className: "absolute left-0 right-0 top-[calc(100%+6px)] z-20 max-h-[240px] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10", children: filteredOptions.length > 0 ? filteredOptions.map((option) => /* @__PURE__ */ jsxs3(
         "div",
         {
           className: `flex items-center justify-between px-3 py-2.5 cursor-pointer transition hover:bg-slate-50 ${option.id === value ? "bg-slate-50" : ""}`,
           onMouseDown: () => handleSelect(option.id),
           children: [
-            /* @__PURE__ */ jsx5("span", { className: "text-sm text-slate-700", children: option.label }),
-            option.id === value && /* @__PURE__ */ jsx5(FiCheck2, { size: 14, className: "text-slate-500" })
+            /* @__PURE__ */ jsx4("span", { className: "text-sm text-slate-700", children: option.label }),
+            option.id === value && /* @__PURE__ */ jsx4(FiCheck2, { size: 14, className: "text-slate-500" })
           ]
         },
         option.id
-      )) : /* @__PURE__ */ jsx5("div", { className: "px-3 py-2.5", children: /* @__PURE__ */ jsx5("span", { className: "text-sm text-slate-500", children: "No matches" }) }) })
+      )) : /* @__PURE__ */ jsx4("div", { className: "px-3 py-2.5", children: /* @__PURE__ */ jsx4("span", { className: "text-sm text-slate-500", children: "No matches" }) }) })
     ] })
   ] });
 }
@@ -2345,71 +2137,72 @@ function DevNotesForm({
     });
     return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label));
   }, [collaborators, userProfiles]);
-  const [selectedTypes, setSelectedTypes] = useState6(existingReport?.types || []);
-  useEffect6(() => {
+  const [selectedTypes, setSelectedTypes] = useState5(existingReport?.types || []);
+  useEffect5(() => {
     if (existingReport || selectedTypes.length > 0) return;
     const bugType = taskTypes.find((t) => t.name.toLowerCase() === "bug");
     if (bugType) {
       setSelectedTypes([bugType.id]);
     }
   }, [taskTypes, existingReport, selectedTypes.length]);
-  const [severity, setSeverity] = useState6(
+  const [severity, setSeverity] = useState5(
     existingReport?.severity || "Medium"
   );
-  const [title, setTitle] = useState6(existingReport?.title || "");
-  const [description, setDescription] = useState6(existingReport?.description || "");
-  const [expectedBehavior, setExpectedBehavior] = useState6(
+  const [title, setTitle] = useState5(existingReport?.title || "");
+  const [description, setDescription] = useState5(existingReport?.description || "");
+  const [expectedBehavior, setExpectedBehavior] = useState5(
     existingReport?.expected_behavior || ""
   );
-  const [actualBehavior, setActualBehavior] = useState6(existingReport?.actual_behavior || "");
-  const [status, setStatus] = useState6(
+  const [actualBehavior, setActualBehavior] = useState5(existingReport?.actual_behavior || "");
+  const [status, setStatus] = useState5(
     getInitialTaskStatus(existingReport?.status)
   );
-  useEffect6(() => {
+  useEffect5(() => {
     setStatus(getInitialTaskStatus(existingReport?.status));
   }, [existingReport?.id, existingReport?.status]);
-  const [assignedTo, setAssignedTo] = useState6(existingReport?.assigned_to || null);
-  const [resolvedBy, setResolvedBy] = useState6(existingReport?.resolved_by || null);
-  const [aiReady, setAiReady] = useState6(existingReport?.ai_ready || false);
-  const [aiDescription, setAiDescription] = useState6(
+  const [assignedTo, setAssignedTo] = useState5(existingReport?.assigned_to || null);
+  const [resolvedBy, setResolvedBy] = useState5(existingReport?.resolved_by || null);
+  const [aiReady, setAiReady] = useState5(existingReport?.ai_ready || false);
+  const [aiDescription, setAiDescription] = useState5(
     existingReport?.ai_description || null
   );
-  const [reportPageUrl, setReportPageUrl] = useState6(existingReport?.page_url || pageUrl);
+  const [reportPageUrl, setReportPageUrl] = useState5(existingReport?.page_url || pageUrl);
   const defaultTaskListId = useMemo3(() => {
     const defaultList = taskLists.find((list) => list.is_default);
     return defaultList?.id || taskLists[0]?.id || "";
   }, [taskLists]);
-  const [taskListId, setTaskListId] = useState6(existingReport?.task_list_id || defaultTaskListId);
-  const [newTypeName, setNewTypeName] = useState6("");
-  const [showTypeDropdown, setShowTypeDropdown] = useState6(false);
-  const [pendingTypeName, setPendingTypeName] = useState6(null);
-  const typeInputRef = useRef6(null);
-  const [showCopied, setShowCopied] = useState6(false);
-  const copyTimeoutRef = useRef6(null);
-  const [showLinkCopied, setShowLinkCopied] = useState6(false);
-  const linkCopyTimeoutRef = useRef6(null);
-  const [showAiPayloadCopied, setShowAiPayloadCopied] = useState6(false);
-  const aiPayloadCopyTimeoutRef = useRef6(null);
-  const [taskListSearchTerm, setTaskListSearchTerm] = useState6("");
-  const [showTaskListDropdown, setShowTaskListDropdown] = useState6(false);
-  const [pendingTaskListName, setPendingTaskListName] = useState6(null);
-  const taskListInputRef = useRef6(null);
-  const descriptionRef = useRef6(null);
-  const expectedBehaviorRef = useRef6(null);
-  const actualBehaviorRef = useRef6(null);
-  const [descriptionHeight, setDescriptionHeight] = useState6("120px");
-  const [expectedBehaviorHeight, setExpectedBehaviorHeight] = useState6(
+  const [taskListId, setTaskListId] = useState5(existingReport?.task_list_id || defaultTaskListId);
+  const [newTypeName, setNewTypeName] = useState5("");
+  const [showTypeDropdown, setShowTypeDropdown] = useState5(false);
+  const [pendingTypeName, setPendingTypeName] = useState5(null);
+  const typeInputRef = useRef5(null);
+  const [showCopied, setShowCopied] = useState5(false);
+  const copyTimeoutRef = useRef5(null);
+  const [showLinkCopied, setShowLinkCopied] = useState5(false);
+  const linkCopyTimeoutRef = useRef5(null);
+  const [showAiPayloadCopied, setShowAiPayloadCopied] = useState5(false);
+  const aiPayloadCopyTimeoutRef = useRef5(null);
+  const [taskListSearchTerm, setTaskListSearchTerm] = useState5("");
+  const [showTaskListDropdown, setShowTaskListDropdown] = useState5(false);
+  const [pendingTaskListName, setPendingTaskListName] = useState5(null);
+  const taskListInputRef = useRef5(null);
+  const descriptionRef = useRef5(null);
+  const expectedBehaviorRef = useRef5(null);
+  const actualBehaviorRef = useRef5(null);
+  const [descriptionHeight, setDescriptionHeight] = useState5("120px");
+  const [expectedBehaviorHeight, setExpectedBehaviorHeight] = useState5(
     `${expectedBehavior.trim() ? EXPANDED_BEHAVIOR_MIN_HEIGHT : COMPACT_BEHAVIOR_HEIGHT}px`
   );
-  const [actualBehaviorHeight, setActualBehaviorHeight] = useState6(
+  const [actualBehaviorHeight, setActualBehaviorHeight] = useState5(
     `${actualBehavior.trim() ? EXPANDED_BEHAVIOR_MIN_HEIGHT : COMPACT_BEHAVIOR_HEIGHT}px`
   );
-  const [showAiChat, setShowAiChat] = useState6(false);
-  const [activeNarrativeTab, setActiveNarrativeTab] = useState6(
+  const [showAiChat, setShowAiChat] = useState5(false);
+  const [aiUnavailable, setAiUnavailable] = useState5(false);
+  const [activeNarrativeTab, setActiveNarrativeTab] = useState5(
     getInitialNarrativeTab()
   );
-  const [submitAttempted, setSubmitAttempted] = useState6(false);
-  const [pendingDestructiveAction, setPendingDestructiveAction] = useState6(null);
+  const [submitAttempted, setSubmitAttempted] = useState5(false);
+  const [pendingDestructiveAction, setPendingDestructiveAction] = useState5(null);
   const capturedContext = useMemo3(
     () => existingReport?.capture_context || buildCaptureContext(reportPageUrl),
     [existingReport?.capture_context, reportPageUrl]
@@ -2424,7 +2217,7 @@ function DevNotesForm({
   const statusIcons = {
     Open: { icon: FiAlertCircle, colorClass: "bg-red-100 text-red-800" },
     "In Progress": { icon: FiLoader, colorClass: "bg-blue-100 text-blue-800" },
-    "Needs Review": { icon: FiEye2, colorClass: "bg-purple-100 text-purple-800" },
+    "Needs Review": { icon: FiEye, colorClass: "bg-purple-100 text-purple-800" },
     Resolved: { icon: FiCheckCircle, colorClass: "bg-green-100 text-green-800" },
     Closed: { icon: FiArchive, colorClass: "bg-gray-100 text-gray-800" }
   };
@@ -2497,33 +2290,33 @@ function DevNotesForm({
     if (!baseUrl) return null;
     return `${baseUrl.replace(/\/+$/, "")}/tasks/${encodeURIComponent(existingReport.id)}`;
   }, [appLinkStatus?.projectDiscovery?.baseUrl, existingReport?.id]);
-  useEffect6(() => {
+  useEffect5(() => {
     setReportPageUrl(existingReport?.page_url || pageUrl);
   }, [existingReport?.page_url, pageUrl]);
-  useEffect6(() => {
+  useEffect5(() => {
     if (!existingReport?.task_list_id && defaultTaskListId && !taskListId) {
       setTaskListId(defaultTaskListId);
     }
   }, [defaultTaskListId, existingReport?.task_list_id, taskListId]);
-  useEffect6(() => {
+  useEffect5(() => {
     return () => {
       if (copyTimeoutRef.current) window.clearTimeout(copyTimeoutRef.current);
       if (linkCopyTimeoutRef.current) window.clearTimeout(linkCopyTimeoutRef.current);
       if (aiPayloadCopyTimeoutRef.current) window.clearTimeout(aiPayloadCopyTimeoutRef.current);
     };
   }, []);
-  useEffect6(() => {
+  useEffect5(() => {
     if ((status === "Closed" || status === "Resolved") && !resolvedBy && user?.id) {
       setResolvedBy(user.id);
     }
   }, [status, resolvedBy, user?.id]);
-  useEffect6(() => {
+  useEffect5(() => {
     resizeDescriptionField();
   }, [description]);
-  useEffect6(() => {
+  useEffect5(() => {
     resizeBehaviorField(expectedBehaviorRef.current, expectedBehavior, setExpectedBehaviorHeight);
   }, [expectedBehavior]);
-  useEffect6(() => {
+  useEffect5(() => {
     resizeBehaviorField(actualBehaviorRef.current, actualBehavior, setActualBehaviorHeight);
   }, [actualBehavior]);
   const availableTypes = taskTypes.filter((type) => !selectedTypes.includes(type.id));
@@ -2676,7 +2469,9 @@ function DevNotesForm({
   const hasDescription = trimmedDescription.length > 0;
   const hasBehavior = trimmedExpectedBehavior.length > 0 || trimmedActualBehavior.length > 0;
   const hasNarrative = hasDescription || hasBehavior;
-  const requiresAiBeforeCreate = Boolean(aiProvider && !existingReport && !aiDescription);
+  const requiresAiBeforeCreate = Boolean(
+    aiProvider && !existingReport && !aiDescription && !aiUnavailable
+  );
   const submitDisabled = loading || !hasNarrative || statusRequired;
   const submitTitle = requiresAiBeforeCreate ? "Save will start AI clarification before creating the task" : statusRequired ? "Select a status before saving" : !hasNarrative ? "Add a description, expected behavior, or actual behavior" : existingReport ? "Update" : "Save";
   const aiSeedDescription = hasDescription ? trimmedDescription : hasBehavior ? [trimmedExpectedBehavior, trimmedActualBehavior].filter(Boolean).join("\n") : title.trim();
@@ -2800,8 +2595,8 @@ function DevNotesForm({
   };
   const StatusIcon = statusIcons[statusValue]?.icon || FiAlertCircle;
   const statusColorClass = statusIcons[statusValue]?.colorClass || "bg-red-100 text-red-800";
-  const renderStatusSaveActions = (position) => /* @__PURE__ */ jsxs4("div", { className: "flex items-end gap-2", children: [
-    /* @__PURE__ */ jsx5(
+  const renderStatusSaveActions = (position) => /* @__PURE__ */ jsxs3("div", { className: "flex items-end gap-2", children: [
+    /* @__PURE__ */ jsx4(
       SearchableSingleSelect,
       {
         label: "Status",
@@ -2814,7 +2609,7 @@ function DevNotesForm({
         minInputWidthClassName: "min-w-[84px]"
       }
     ),
-    /* @__PURE__ */ jsx5(
+    /* @__PURE__ */ jsx4(
       "button",
       {
         type: "button",
@@ -2823,31 +2618,31 @@ function DevNotesForm({
         disabled: submitDisabled,
         "aria-label": existingReport ? "Update" : "Save",
         title: submitTitle,
-        children: loading ? /* @__PURE__ */ jsx5("div", { className: "w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" }) : /* @__PURE__ */ jsx5(FiSave, { size: 16 })
+        children: loading ? /* @__PURE__ */ jsx4("div", { className: "w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" }) : /* @__PURE__ */ jsx4(FiSave, { size: 16 })
       }
     )
   ] });
-  return /* @__PURE__ */ jsxs4("div", { className: "relative mx-auto w-full min-w-[320px] max-w-[1040px] rounded-3xl border border-slate-200 bg-gradient-to-b from-white via-slate-50/90 to-slate-100 p-4 shadow-[0_24px_90px_rgba(15,23,42,0.14)] md:p-6", children: [
-    /* @__PURE__ */ jsxs4("div", { className: "mb-5 flex items-start justify-between gap-4", children: [
-      /* @__PURE__ */ jsxs4("div", { className: "space-y-2", children: [
-        /* @__PURE__ */ jsxs4("div", { className: "flex flex-wrap items-center gap-2", children: [
-          /* @__PURE__ */ jsx5("span", { className: "text-base font-semibold text-slate-900 md:text-lg", children: existingReport ? "Edit Task" : "Create Task" }),
-          existingReport && /* @__PURE__ */ jsxs4(
+  return /* @__PURE__ */ jsxs3("div", { className: "relative mx-auto w-full min-w-[320px] max-w-[1040px] rounded-3xl border border-slate-200 bg-gradient-to-b from-white via-slate-50/90 to-slate-100 p-4 shadow-[0_24px_90px_rgba(15,23,42,0.14)] md:p-6", children: [
+    /* @__PURE__ */ jsxs3("div", { className: "mb-5 flex items-start justify-between gap-4", children: [
+      /* @__PURE__ */ jsxs3("div", { className: "space-y-2", children: [
+        /* @__PURE__ */ jsxs3("div", { className: "flex flex-wrap items-center gap-2", children: [
+          /* @__PURE__ */ jsx4("span", { className: "text-base font-semibold text-slate-900 md:text-lg", children: existingReport ? "Edit Task" : "Create Task" }),
+          existingReport && /* @__PURE__ */ jsxs3(
             "span",
             {
               className: `inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${statusColorClass}`,
               children: [
-                /* @__PURE__ */ jsx5(StatusIcon, { size: 12 }),
+                /* @__PURE__ */ jsx4(StatusIcon, { size: 12 }),
                 status
               ]
             }
           )
         ] }),
-        /* @__PURE__ */ jsx5("p", { className: "max-w-2xl text-sm text-slate-500", children: existingReport ? "Review the report with clearer field grouping, comments, and workflow controls." : "Capture the issue with a clear title, narrative, and workflow context." })
+        /* @__PURE__ */ jsx4("p", { className: "max-w-2xl text-sm text-slate-500", children: existingReport ? "Review the report with clearer field grouping, comments, and workflow controls." : "Capture the issue with a clear title, narrative, and workflow context." })
       ] }),
-      /* @__PURE__ */ jsxs4("div", { className: "flex flex-col items-end gap-2 sm:flex-row sm:items-center", children: [
+      /* @__PURE__ */ jsxs3("div", { className: "flex flex-col items-end gap-2 sm:flex-row sm:items-center", children: [
         renderStatusSaveActions("header"),
-        /* @__PURE__ */ jsx5(
+        /* @__PURE__ */ jsx4(
           "button",
           {
             type: "button",
@@ -2855,24 +2650,24 @@ function DevNotesForm({
             onClick: onCancel,
             "aria-label": "Cancel",
             title: "Cancel",
-            children: /* @__PURE__ */ jsx5(FiX2, { size: 16 })
+            children: /* @__PURE__ */ jsx4(FiX2, { size: 16 })
           }
         )
       ] })
     ] }),
-    existingReport && /* @__PURE__ */ jsxs4("div", { className: "mb-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-900/5", children: [
-      /* @__PURE__ */ jsxs4("div", { className: "flex flex-wrap items-center gap-2 text-xs text-slate-600", children: [
-        /* @__PURE__ */ jsxs4("span", { className: "inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1", children: [
-          /* @__PURE__ */ jsx5(FiClock, { size: 12, className: "text-slate-400" }),
+    existingReport && /* @__PURE__ */ jsxs3("div", { className: "mb-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-900/5", children: [
+      /* @__PURE__ */ jsxs3("div", { className: "flex flex-wrap items-center gap-2 text-xs text-slate-600", children: [
+        /* @__PURE__ */ jsxs3("span", { className: "inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1", children: [
+          /* @__PURE__ */ jsx4(FiClock, { size: 12, className: "text-slate-400" }),
           "Created by",
           " ",
-          /* @__PURE__ */ jsx5("span", { className: "font-medium text-slate-700", children: getFirstName(
+          /* @__PURE__ */ jsx4("span", { className: "font-medium text-slate-700", children: getFirstName(
             existingReport.creator?.full_name || existingReport.creator?.email || "Unknown"
           ) }),
-          /* @__PURE__ */ jsx5("span", { className: "text-slate-400", children: "on" }),
-          /* @__PURE__ */ jsx5("span", { className: "text-slate-700", children: formatCreatedDate(existingReport.created_at) })
+          /* @__PURE__ */ jsx4("span", { className: "text-slate-400", children: "on" }),
+          /* @__PURE__ */ jsx4("span", { className: "text-slate-700", children: formatCreatedDate(existingReport.created_at) })
         ] }),
-        /* @__PURE__ */ jsxs4(
+        /* @__PURE__ */ jsxs3(
           "button",
           {
             type: "button",
@@ -2880,12 +2675,12 @@ function DevNotesForm({
             onClick: handleCopyTaskId,
             title: "Copy task ID",
             children: [
-              /* @__PURE__ */ jsx5(FiCopy, { size: 11, className: "text-slate-400" }),
+              /* @__PURE__ */ jsx4(FiCopy, { size: 11, className: "text-slate-400" }),
               existingReport.id
             ]
           }
         ),
-        forgeTaskUrl && /* @__PURE__ */ jsxs4(
+        forgeTaskUrl && /* @__PURE__ */ jsxs3(
           "a",
           {
             href: forgeTaskUrl,
@@ -2894,12 +2689,12 @@ function DevNotesForm({
             className: "inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-slate-700 transition hover:border-slate-300 hover:bg-slate-100",
             title: "Open task in Forge",
             children: [
-              /* @__PURE__ */ jsx5(FiExternalLink, { size: 12, className: "text-slate-400" }),
+              /* @__PURE__ */ jsx4(FiExternalLink, { size: 12, className: "text-slate-400" }),
               "Open in Forge"
             ]
           }
         ),
-        /* @__PURE__ */ jsxs4(
+        /* @__PURE__ */ jsxs3(
           "button",
           {
             type: "button",
@@ -2907,12 +2702,12 @@ function DevNotesForm({
             onClick: handleCopyLink,
             title: "Copy shareable link",
             children: [
-              /* @__PURE__ */ jsx5(FiLink2, { size: 12, className: "text-slate-400" }),
+              /* @__PURE__ */ jsx4(FiLink2, { size: 12, className: "text-slate-400" }),
               "Copy Link"
             ]
           }
         ),
-        /* @__PURE__ */ jsxs4(
+        /* @__PURE__ */ jsxs3(
           "button",
           {
             type: "button",
@@ -2920,22 +2715,22 @@ function DevNotesForm({
             onClick: handleCopyAiPayload,
             title: "Copy AI fix payload",
             children: [
-              /* @__PURE__ */ jsx5(FiCopy, { size: 12, className: "text-slate-400" }),
+              /* @__PURE__ */ jsx4(FiCopy, { size: 12, className: "text-slate-400" }),
               "Copy AI Payload"
             ]
           }
         )
       ] }),
-      /* @__PURE__ */ jsxs4("div", { className: "relative mt-2 min-h-4", children: [
-        (showCopied || showLinkCopied) && /* @__PURE__ */ jsx5("span", { className: "absolute left-0 top-0 text-xs font-medium text-slate-500 animate-devnotes-fade-up pointer-events-none", children: showLinkCopied ? "Link copied!" : "Copied!" }),
-        showAiPayloadCopied && /* @__PURE__ */ jsx5("span", { className: "absolute left-0 top-0 text-xs font-medium text-slate-500 animate-devnotes-fade-up pointer-events-none", children: "AI payload copied!" })
+      /* @__PURE__ */ jsxs3("div", { className: "relative mt-2 min-h-4", children: [
+        (showCopied || showLinkCopied) && /* @__PURE__ */ jsx4("span", { className: "absolute left-0 top-0 text-xs font-medium text-slate-500 animate-devnotes-fade-up pointer-events-none", children: showLinkCopied ? "Link copied!" : "Copied!" }),
+        showAiPayloadCopied && /* @__PURE__ */ jsx4("span", { className: "absolute left-0 top-0 text-xs font-medium text-slate-500 animate-devnotes-fade-up pointer-events-none", children: "AI payload copied!" })
       ] })
     ] }),
-    /* @__PURE__ */ jsxs4("div", { className: "space-y-5", children: [
-      /* @__PURE__ */ jsxs4("section", { className: SECTION_CARD_CLASS, children: [
-        /* @__PURE__ */ jsxs4("div", { className: "mb-4 flex items-center justify-between gap-3", children: [
-          /* @__PURE__ */ jsx5("span", { className: sectionLabelClass, children: "Core details" }),
-          aiProvider && /* @__PURE__ */ jsxs4(
+    /* @__PURE__ */ jsxs3("div", { className: "space-y-5", children: [
+      /* @__PURE__ */ jsxs3("section", { className: SECTION_CARD_CLASS, children: [
+        /* @__PURE__ */ jsxs3("div", { className: "mb-4 flex items-center justify-between gap-3", children: [
+          /* @__PURE__ */ jsx4("span", { className: sectionLabelClass, children: "Core details" }),
+          aiProvider && /* @__PURE__ */ jsxs3(
             "button",
             {
               type: "button",
@@ -2947,18 +2742,18 @@ function DevNotesForm({
               disabled: !canReviewDescriptionWithAi,
               title: canReviewDescriptionWithAi ? "Review the description with AI" : "Add a description to review it with AI",
               children: [
-                /* @__PURE__ */ jsx5(FiZap2, { size: 12 }),
+                /* @__PURE__ */ jsx4(FiZap2, { size: 12 }),
                 "Review with AI"
               ]
             }
           )
         ] }),
-        /* @__PURE__ */ jsxs4("div", { className: isSuperscriptLabels ? "relative" : "", children: [
-          /* @__PURE__ */ jsxs4("label", { className: floatingLabelClass(isSuperscriptLabels), children: [
+        /* @__PURE__ */ jsxs3("div", { className: isSuperscriptLabels ? "relative" : "", children: [
+          /* @__PURE__ */ jsxs3("label", { className: floatingLabelClass(isSuperscriptLabels), children: [
             "Title ",
-            /* @__PURE__ */ jsx5("span", { className: "text-rose-500", children: "*" })
+            /* @__PURE__ */ jsx4("span", { className: "text-rose-500", children: "*" })
           ] }),
-          /* @__PURE__ */ jsx5(
+          /* @__PURE__ */ jsx4(
             "input",
             {
               type: "text",
@@ -2970,10 +2765,10 @@ function DevNotesForm({
           )
         ] })
       ] }),
-      /* @__PURE__ */ jsxs4("section", { className: SECTION_CARD_CLASS, children: [
-        /* @__PURE__ */ jsx5("div", { className: "mb-4 border-b border-slate-200", children: /* @__PURE__ */ jsx5("div", { className: "flex flex-wrap items-end gap-2", children: narrativeTabs.map((tab) => {
+      /* @__PURE__ */ jsxs3("section", { className: SECTION_CARD_CLASS, children: [
+        /* @__PURE__ */ jsx4("div", { className: "mb-4 border-b border-slate-200", children: /* @__PURE__ */ jsx4("div", { className: "flex flex-wrap items-end gap-2", children: narrativeTabs.map((tab) => {
           const isActive = activeNarrativeTab === tab.id;
-          return /* @__PURE__ */ jsxs4(
+          return /* @__PURE__ */ jsxs3(
             "button",
             {
               type: "button",
@@ -2981,22 +2776,22 @@ function DevNotesForm({
               onClick: () => setActiveNarrativeTab(tab.id),
               "aria-pressed": isActive,
               children: [
-                /* @__PURE__ */ jsx5("span", { className: "block text-[11px] font-semibold uppercase tracking-[0.16em]", children: "Description" }),
-                /* @__PURE__ */ jsx5("span", { className: "mt-1 block text-sm font-medium", children: tab.label }),
-                /* @__PURE__ */ jsx5("span", { className: "mt-1 block text-xs text-slate-500", children: tab.hint })
+                /* @__PURE__ */ jsx4("span", { className: "block text-[11px] font-semibold uppercase tracking-[0.16em]", children: "Description" }),
+                /* @__PURE__ */ jsx4("span", { className: "mt-1 block text-sm font-medium", children: tab.label }),
+                /* @__PURE__ */ jsx4("span", { className: "mt-1 block text-xs text-slate-500", children: tab.hint })
               ]
             },
             tab.id
           );
         }) }) }),
-        activeNarrativeTab === "description" ? /* @__PURE__ */ jsxs4("div", { className: "space-y-4", children: [
-          /* @__PURE__ */ jsxs4("div", { className: "flex items-center justify-between gap-3", children: [
-            /* @__PURE__ */ jsx5("span", { className: sectionLabelClass, children: "Standard description" }),
-            /* @__PURE__ */ jsx5("span", { className: "text-xs text-slate-500", children: "Use one clear narrative field" })
+        activeNarrativeTab === "description" ? /* @__PURE__ */ jsxs3("div", { className: "space-y-4", children: [
+          /* @__PURE__ */ jsxs3("div", { className: "flex items-center justify-between gap-3", children: [
+            /* @__PURE__ */ jsx4("span", { className: sectionLabelClass, children: "Standard description" }),
+            /* @__PURE__ */ jsx4("span", { className: "text-xs text-slate-500", children: "Use one clear narrative field" })
           ] }),
-          /* @__PURE__ */ jsxs4("div", { className: isSuperscriptLabels ? "relative" : "", children: [
-            /* @__PURE__ */ jsx5("label", { className: floatingLabelClass(isSuperscriptLabels), children: "Description" }),
-            /* @__PURE__ */ jsx5(
+          /* @__PURE__ */ jsxs3("div", { className: isSuperscriptLabels ? "relative" : "", children: [
+            /* @__PURE__ */ jsx4("label", { className: floatingLabelClass(isSuperscriptLabels), children: "Description" }),
+            /* @__PURE__ */ jsx4(
               "textarea",
               {
                 ref: descriptionRef,
@@ -3010,15 +2805,15 @@ function DevNotesForm({
               }
             )
           ] })
-        ] }) : /* @__PURE__ */ jsxs4("div", { className: "space-y-4", children: [
-          /* @__PURE__ */ jsxs4("div", { className: "flex items-center justify-between gap-3", children: [
-            /* @__PURE__ */ jsx5("span", { className: sectionLabelClass, children: "Issue details" }),
-            /* @__PURE__ */ jsx5("span", { className: "text-xs text-slate-500", children: "Use one or both fields below" })
+        ] }) : /* @__PURE__ */ jsxs3("div", { className: "space-y-4", children: [
+          /* @__PURE__ */ jsxs3("div", { className: "flex items-center justify-between gap-3", children: [
+            /* @__PURE__ */ jsx4("span", { className: sectionLabelClass, children: "Issue details" }),
+            /* @__PURE__ */ jsx4("span", { className: "text-xs text-slate-500", children: "Use one or both fields below" })
           ] }),
-          /* @__PURE__ */ jsxs4("div", { className: "grid grid-cols-1 gap-4 md:grid-cols-2", children: [
-            /* @__PURE__ */ jsxs4("div", { className: isSuperscriptLabels ? "relative" : "", children: [
-              /* @__PURE__ */ jsx5("label", { className: floatingLabelClass(isSuperscriptLabels), children: "Expected Behavior" }),
-              /* @__PURE__ */ jsx5(
+          /* @__PURE__ */ jsxs3("div", { className: "grid grid-cols-1 gap-4 md:grid-cols-2", children: [
+            /* @__PURE__ */ jsxs3("div", { className: isSuperscriptLabels ? "relative" : "", children: [
+              /* @__PURE__ */ jsx4("label", { className: floatingLabelClass(isSuperscriptLabels), children: "Expected Behavior" }),
+              /* @__PURE__ */ jsx4(
                 "textarea",
                 {
                   ref: expectedBehaviorRef,
@@ -3039,9 +2834,9 @@ function DevNotesForm({
                 }
               )
             ] }),
-            /* @__PURE__ */ jsxs4("div", { className: isSuperscriptLabels ? "relative" : "", children: [
-              /* @__PURE__ */ jsx5("label", { className: floatingLabelClass(isSuperscriptLabels), children: "Actual Behavior" }),
-              /* @__PURE__ */ jsx5(
+            /* @__PURE__ */ jsxs3("div", { className: isSuperscriptLabels ? "relative" : "", children: [
+              /* @__PURE__ */ jsx4("label", { className: floatingLabelClass(isSuperscriptLabels), children: "Actual Behavior" }),
+              /* @__PURE__ */ jsx4(
                 "textarea",
                 {
                   ref: actualBehaviorRef,
@@ -3064,9 +2859,9 @@ function DevNotesForm({
             ] })
           ] })
         ] }),
-        submitAttempted && !hasNarrative && /* @__PURE__ */ jsx5("p", { className: "mt-3 text-xs font-medium text-rose-600", children: "Add a description, expected behavior, or actual behavior." })
+        submitAttempted && !hasNarrative && /* @__PURE__ */ jsx4("p", { className: "mt-3 text-xs font-medium text-rose-600", children: "Add a description, expected behavior, or actual behavior." })
       ] }),
-      showAiChat && aiProvider && /* @__PURE__ */ jsx5(
+      showAiChat && aiProvider && /* @__PURE__ */ jsx4(
         AiDescriptionChat,
         {
           initialDescription: aiSeedDescription,
@@ -3095,13 +2890,20 @@ function DevNotesForm({
               });
             }
           },
+          onSaveWithoutAi: async () => {
+            setAiUnavailable(true);
+            setShowAiChat(false);
+            if (!existingReport) {
+              await saveReport({ aiReady: false });
+            }
+          },
           onCancel: () => setShowAiChat(false)
         }
       ),
-      aiDescription && /* @__PURE__ */ jsxs4("section", { className: "rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 shadow-sm shadow-emerald-900/5", children: [
-        /* @__PURE__ */ jsxs4("div", { className: "flex items-center justify-between gap-3", children: [
-          /* @__PURE__ */ jsx5("span", { className: "text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700", children: "AI-Reviewed Description" }),
-          /* @__PURE__ */ jsx5(
+      aiDescription && /* @__PURE__ */ jsxs3("section", { className: "rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 shadow-sm shadow-emerald-900/5", children: [
+        /* @__PURE__ */ jsxs3("div", { className: "flex items-center justify-between gap-3", children: [
+          /* @__PURE__ */ jsx4("span", { className: "text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700", children: "AI-Reviewed Description" }),
+          /* @__PURE__ */ jsx4(
             "button",
             {
               type: "button",
@@ -3114,43 +2916,43 @@ function DevNotesForm({
             }
           )
         ] }),
-        /* @__PURE__ */ jsx5("p", { className: "mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-800", children: aiDescription }),
-        /* @__PURE__ */ jsx5("div", { className: "mt-3 flex items-center justify-end", children: /* @__PURE__ */ jsxs4(
+        /* @__PURE__ */ jsx4("p", { className: "mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-800", children: aiDescription }),
+        /* @__PURE__ */ jsx4("div", { className: "mt-3 flex items-center justify-end", children: /* @__PURE__ */ jsxs3(
           "button",
           {
             type: "button",
             className: "inline-flex items-center gap-1 rounded-full border border-violet-200 bg-white px-3 py-1.5 text-xs font-medium text-violet-700 transition hover:border-violet-300 hover:bg-violet-50",
             onClick: handleCopyAiPayload,
             children: [
-              /* @__PURE__ */ jsx5(FiCopy, { size: 12 }),
+              /* @__PURE__ */ jsx4(FiCopy, { size: 12 }),
               "Copy AI Fix Payload"
             ]
           }
         ) }),
-        showAiPayloadCopied && /* @__PURE__ */ jsx5("p", { className: "mt-2 text-right text-xs font-medium text-violet-700", children: "AI payload copied!" })
+        showAiPayloadCopied && /* @__PURE__ */ jsx4("p", { className: "mt-2 text-right text-xs font-medium text-violet-700", children: "AI payload copied!" })
       ] }),
-      /* @__PURE__ */ jsxs4("section", { className: SECTION_CARD_CLASS, children: [
-        /* @__PURE__ */ jsxs4("div", { className: "mb-4 flex items-center justify-between gap-3", children: [
-          /* @__PURE__ */ jsx5("span", { className: sectionLabelClass, children: "Workflow" }),
-          /* @__PURE__ */ jsx5("span", { className: "text-xs text-slate-500", children: "Search or add where allowed" })
+      /* @__PURE__ */ jsxs3("section", { className: SECTION_CARD_CLASS, children: [
+        /* @__PURE__ */ jsxs3("div", { className: "mb-4 flex items-center justify-between gap-3", children: [
+          /* @__PURE__ */ jsx4("span", { className: sectionLabelClass, children: "Workflow" }),
+          /* @__PURE__ */ jsx4("span", { className: "text-xs text-slate-500", children: "Search or add where allowed" })
         ] }),
-        /* @__PURE__ */ jsxs4("div", { className: "grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3", children: [
-          /* @__PURE__ */ jsxs4("div", { className: isSuperscriptLabels ? "relative" : "", children: [
-            /* @__PURE__ */ jsx5("label", { className: floatingLabelClass(isSuperscriptLabels), children: "Type(s)" }),
-            /* @__PURE__ */ jsxs4("div", { className: "relative", children: [
-              /* @__PURE__ */ jsxs4("div", { className: FIELD_SURFACE_CLASS, children: [
-                /* @__PURE__ */ jsxs4("div", { className: "flex items-center gap-2 px-3 py-2", children: [
-                  /* @__PURE__ */ jsx5(FiSearch, { size: 14, className: "shrink-0 text-slate-400" }),
-                  /* @__PURE__ */ jsx5("div", { className: "h-4 w-px bg-slate-200" })
+        /* @__PURE__ */ jsxs3("div", { className: "grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3", children: [
+          /* @__PURE__ */ jsxs3("div", { className: isSuperscriptLabels ? "relative" : "", children: [
+            /* @__PURE__ */ jsx4("label", { className: floatingLabelClass(isSuperscriptLabels), children: "Type(s)" }),
+            /* @__PURE__ */ jsxs3("div", { className: "relative", children: [
+              /* @__PURE__ */ jsxs3("div", { className: FIELD_SURFACE_CLASS, children: [
+                /* @__PURE__ */ jsxs3("div", { className: "flex items-center gap-2 px-3 py-2", children: [
+                  /* @__PURE__ */ jsx4(FiSearch, { size: 14, className: "shrink-0 text-slate-400" }),
+                  /* @__PURE__ */ jsx4("div", { className: "h-4 w-px bg-slate-200" })
                 ] }),
-                /* @__PURE__ */ jsxs4("div", { className: "flex min-h-[40px] flex-wrap items-center gap-1 px-3 pb-2 pt-0", children: [
-                  selectedTypes.map((typeId) => /* @__PURE__ */ jsxs4(
+                /* @__PURE__ */ jsxs3("div", { className: "flex min-h-[40px] flex-wrap items-center gap-1 px-3 pb-2 pt-0", children: [
+                  selectedTypes.map((typeId) => /* @__PURE__ */ jsxs3(
                     "span",
                     {
                       className: "inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700",
                       children: [
                         getTypeName(typeId),
-                        /* @__PURE__ */ jsx5(
+                        /* @__PURE__ */ jsx4(
                           "button",
                           {
                             type: "button",
@@ -3163,7 +2965,7 @@ function DevNotesForm({
                     },
                     typeId
                   )),
-                  /* @__PURE__ */ jsx5(
+                  /* @__PURE__ */ jsx4(
                     "input",
                     {
                       ref: typeInputRef,
@@ -3181,27 +2983,27 @@ function DevNotesForm({
                       onKeyDown: handleTypeKeyDown
                     }
                   ),
-                  /* @__PURE__ */ jsx5("span", { className: "shrink-0 text-[11px] text-slate-400", children: "Enter to select" })
+                  /* @__PURE__ */ jsx4("span", { className: "shrink-0 text-[11px] text-slate-400", children: "Enter to select" })
                 ] })
               ] }),
-              showTypeDropdown && /* @__PURE__ */ jsxs4("div", { className: "absolute left-0 right-0 top-[calc(100%+6px)] z-20 max-h-[220px] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10", children: [
+              showTypeDropdown && /* @__PURE__ */ jsxs3("div", { className: "absolute left-0 right-0 top-[calc(100%+6px)] z-20 max-h-[220px] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10", children: [
                 availableTypes.filter(
                   (type) => type.name.toLowerCase().includes(newTypeName.toLowerCase())
-                ).map((type) => /* @__PURE__ */ jsxs4(
+                ).map((type) => /* @__PURE__ */ jsxs3(
                   "div",
                   {
                     className: "flex items-center justify-between px-3 py-2.5 cursor-pointer transition hover:bg-slate-50",
                     onMouseDown: () => handleTypeSelect(type.id),
                     children: [
-                      /* @__PURE__ */ jsx5("span", { className: "text-sm text-slate-700", children: type.name }),
-                      !type.is_default && /* @__PURE__ */ jsx5(
+                      /* @__PURE__ */ jsx4("span", { className: "text-sm text-slate-700", children: type.name }),
+                      !type.is_default && /* @__PURE__ */ jsx4(
                         "button",
                         {
                           type: "button",
                           className: "rounded-full p-1 text-rose-500 transition hover:bg-rose-50 hover:text-rose-700",
                           "aria-label": "Delete type",
                           onMouseDown: (e) => handleDeleteType(type.id, e),
-                          children: /* @__PURE__ */ jsx5(FiTrash22, { size: 12 })
+                          children: /* @__PURE__ */ jsx4(FiTrash22, { size: 12 })
                         }
                       )
                     ]
@@ -3210,7 +3012,7 @@ function DevNotesForm({
                 )),
                 newTypeName.trim() && !taskTypes.some(
                   (t) => t.name.toLowerCase() === newTypeName.trim().toLowerCase()
-                ) && /* @__PURE__ */ jsxs4(
+                ) && /* @__PURE__ */ jsxs3(
                   "div",
                   {
                     className: "cursor-pointer border-t border-slate-100 bg-slate-50 px-3 py-2.5 text-sm text-violet-700 transition hover:bg-violet-50",
@@ -3222,16 +3024,16 @@ function DevNotesForm({
                     ]
                   }
                 ),
-                availableTypes.length === 0 && !newTypeName.trim() && /* @__PURE__ */ jsx5("div", { className: "px-3 py-2.5 text-sm text-slate-500", children: "No more types available" })
+                availableTypes.length === 0 && !newTypeName.trim() && /* @__PURE__ */ jsx4("div", { className: "px-3 py-2.5 text-sm text-slate-500", children: "No more types available" })
               ] }),
-              pendingTypeName && /* @__PURE__ */ jsx5("div", { className: "absolute left-0 top-[calc(100%+8px)] z-30 rounded-2xl border border-amber-200 bg-white p-3 shadow-xl shadow-slate-900/10", children: /* @__PURE__ */ jsxs4("div", { className: "flex flex-col gap-3", children: [
-                /* @__PURE__ */ jsxs4("p", { className: "text-xs font-medium text-slate-700", children: [
+              pendingTypeName && /* @__PURE__ */ jsx4("div", { className: "absolute left-0 top-[calc(100%+8px)] z-30 rounded-2xl border border-amber-200 bg-white p-3 shadow-xl shadow-slate-900/10", children: /* @__PURE__ */ jsxs3("div", { className: "flex flex-col gap-3", children: [
+                /* @__PURE__ */ jsxs3("p", { className: "text-xs font-medium text-slate-700", children: [
                   'Add "',
                   pendingTypeName,
                   '"? Press Shift+Enter or approve.'
                 ] }),
-                /* @__PURE__ */ jsxs4("div", { className: "flex justify-end gap-2", children: [
-                  /* @__PURE__ */ jsx5(
+                /* @__PURE__ */ jsxs3("div", { className: "flex justify-end gap-2", children: [
+                  /* @__PURE__ */ jsx4(
                     "button",
                     {
                       type: "button",
@@ -3240,7 +3042,7 @@ function DevNotesForm({
                       children: "Cancel"
                     }
                   ),
-                  /* @__PURE__ */ jsx5(
+                  /* @__PURE__ */ jsx4(
                     "button",
                     {
                       type: "button",
@@ -3253,7 +3055,7 @@ function DevNotesForm({
               ] }) })
             ] })
           ] }),
-          /* @__PURE__ */ jsx5(
+          /* @__PURE__ */ jsx4(
             SearchableSingleSelect,
             {
               label: "Severity",
@@ -3267,10 +3069,10 @@ function DevNotesForm({
               isSuperscript: isSuperscriptLabels
             }
           ),
-          isAdmin && /* @__PURE__ */ jsxs4("div", { className: isSuperscriptLabels ? "relative" : "", children: [
-            /* @__PURE__ */ jsx5("label", { className: floatingLabelClass(isSuperscriptLabels), children: "Assignment & Workflow" }),
-            /* @__PURE__ */ jsxs4("div", { className: "space-y-3", children: [
-              /* @__PURE__ */ jsx5(
+          isAdmin && /* @__PURE__ */ jsxs3("div", { className: isSuperscriptLabels ? "relative" : "", children: [
+            /* @__PURE__ */ jsx4("label", { className: floatingLabelClass(isSuperscriptLabels), children: "Assignment & Workflow" }),
+            /* @__PURE__ */ jsxs3("div", { className: "space-y-3", children: [
+              /* @__PURE__ */ jsx4(
                 SearchableSingleSelect,
                 {
                   label: "Assignee",
@@ -3281,7 +3083,7 @@ function DevNotesForm({
                   isSuperscript: isSuperscriptLabels
                 }
               ),
-              existingReport && (statusValue === "Closed" || statusValue === "Resolved") && /* @__PURE__ */ jsx5(
+              existingReport && (statusValue === "Closed" || statusValue === "Resolved") && /* @__PURE__ */ jsx4(
                 SearchableSingleSelect,
                 {
                   label: "Resolved By",
@@ -3294,18 +3096,18 @@ function DevNotesForm({
               )
             ] })
           ] }),
-          /* @__PURE__ */ jsxs4("div", { className: isSuperscriptLabels ? "relative" : "", children: [
-            /* @__PURE__ */ jsx5("label", { className: floatingLabelClass(isSuperscriptLabels), children: "Task List" }),
-            /* @__PURE__ */ jsxs4("div", { className: "relative", children: [
-              /* @__PURE__ */ jsxs4("div", { className: FIELD_SURFACE_CLASS, children: [
-                /* @__PURE__ */ jsxs4("div", { className: "flex items-center gap-2 px-3 py-2", children: [
-                  /* @__PURE__ */ jsx5(FiSearch, { size: 14, className: "shrink-0 text-slate-400" }),
-                  /* @__PURE__ */ jsx5("div", { className: "h-4 w-px bg-slate-200" })
+          /* @__PURE__ */ jsxs3("div", { className: isSuperscriptLabels ? "relative" : "", children: [
+            /* @__PURE__ */ jsx4("label", { className: floatingLabelClass(isSuperscriptLabels), children: "Task List" }),
+            /* @__PURE__ */ jsxs3("div", { className: "relative", children: [
+              /* @__PURE__ */ jsxs3("div", { className: FIELD_SURFACE_CLASS, children: [
+                /* @__PURE__ */ jsxs3("div", { className: "flex items-center gap-2 px-3 py-2", children: [
+                  /* @__PURE__ */ jsx4(FiSearch, { size: 14, className: "shrink-0 text-slate-400" }),
+                  /* @__PURE__ */ jsx4("div", { className: "h-4 w-px bg-slate-200" })
                 ] }),
-                /* @__PURE__ */ jsxs4("div", { className: "flex min-h-[40px] flex-wrap items-center gap-1 px-3 pb-2 pt-0", children: [
-                  taskListId && /* @__PURE__ */ jsxs4("span", { className: "inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700", children: [
+                /* @__PURE__ */ jsxs3("div", { className: "flex min-h-[40px] flex-wrap items-center gap-1 px-3 pb-2 pt-0", children: [
+                  taskListId && /* @__PURE__ */ jsxs3("span", { className: "inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700", children: [
                     getTaskListName(taskListId),
-                    /* @__PURE__ */ jsx5(
+                    /* @__PURE__ */ jsx4(
                       "button",
                       {
                         type: "button",
@@ -3315,7 +3117,7 @@ function DevNotesForm({
                       }
                     )
                   ] }),
-                  /* @__PURE__ */ jsx5(
+                  /* @__PURE__ */ jsx4(
                     "input",
                     {
                       ref: taskListInputRef,
@@ -3333,33 +3135,33 @@ function DevNotesForm({
                       onKeyDown: handleTaskListKeyDown
                     }
                   ),
-                  /* @__PURE__ */ jsx5("span", { className: "shrink-0 text-[11px] text-slate-400", children: "Enter to select" })
+                  /* @__PURE__ */ jsx4("span", { className: "shrink-0 text-[11px] text-slate-400", children: "Enter to select" })
                 ] })
               ] }),
-              showTaskListDropdown && /* @__PURE__ */ jsxs4("div", { className: "absolute left-0 right-0 top-[calc(100%+6px)] z-20 max-h-[220px] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10", children: [
+              showTaskListDropdown && /* @__PURE__ */ jsxs3("div", { className: "absolute left-0 right-0 top-[calc(100%+6px)] z-20 max-h-[220px] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10", children: [
                 taskLists.filter(
                   (list) => list.name.toLowerCase().includes(taskListSearchTerm.toLowerCase())
-                ).map((list) => /* @__PURE__ */ jsxs4(
+                ).map((list) => /* @__PURE__ */ jsxs3(
                   "div",
                   {
                     className: `flex items-center justify-between px-3 py-2.5 cursor-pointer transition hover:bg-slate-50 ${list.id === taskListId ? "bg-slate-50" : ""}`,
                     onMouseDown: () => handleTaskListSelect(list.id),
                     children: [
-                      /* @__PURE__ */ jsx5(
+                      /* @__PURE__ */ jsx4(
                         "span",
                         {
                           className: `text-sm text-slate-700 ${list.id === taskListId ? "font-medium" : ""}`,
                           children: list.name
                         }
                       ),
-                      list.is_default && /* @__PURE__ */ jsx5("span", { className: "rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500", children: "Default" })
+                      list.is_default && /* @__PURE__ */ jsx4("span", { className: "rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500", children: "Default" })
                     ]
                   },
                   list.id
                 )),
                 taskListSearchTerm.trim() && !taskLists.some(
                   (list) => list.name.toLowerCase() === taskListSearchTerm.trim().toLowerCase()
-                ) && /* @__PURE__ */ jsxs4(
+                ) && /* @__PURE__ */ jsxs3(
                   "div",
                   {
                     className: "cursor-pointer border-t border-slate-100 bg-slate-50 px-3 py-2.5 text-sm text-violet-700 transition hover:bg-violet-50",
@@ -3371,16 +3173,16 @@ function DevNotesForm({
                     ]
                   }
                 ),
-                taskLists.length === 0 && !taskListSearchTerm.trim() && /* @__PURE__ */ jsx5("div", { className: "px-3 py-2.5 text-sm text-slate-500", children: "No task lists available" })
+                taskLists.length === 0 && !taskListSearchTerm.trim() && /* @__PURE__ */ jsx4("div", { className: "px-3 py-2.5 text-sm text-slate-500", children: "No task lists available" })
               ] }),
-              pendingTaskListName && /* @__PURE__ */ jsx5("div", { className: "absolute left-0 top-[calc(100%+8px)] z-30 rounded-2xl border border-amber-200 bg-white p-3 shadow-xl shadow-slate-900/10", children: /* @__PURE__ */ jsxs4("div", { className: "flex flex-col gap-3", children: [
-                /* @__PURE__ */ jsxs4("p", { className: "text-xs font-medium text-slate-700", children: [
+              pendingTaskListName && /* @__PURE__ */ jsx4("div", { className: "absolute left-0 top-[calc(100%+8px)] z-30 rounded-2xl border border-amber-200 bg-white p-3 shadow-xl shadow-slate-900/10", children: /* @__PURE__ */ jsxs3("div", { className: "flex flex-col gap-3", children: [
+                /* @__PURE__ */ jsxs3("p", { className: "text-xs font-medium text-slate-700", children: [
                   'Add "',
                   pendingTaskListName,
                   '"? Press Shift+Enter or approve.'
                 ] }),
-                /* @__PURE__ */ jsxs4("div", { className: "flex justify-end gap-2", children: [
-                  /* @__PURE__ */ jsx5(
+                /* @__PURE__ */ jsxs3("div", { className: "flex justify-end gap-2", children: [
+                  /* @__PURE__ */ jsx4(
                     "button",
                     {
                       type: "button",
@@ -3389,7 +3191,7 @@ function DevNotesForm({
                       children: "Cancel"
                     }
                   ),
-                  /* @__PURE__ */ jsx5(
+                  /* @__PURE__ */ jsx4(
                     "button",
                     {
                       type: "button",
@@ -3402,10 +3204,10 @@ function DevNotesForm({
               ] }) })
             ] })
           ] }),
-          /* @__PURE__ */ jsxs4("div", { className: isSuperscriptLabels ? "relative" : "", children: [
-            /* @__PURE__ */ jsx5("label", { className: floatingLabelClass(isSuperscriptLabels), children: "Page URL" }),
-            /* @__PURE__ */ jsx5("div", { className: FIELD_SURFACE_CLASS, children: /* @__PURE__ */ jsxs4("div", { className: "relative flex items-center", children: [
-              /* @__PURE__ */ jsx5(
+          /* @__PURE__ */ jsxs3("div", { className: isSuperscriptLabels ? "relative" : "", children: [
+            /* @__PURE__ */ jsx4("label", { className: floatingLabelClass(isSuperscriptLabels), children: "Page URL" }),
+            /* @__PURE__ */ jsx4("div", { className: FIELD_SURFACE_CLASS, children: /* @__PURE__ */ jsxs3("div", { className: "relative flex items-center", children: [
+              /* @__PURE__ */ jsx4(
                 "input",
                 {
                   type: "text",
@@ -3415,7 +3217,7 @@ function DevNotesForm({
                   readOnly: !existingReport
                 }
               ),
-              /* @__PURE__ */ jsx5(
+              /* @__PURE__ */ jsx4(
                 "a",
                 {
                   href: composePageUrlWithTab(reportPageUrl),
@@ -3423,31 +3225,31 @@ function DevNotesForm({
                   rel: "noreferrer",
                   className: "absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700",
                   title: "Open in new tab",
-                  children: /* @__PURE__ */ jsx5(FiExternalLink, { size: 14 })
+                  children: /* @__PURE__ */ jsx4(FiExternalLink, { size: 14 })
                 }
               )
             ] }) })
           ] })
         ] })
       ] }),
-      existingReport && /* @__PURE__ */ jsxs4("section", { className: "rounded-2xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-900/5", children: [
-        /* @__PURE__ */ jsxs4("div", { className: "mb-3 flex items-center justify-between gap-3", children: [
-          /* @__PURE__ */ jsx5("span", { className: sectionLabelClass, children: "Discussion" }),
-          /* @__PURE__ */ jsx5("span", { className: "text-xs text-slate-500", children: "Visible to collaborators with access" })
+      existingReport && /* @__PURE__ */ jsxs3("section", { className: "rounded-2xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-900/5", children: [
+        /* @__PURE__ */ jsxs3("div", { className: "mb-3 flex items-center justify-between gap-3", children: [
+          /* @__PURE__ */ jsx4("span", { className: sectionLabelClass, children: "Discussion" }),
+          /* @__PURE__ */ jsx4("span", { className: "text-xs text-slate-500", children: "Visible to collaborators with access" })
         ] }),
-        /* @__PURE__ */ jsx5(DevNotesDiscussion, { report: existingReport })
+        /* @__PURE__ */ jsx4(DevNotesDiscussion, { report: existingReport })
       ] }),
-      /* @__PURE__ */ jsxs4("div", { className: "flex flex-col-reverse gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between", children: [
-        /* @__PURE__ */ jsxs4("div", { className: "relative flex flex-wrap items-center gap-3", children: [
-          isAdmin && /* @__PURE__ */ jsx5(
+      /* @__PURE__ */ jsxs3("div", { className: "flex flex-col-reverse gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between", children: [
+        /* @__PURE__ */ jsxs3("div", { className: "relative flex flex-wrap items-center gap-3", children: [
+          isAdmin && /* @__PURE__ */ jsx4(
             "span",
             {
               className: `inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${aiReady ? "bg-violet-100 text-violet-800" : "bg-slate-100 text-slate-500"}`,
               children: aiReady ? "AI Ready" : "AI Not Ready"
             }
           ),
-          existingReport && (onDelete || onArchive) ? /* @__PURE__ */ jsxs4(Fragment2, { children: [
-            onArchive && /* @__PURE__ */ jsx5(
+          existingReport && (onDelete || onArchive) ? /* @__PURE__ */ jsxs3(Fragment2, { children: [
+            onArchive && /* @__PURE__ */ jsx4(
               "button",
               {
                 type: "button",
@@ -3456,10 +3258,10 @@ function DevNotesForm({
                 disabled: loading,
                 "aria-label": "Archive",
                 title: "Archive",
-                children: /* @__PURE__ */ jsx5(FiArchive, { size: 16 })
+                children: /* @__PURE__ */ jsx4(FiArchive, { size: 16 })
               }
             ),
-            onDelete && /* @__PURE__ */ jsx5(
+            onDelete && /* @__PURE__ */ jsx4(
               "button",
               {
                 type: "button",
@@ -3468,13 +3270,13 @@ function DevNotesForm({
                 disabled: loading,
                 "aria-label": "Delete",
                 title: "Delete",
-                children: /* @__PURE__ */ jsx5(FiTrash22, { size: 16 })
+                children: /* @__PURE__ */ jsx4(FiTrash22, { size: 16 })
               }
             ),
-            pendingDestructiveAction && /* @__PURE__ */ jsxs4("div", { className: "absolute bottom-[calc(100%+8px)] left-0 z-30 min-w-[260px] rounded-2xl border border-slate-200 bg-white p-3 shadow-xl shadow-slate-900/10", children: [
-              /* @__PURE__ */ jsx5("p", { className: "text-sm text-slate-800", children: pendingDestructiveAction === "delete" ? "Delete this dev note permanently?" : "Archive this dev note by setting its status to Closed?" }),
-              /* @__PURE__ */ jsxs4("div", { className: "mt-3 flex justify-end gap-2", children: [
-                /* @__PURE__ */ jsx5(
+            pendingDestructiveAction && /* @__PURE__ */ jsxs3("div", { className: "absolute bottom-[calc(100%+8px)] left-0 z-30 min-w-[260px] rounded-2xl border border-slate-200 bg-white p-3 shadow-xl shadow-slate-900/10", children: [
+              /* @__PURE__ */ jsx4("p", { className: "text-sm text-slate-800", children: pendingDestructiveAction === "delete" ? "Delete this dev note permanently?" : "Archive this dev note by setting its status to Closed?" }),
+              /* @__PURE__ */ jsxs3("div", { className: "mt-3 flex justify-end gap-2", children: [
+                /* @__PURE__ */ jsx4(
                   "button",
                   {
                     type: "button",
@@ -3483,7 +3285,7 @@ function DevNotesForm({
                     children: "Cancel"
                   }
                 ),
-                /* @__PURE__ */ jsx5(
+                /* @__PURE__ */ jsx4(
                   "button",
                   {
                     type: "button",
@@ -3504,8 +3306,8 @@ function DevNotesForm({
             ] })
           ] }) : null
         ] }),
-        /* @__PURE__ */ jsxs4("div", { className: "flex items-center gap-2", children: [
-          /* @__PURE__ */ jsx5(
+        /* @__PURE__ */ jsxs3("div", { className: "flex items-center gap-2", children: [
+          /* @__PURE__ */ jsx4(
             "button",
             {
               type: "button",
@@ -3513,7 +3315,7 @@ function DevNotesForm({
               onClick: onCancel,
               "aria-label": "Cancel",
               title: "Cancel",
-              children: /* @__PURE__ */ jsx5(FiX2, { size: 16 })
+              children: /* @__PURE__ */ jsx4(FiX2, { size: 16 })
             }
           ),
           renderStatusSaveActions("footer")
@@ -3523,712 +3325,8 @@ function DevNotesForm({
   ] });
 }
 
-// src/DevNotesDot.tsx
-import {
-  useState as useState8,
-  useCallback as useCallback6,
-  useEffect as useEffect8,
-  useRef as useRef7
-} from "react";
-import {
-  FiAlertCircle as FiAlertCircle2,
-  FiLoader as FiLoader2,
-  FiEye as FiEye3,
-  FiCheckCircle as FiCheckCircle2,
-  FiArchive as FiArchive2,
-  FiMove,
-  FiCheck as FiCheck3,
-  FiX as FiX3
-} from "react-icons/fi";
-
-// src/hooks/useBugReportPosition.ts
-import { useState as useState7, useEffect as useEffect7, useCallback as useCallback5 } from "react";
-var subscribers = /* @__PURE__ */ new Set();
-var cleanupGlobalListeners = null;
-var rafId = null;
-var schedulePositionUpdate = () => {
-  if (typeof window === "undefined") return;
-  if (rafId !== null) return;
-  rafId = window.requestAnimationFrame(() => {
-    rafId = null;
-    subscribers.forEach((subscriber) => {
-      try {
-        subscriber();
-      } catch {
-      }
-    });
-  });
-};
-var ensureGlobalListeners = () => {
-  if (cleanupGlobalListeners || typeof window === "undefined" || typeof document === "undefined") {
-    return;
-  }
-  const handleUpdate = () => {
-    schedulePositionUpdate();
-  };
-  const observer = new MutationObserver(handleUpdate);
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true
-  });
-  window.addEventListener("resize", handleUpdate);
-  window.addEventListener("scroll", handleUpdate, true);
-  document.addEventListener("scroll", handleUpdate, true);
-  cleanupGlobalListeners = () => {
-    window.removeEventListener("resize", handleUpdate);
-    window.removeEventListener("scroll", handleUpdate, true);
-    document.removeEventListener("scroll", handleUpdate, true);
-    observer.disconnect();
-    if (rafId !== null) {
-      cancelAnimationFrame(rafId);
-      rafId = null;
-    }
-    cleanupGlobalListeners = null;
-  };
-};
-var subscribeToPositionUpdates = (subscriber) => {
-  subscribers.add(subscriber);
-  ensureGlobalListeners();
-  return () => {
-    subscribers.delete(subscriber);
-    if (subscribers.size === 0 && cleanupGlobalListeners) {
-      cleanupGlobalListeners();
-    }
-  };
-};
-var useBugReportPosition = (report) => {
-  const calculate = useCallback5(() => {
-    if (!report) return null;
-    return resolveBugReportCoordinates(report);
-  }, [report]);
-  const [position, setPosition] = useState7(() => calculate());
-  useEffect7(() => {
-    setPosition(calculate());
-  }, [calculate]);
-  useEffect7(() => {
-    if (!report) return void 0;
-    return subscribeToPositionUpdates(() => {
-      setPosition(calculate());
-    });
-  }, [report, calculate]);
-  return position;
-};
-
-// src/DevNotesDot.tsx
-import { Fragment as Fragment3, jsx as jsx6, jsxs as jsxs5 } from "react/jsx-runtime";
-var statusConfig = {
-  Open: { color: "red", bgClass: "bg-red-500", bgHoverClass: "bg-red-600", icon: FiAlertCircle2 },
-  "In Progress": { color: "blue", bgClass: "bg-blue-500", bgHoverClass: "bg-blue-600", icon: FiLoader2 },
-  "Needs Review": { color: "purple", bgClass: "bg-purple-500", bgHoverClass: "bg-purple-600", icon: FiEye3 },
-  Resolved: { color: "green", bgClass: "bg-green-500", bgHoverClass: "bg-green-600", icon: FiCheckCircle2 },
-  Closed: { color: "gray", bgClass: "bg-gray-500", bgHoverClass: "bg-gray-600", icon: FiArchive2 }
-};
-var severityBadgeColors = {
-  Critical: "bg-red-100 text-red-800",
-  High: "bg-orange-100 text-orange-800",
-  Medium: "bg-yellow-100 text-yellow-800",
-  Low: "bg-green-100 text-green-800"
-};
-var MIN_DRAG_DISTANCE = 5;
-var DEFAULT_DOT_Z_INDEX = 9998;
-var resolveAttachedElementZIndex = (selector) => {
-  if (!selector || typeof document === "undefined" || typeof window === "undefined") return null;
-  const targetElement = document.querySelector(selector);
-  if (!targetElement) return null;
-  let currentElement = targetElement;
-  while (currentElement && currentElement !== document.body && currentElement !== document.documentElement) {
-    const computed = window.getComputedStyle(currentElement).zIndex;
-    if (computed !== "auto") {
-      const parsed = Number.parseInt(computed, 10);
-      if (!Number.isNaN(parsed)) {
-        return parsed;
-      }
-    }
-    currentElement = currentElement.parentElement;
-  }
-  return 0;
-};
-function DevNotesDot({ report }) {
-  const { deleteTask, taskTypes, updateTask, compensate } = useDevNotes();
-  const [isFormOpen, setIsFormOpen] = useState8(false);
-  const [isDragging, setIsDragging] = useState8(false);
-  const [dragPosition, setDragPosition] = useState8(null);
-  const [pendingMove, setPendingMove] = useState8(null);
-  const [showTooltip, setShowTooltip] = useState8(false);
-  const dragStartRef = useRef7(null);
-  const didDragRef = useRef7(false);
-  const dotRef = useRef7(null);
-  const handleDelete = async () => {
-    const success = await deleteTask(report.id);
-    if (success) {
-      setIsFormOpen(false);
-    }
-  };
-  const getTypeNames = useCallback6(() => {
-    return report.types.map((typeId) => {
-      const type = taskTypes.find((t) => t.id === typeId);
-      return type?.name || "Unknown";
-    }).join(", ");
-  }, [report.types, taskTypes]);
-  const persistPosition = useCallback6(
-    async (clientX, clientY) => {
-      const payload = calculateBugPositionFromPoint({
-        clientX,
-        clientY,
-        elementsToIgnore: [dotRef.current]
-      });
-      await updateTask(report.id, {
-        x_position: payload.x,
-        y_position: payload.y,
-        target_selector: payload.targetSelector,
-        target_relative_x: payload.targetRelativeX,
-        target_relative_y: payload.targetRelativeY,
-        page_url: normalizePageUrl(`${window.location.pathname}${window.location.search}`)
-      });
-    },
-    [report.id, updateTask]
-  );
-  const anchoredPosition = useBugReportPosition(report);
-  const resolvedPosition = anchoredPosition ?? resolveBugReportCoordinates(report);
-  const handleDragStart = useCallback6(
-    (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      didDragRef.current = false;
-      const currentPosition = dragPosition || resolvedPosition;
-      if (!currentPosition) return;
-      dragStartRef.current = {
-        x: event.clientX,
-        y: event.clientY,
-        dotX: currentPosition.x,
-        dotY: currentPosition.y,
-        hasMoved: false
-      };
-      setIsDragging(true);
-      setDragPosition(currentPosition);
-    },
-    [dragPosition, resolvedPosition]
-  );
-  const handleDragMove = useCallback6(
-    (event) => {
-      if (!isDragging || !dragStartRef.current) return;
-      const deltaX = event.clientX - dragStartRef.current.x;
-      const deltaY = event.clientY - dragStartRef.current.y;
-      if (!dragStartRef.current.hasMoved && Math.sqrt(deltaX * deltaX + deltaY * deltaY) > MIN_DRAG_DISTANCE) {
-        dragStartRef.current.hasMoved = true;
-      }
-      setDragPosition({
-        x: dragStartRef.current.dotX + deltaX,
-        y: dragStartRef.current.dotY + deltaY
-      });
-    },
-    [isDragging]
-  );
-  const handleDragEnd = useCallback6(
-    (event) => {
-      if (!isDragging || !dragStartRef.current) return;
-      const hasMoved = dragStartRef.current.hasMoved;
-      didDragRef.current = hasMoved;
-      setIsDragging(false);
-      dragStartRef.current = null;
-      if (hasMoved && event) {
-        setPendingMove({ clientX: event.clientX, clientY: event.clientY });
-      } else {
-        setDragPosition(null);
-        if (!pendingMove) {
-          setIsFormOpen(true);
-        }
-      }
-    },
-    [isDragging, pendingMove]
-  );
-  const confirmMove = useCallback6(async () => {
-    if (!pendingMove) return;
-    await persistPosition(pendingMove.clientX, pendingMove.clientY);
-    setPendingMove(null);
-    setDragPosition(null);
-  }, [pendingMove, persistPosition]);
-  const cancelMove = useCallback6(() => {
-    setPendingMove(null);
-    setDragPosition(null);
-  }, []);
-  useEffect8(() => {
-    if (!isDragging) return void 0;
-    window.addEventListener("mousemove", handleDragMove);
-    window.addEventListener("mouseup", handleDragEnd);
-    return () => {
-      window.removeEventListener("mousemove", handleDragMove);
-      window.removeEventListener("mouseup", handleDragEnd);
-    };
-  }, [isDragging, handleDragMove, handleDragEnd]);
-  if (!resolvedPosition && !dragPosition) {
-    return null;
-  }
-  const displayPosition = dragPosition || resolvedPosition;
-  const attachedElementZIndex = resolveAttachedElementZIndex(report.target_selector);
-  const dotZIndex = attachedElementZIndex !== null ? attachedElementZIndex + 1 : DEFAULT_DOT_Z_INDEX;
-  const config = statusConfig[report.status] || statusConfig.Open;
-  const StatusIcon = config.icon;
-  const handleKeyDown = (event) => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      setIsFormOpen(true);
-    }
-  };
-  const creatorName = report.creator?.full_name || report.creator?.email || report.created_by || "Unknown";
-  const descriptionPreview = report.description?.trim() || "No description provided.";
-  const createdLabel = new Date(report.created_at).toLocaleString();
-  const needsApproval = !report.approved && !report.ai_ready;
-  const compensated = compensate(displayPosition.x, displayPosition.y);
-  return /* @__PURE__ */ jsxs5(Fragment3, { children: [
-    /* @__PURE__ */ jsxs5(
-      "div",
-      {
-        className: "group",
-        style: {
-          position: "absolute",
-          left: `${compensated.x}px`,
-          top: `${compensated.y}px`,
-          transform: "translate(-50%, -50%)",
-          zIndex: isDragging ? dotZIndex + 1 : dotZIndex
-        },
-        onMouseEnter: () => !isFormOpen && !isDragging && setShowTooltip(true),
-        onMouseLeave: () => setShowTooltip(false),
-        children: [
-          /* @__PURE__ */ jsxs5(
-            "div",
-            {
-              ref: dotRef,
-              className: `${isDragging ? `${config.bgHoverClass} w-8 h-8` : `${config.bgClass} w-6 h-6`} rounded-full border-[3px] border-white flex items-center justify-center transition-all duration-150 ${isDragging ? "shadow-[0_4px_16px_rgba(0,0,0,0.4)] cursor-grabbing" : "shadow-[0_2px_8px_rgba(0,0,0,0.3)] cursor-pointer hover:scale-[1.2] hover:shadow-[0_4px_12px_rgba(0,0,0,0.4)]"}`,
-              onMouseDown: handleDragStart,
-              onClick: (event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                if (didDragRef.current) {
-                  didDragRef.current = false;
-                  return;
-                }
-                if (pendingMove) return;
-                setIsFormOpen(true);
-              },
-              onKeyDown: handleKeyDown,
-              tabIndex: 0,
-              role: "button",
-              children: [
-                isDragging ? /* @__PURE__ */ jsx6(FiMove, { color: "white", size: 14 }) : /* @__PURE__ */ jsx6(StatusIcon, { color: "white", size: 12 }),
-                needsApproval && /* @__PURE__ */ jsx6("span", { className: "absolute -top-2 -right-2 text-base font-bold text-orange-500 pointer-events-none leading-none", children: "*" })
-              ]
-            }
-          ),
-          showTooltip && !pendingMove && /* @__PURE__ */ jsxs5("div", { className: "absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-[280px] bg-gray-800 text-white rounded-lg p-3 shadow-xl z-[2147483647] pointer-events-none", children: [
-            /* @__PURE__ */ jsx6("div", { className: "font-bold text-sm mb-1", children: report.title }),
-            /* @__PURE__ */ jsxs5("div", { className: "flex items-center gap-2 mb-1 flex-wrap", children: [
-              /* @__PURE__ */ jsx6("span", { className: `text-xs px-1.5 py-0.5 rounded ${severityBadgeColors[report.severity] || "bg-gray-100 text-gray-800"}`, children: report.severity }),
-              /* @__PURE__ */ jsxs5("span", { className: `text-xs px-1.5 py-0.5 rounded flex items-center gap-1 ${config.color === "red" ? "bg-red-100 text-red-800" : config.color === "blue" ? "bg-blue-100 text-blue-800" : config.color === "purple" ? "bg-purple-100 text-purple-800" : config.color === "green" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`, children: [
-                /* @__PURE__ */ jsx6(StatusIcon, { size: 10 }),
-                report.status
-              ] }),
-              report.approved && /* @__PURE__ */ jsx6("span", { className: "text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-800", children: "Approved" }),
-              report.ai_ready && /* @__PURE__ */ jsx6("span", { className: "text-xs px-1.5 py-0.5 rounded bg-purple-100 text-purple-800", children: "AI Ready" })
-            ] }),
-            /* @__PURE__ */ jsx6("div", { className: "text-xs text-gray-300", children: getTypeNames() }),
-            /* @__PURE__ */ jsx6("div", { className: "text-xs text-gray-200 mt-2", children: descriptionPreview }),
-            /* @__PURE__ */ jsxs5("div", { className: "text-xs text-gray-300 mt-2", children: [
-              "Created by ",
-              creatorName,
-              " on ",
-              createdLabel
-            ] }),
-            /* @__PURE__ */ jsx6("div", { className: "text-xs text-gray-400 mt-1", children: "Click to view/edit or drag to reposition" }),
-            /* @__PURE__ */ jsx6("div", { className: "absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800" })
-          ] }),
-          pendingMove && !isDragging && /* @__PURE__ */ jsxs5("div", { className: "absolute top-full left-1/2 -translate-x-1/2 mt-2 flex gap-1.5", style: { pointerEvents: "auto" }, children: [
-            /* @__PURE__ */ jsx6(
-              "button",
-              {
-                className: "w-8 h-8 rounded-full bg-green-500 hover:bg-green-600 flex items-center justify-center shadow-lg border-2 border-white cursor-pointer transition-colors",
-                onClick: (e) => {
-                  e.stopPropagation();
-                  confirmMove();
-                },
-                title: "Confirm new position",
-                children: /* @__PURE__ */ jsx6(FiCheck3, { color: "white", size: 14 })
-              }
-            ),
-            /* @__PURE__ */ jsx6(
-              "button",
-              {
-                className: "w-8 h-8 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center shadow-lg border-2 border-white cursor-pointer transition-colors",
-                onClick: (e) => {
-                  e.stopPropagation();
-                  cancelMove();
-                },
-                title: "Cancel move",
-                children: /* @__PURE__ */ jsx6(FiX3, { color: "white", size: 14 })
-              }
-            )
-          ] })
-        ]
-      }
-    ),
-    isFormOpen && /* @__PURE__ */ jsxs5(Fragment3, { children: [
-      /* @__PURE__ */ jsx6(
-        "div",
-        {
-          style: { position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)", zIndex: 9998, pointerEvents: "auto" },
-          onClick: () => setIsFormOpen(false)
-        }
-      ),
-      /* @__PURE__ */ jsx6("div", { style: { position: "absolute", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", padding: 16 }, children: /* @__PURE__ */ jsx6("div", { className: "pointer-events-auto max-h-[calc(100vh-32px)] overflow-y-auto rounded-lg shadow-xl", "data-bug-form": true, children: /* @__PURE__ */ jsx6(
-        DevNotesForm,
-        {
-          pageUrl: report.page_url,
-          xPosition: report.x_position,
-          yPosition: report.y_position,
-          targetSelector: report.target_selector ?? null,
-          targetRelativeX: report.target_relative_x ?? null,
-          targetRelativeY: report.target_relative_y ?? null,
-          existingReport: report,
-          onSave: () => setIsFormOpen(false),
-          onCancel: () => setIsFormOpen(false),
-          onDelete: handleDelete
-        }
-      ) }) })
-    ] })
-  ] });
-}
-
-// src/DevNotesOverlay.tsx
-import { Fragment as Fragment4, jsx as jsx7, jsxs as jsxs6 } from "react/jsx-runtime";
-function DevNotesOverlay({
-  openReportId,
-  onOpenReportClose
-} = {}) {
-  const {
-    isEnabled,
-    setIsEnabled,
-    showTasksAlways,
-    hideResolvedClosed,
-    tasks,
-    currentPageTasks,
-    deleteTask,
-    updateTask,
-    dotContainer,
-    compensate,
-    role,
-    user
-  } = useDevNotes();
-  const [pendingDot, setPendingDot] = useState9(null);
-  const [showPendingForm, setShowPendingForm] = useState9(false);
-  const [openedReport, setOpenedReport] = useState9(null);
-  const pendingDotRef = useRef8(null);
-  const [isDragging, setIsDragging] = useState9(false);
-  const dragStartRef = useRef8(null);
-  const didDragRef = useRef8(false);
-  const justEnabledRef = useRef8(false);
-  useEffect9(() => {
-    if (isEnabled) {
-      justEnabledRef.current = true;
-      const timer = setTimeout(() => {
-        justEnabledRef.current = false;
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-    justEnabledRef.current = false;
-    return void 0;
-  }, [isEnabled]);
-  useEffect9(() => {
-    if (openReportId) {
-      const report = tasks.find((r) => r.id === openReportId);
-      if (report) {
-        setOpenedReport(report);
-      }
-    }
-  }, [openReportId, tasks]);
-  useEffect9(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === "Escape") {
-        if (showPendingForm) {
-          setShowPendingForm(false);
-        } else if (pendingDot) {
-          setPendingDot(null);
-        } else if (isEnabled) {
-          setIsEnabled(false);
-        }
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isEnabled, setIsEnabled, pendingDot, showPendingForm]);
-  useEffect9(() => {
-    if (isEnabled && !showPendingForm) {
-      document.body.style.cursor = "crosshair";
-      return () => {
-        document.body.style.cursor = "";
-      };
-    }
-    return void 0;
-  }, [isEnabled, showPendingForm]);
-  const handleCloseOpenedReport = useCallback7(() => {
-    setOpenedReport(null);
-    onOpenReportClose?.();
-  }, [onOpenReportClose]);
-  const handleDeleteOpenedReport = useCallback7(async () => {
-    if (openedReport) {
-      await deleteTask(openedReport.id);
-      setOpenedReport(null);
-      onOpenReportClose?.();
-    }
-  }, [openedReport, deleteTask, onOpenReportClose]);
-  const handleArchiveOpenedReport = useCallback7(async () => {
-    if (!openedReport) return;
-    const archived = await updateTask(openedReport.id, {
-      status: "Closed",
-      resolved_by: openedReport.resolved_by || user.id
-    });
-    if (archived) {
-      setOpenedReport(null);
-      onOpenReportClose?.();
-    }
-  }, [openedReport, updateTask, onOpenReportClose, user.id]);
-  useEffect9(() => {
-    if (!isEnabled || showPendingForm) return void 0;
-    const handleDocumentClick = (e) => {
-      if (justEnabledRef.current) return;
-      const target = e.target;
-      if (target.closest("[data-bug-form]") || target.closest("[data-bug-dot]") || target.closest("[data-bug-menu]") || target.closest("[data-pending-dot]")) {
-        return;
-      }
-      const position = calculateBugPositionFromPoint({
-        clientX: e.clientX,
-        clientY: e.clientY
-      });
-      setPendingDot(position);
-    };
-    document.addEventListener("click", handleDocumentClick);
-    return () => document.removeEventListener("click", handleDocumentClick);
-  }, [isEnabled, showPendingForm]);
-  const handleSave = useCallback7((_report) => {
-    setPendingDot(null);
-    setShowPendingForm(false);
-  }, []);
-  const handleCancel = useCallback7(() => {
-    setPendingDot(null);
-    setShowPendingForm(false);
-  }, []);
-  const handlePendingDotClick = useCallback7((e) => {
-    e.stopPropagation();
-    if (didDragRef.current) {
-      didDragRef.current = false;
-      return;
-    }
-    setIsDragging(false);
-    setShowPendingForm(true);
-  }, []);
-  const handleDragStart = useCallback7(
-    (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (!pendingDot) return;
-      didDragRef.current = false;
-      setIsDragging(true);
-      dragStartRef.current = {
-        x: e.clientX,
-        y: e.clientY,
-        dotX: pendingDot.x,
-        dotY: pendingDot.y
-      };
-    },
-    [pendingDot]
-  );
-  const handleDragMove = useCallback7(
-    (e) => {
-      if (!isDragging || !dragStartRef.current || !pendingDot) return;
-      const deltaX = e.clientX - dragStartRef.current.x;
-      const deltaY = e.clientY - dragStartRef.current.y;
-      if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
-        didDragRef.current = true;
-      }
-      setPendingDot(
-        (prev) => prev ? {
-          ...prev,
-          x: dragStartRef.current.dotX + deltaX,
-          y: dragStartRef.current.dotY + deltaY
-        } : prev
-      );
-    },
-    [isDragging, pendingDot]
-  );
-  const handleDragEnd = useCallback7((event) => {
-    setIsDragging(false);
-    dragStartRef.current = null;
-    if (event && didDragRef.current) {
-      const position = calculateBugPositionFromPoint({
-        clientX: event.clientX,
-        clientY: event.clientY,
-        elementsToIgnore: [pendingDotRef.current]
-      });
-      setPendingDot(position);
-    }
-  }, []);
-  useEffect9(() => {
-    if (isDragging) {
-      window.addEventListener("mousemove", handleDragMove);
-      window.addEventListener("mouseup", handleDragEnd);
-      return () => {
-        window.removeEventListener("mousemove", handleDragMove);
-        window.removeEventListener("mouseup", handleDragEnd);
-      };
-    }
-    return void 0;
-  }, [isDragging, handleDragMove, handleDragEnd]);
-  const visiblePageReports = useMemo4(
-    () => currentPageTasks.filter((report) => {
-      if (hideResolvedClosed) {
-        return report.status !== "Closed" && report.status !== "Resolved";
-      }
-      return true;
-    }),
-    [currentPageTasks, hideResolvedClosed]
-  );
-  const renderOpenedReportModal = () => {
-    if (!openedReport) return null;
-    return /* @__PURE__ */ jsxs6(Fragment4, { children: [
-      /* @__PURE__ */ jsx7(
-        "div",
-        {
-          style: { position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)", zIndex: 9997, pointerEvents: "auto" },
-          onClick: handleCloseOpenedReport
-        }
-      ),
-      /* @__PURE__ */ jsx7("div", { style: { position: "absolute", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", padding: 16 }, children: /* @__PURE__ */ jsx7(
-        "div",
-        {
-          className: "pointer-events-auto max-h-[calc(100vh-32px)] overflow-y-auto rounded-lg shadow-xl",
-          "data-bug-form": true,
-          children: /* @__PURE__ */ jsx7(
-            DevNotesForm,
-            {
-              pageUrl: openedReport.page_url,
-              xPosition: openedReport.x_position,
-              yPosition: openedReport.y_position,
-              targetSelector: openedReport.target_selector ?? null,
-              targetRelativeX: openedReport.target_relative_x ?? null,
-              targetRelativeY: openedReport.target_relative_y ?? null,
-              existingReport: openedReport,
-              onSave: handleCloseOpenedReport,
-              onCancel: handleCloseOpenedReport,
-              onDelete: handleDeleteOpenedReport,
-              onArchive: handleArchiveOpenedReport
-            }
-          )
-        }
-      ) })
-    ] });
-  };
-  if (role === "none") return null;
-  if (!isEnabled) {
-    if (!showTasksAlways && !openedReport) {
-      return null;
-    }
-    return /* @__PURE__ */ jsxs6(Fragment4, { children: [
-      showTasksAlways && dotContainer && createPortal(
-        /* @__PURE__ */ jsxs6(Fragment4, { children: [
-          visiblePageReports.map((report) => /* @__PURE__ */ jsx7("div", { "data-bug-dot": true, style: { pointerEvents: "auto" }, children: /* @__PURE__ */ jsx7(DevNotesDot, { report }) }, report.id)),
-          renderOpenedReportModal()
-        ] }),
-        dotContainer
-      ),
-      !dotContainer && renderOpenedReportModal()
-    ] });
-  }
-  if (!dotContainer) return null;
-  const pendingViewport = pendingDot ? compensate(
-    pendingDot.x - (typeof window !== "undefined" ? window.scrollX : 0),
-    pendingDot.y - (typeof window !== "undefined" ? window.scrollY : 0)
-  ) : null;
-  return createPortal(
-    /* @__PURE__ */ jsxs6(Fragment4, { children: [
-      /* @__PURE__ */ jsxs6(
-        "div",
-        {
-          style: { position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)", zIndex: 9991, pointerEvents: "auto" },
-          className: "bg-red-500 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2",
-          children: [
-            pendingDot && !showPendingForm ? /* @__PURE__ */ jsx7(FiMove2, {}) : /* @__PURE__ */ jsx7(FiCrosshair, {}),
-            /* @__PURE__ */ jsx7("span", { className: "text-sm font-medium", children: pendingDot && !showPendingForm ? "Click pin to add details, or click elsewhere to reposition" : "Click anywhere to create a task" })
-          ]
-        }
-      ),
-      visiblePageReports.map((report) => /* @__PURE__ */ jsx7("div", { "data-bug-dot": true, style: { pointerEvents: "auto" }, children: /* @__PURE__ */ jsx7(DevNotesDot, { report }) }, report.id)),
-      pendingDot && pendingViewport && /* @__PURE__ */ jsx7(
-        "div",
-        {
-          "data-pending-dot": true,
-          ref: pendingDotRef,
-          className: `w-8 h-8 rounded-full border-[3px] border-white z-[9998] flex items-center justify-center transition-all duration-150 ${isDragging ? "bg-red-600 shadow-[0_4px_16px_rgba(0,0,0,0.4)] cursor-grabbing" : "bg-red-500 shadow-[0_2px_8px_rgba(0,0,0,0.3)] cursor-grab animate-devnotes-pulse hover:scale-110"}`,
-          style: {
-            position: "absolute",
-            left: `${pendingViewport.x}px`,
-            top: `${pendingViewport.y}px`,
-            transform: "translate(-50%, -50%)",
-            pointerEvents: "auto"
-          },
-          onMouseDown: handleDragStart,
-          onClick: handlePendingDotClick,
-          title: "Drag to reposition, click to add details",
-          children: /* @__PURE__ */ jsx7(FiMove2, { color: "white", size: 14 })
-        }
-      ),
-      pendingDot && /* @__PURE__ */ jsxs6(Fragment4, { children: [
-        showPendingForm && /* @__PURE__ */ jsx7(
-          "div",
-          {
-            style: { position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)", zIndex: 9997, pointerEvents: "auto" },
-            onClick: handleCancel
-          }
-        ),
-        showPendingForm && /* @__PURE__ */ jsx7("div", { style: { position: "absolute", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", padding: 16 }, children: /* @__PURE__ */ jsx7(
-          "div",
-          {
-            className: "pointer-events-auto max-h-[calc(100vh-32px)] overflow-y-auto rounded-lg shadow-xl",
-            "data-bug-form": true,
-            children: /* @__PURE__ */ jsx7(
-              DevNotesForm,
-              {
-                pageUrl: `${window.location.pathname}${window.location.search}`,
-                xPosition: pendingDot.x,
-                yPosition: pendingDot.y,
-                targetSelector: pendingDot.targetSelector,
-                targetRelativeX: pendingDot.targetRelativeX,
-                targetRelativeY: pendingDot.targetRelativeY,
-                onSave: handleSave,
-                onCancel: handleCancel
-              }
-            )
-          }
-        ) })
-      ] }),
-      openedReport && !pendingDot && renderOpenedReportModal()
-    ] }),
-    dotContainer
-  );
-}
-
-// src/DevNotesTaskListModal.tsx
-import { useEffect as useEffect11 } from "react";
-import {
-  FiSearch as FiSearch2,
-  FiExternalLink as FiExternalLink2,
-  FiChevronDown,
-  FiChevronUp,
-  FiAlertTriangle as FiAlertTriangle2,
-  FiClock as FiClock2,
-  FiX as FiX4
-} from "react-icons/fi";
-
 // src/hooks/useTaskListData.ts
-import { useState as useState10, useMemo as useMemo5, useEffect as useEffect10 } from "react";
+import { useState as useState6, useMemo as useMemo4, useEffect as useEffect6 } from "react";
 var STALE_DAYS = 7;
 var MS_PER_DAY = 24 * 60 * 60 * 1e3;
 function useTaskListData() {
@@ -4242,15 +3340,15 @@ function useTaskListData() {
     adapter,
     user
   } = useDevNotes();
-  const [searchQuery, setSearchQuery] = useState10("");
-  const [filterStatus, setFilterStatus] = useState10("all");
-  const [filterSeverity, setFilterSeverity] = useState10("all");
-  const [showClosed, setShowClosed] = useState10(false);
-  const [selectedReport, setSelectedReport] = useState10(null);
-  const [sortField, setSortField] = useState10("stale");
-  const [sortDir, setSortDir] = useState10("desc");
-  const [visibleReportIds, setVisibleReportIds] = useState10(null);
-  useEffect10(() => {
+  const [searchQuery, setSearchQuery] = useState6("");
+  const [filterStatus, setFilterStatus] = useState6("all");
+  const [filterSeverity, setFilterSeverity] = useState6("all");
+  const [showClosed, setShowClosed] = useState6(false);
+  const [selectedReport, setSelectedReport] = useState6(null);
+  const [sortField, setSortField] = useState6("stale");
+  const [sortDir, setSortDir] = useState6("desc");
+  const [visibleReportIds, setVisibleReportIds] = useState6(null);
+  useEffect6(() => {
     let cancelled = false;
     const normalize = (value) => value?.trim().toLowerCase() || null;
     const mentionTargets = /* @__PURE__ */ new Set();
@@ -4312,7 +3410,7 @@ function useTaskListData() {
       ageDays
     };
   };
-  const stats = useMemo5(() => ({
+  const stats = useMemo4(() => ({
     total: (visibleReportIds ? tasks.filter((r) => visibleReportIds.has(r.id)) : []).length,
     open: (visibleReportIds ? tasks.filter((r) => visibleReportIds.has(r.id) && r.status === "Open") : []).length,
     inProgress: (visibleReportIds ? tasks.filter((r) => visibleReportIds.has(r.id) && r.status === "In Progress") : []).length,
@@ -4320,11 +3418,11 @@ function useTaskListData() {
     resolved: (visibleReportIds ? tasks.filter((r) => visibleReportIds.has(r.id) && r.status === "Resolved") : []).length,
     closed: (visibleReportIds ? tasks.filter((r) => visibleReportIds.has(r.id) && r.status === "Closed") : []).length
   }), [tasks, visibleReportIds]);
-  const accessibleReports = useMemo5(
+  const accessibleReports = useMemo4(
     () => visibleReportIds ? tasks.filter((report) => visibleReportIds.has(report.id)) : [],
     [tasks, visibleReportIds]
   );
-  const filteredReports = useMemo5(() => {
+  const filteredReports = useMemo4(() => {
     const severityOrder = { Critical: 0, High: 1, Medium: 2, Low: 3 };
     const statusOrder = { Open: 0, "In Progress": 1, "Needs Review": 2, Resolved: 3, Closed: 4 };
     return accessibleReports.filter((r) => {
@@ -4423,7 +3521,7 @@ function useTaskListData() {
 }
 
 // src/DevNotesTaskListModal.tsx
-import { jsx as jsx8, jsxs as jsxs7 } from "react/jsx-runtime";
+import { jsx as jsx5, jsxs as jsxs4 } from "react/jsx-runtime";
 var STATUS_STYLES = {
   Open: { background: "#fee2e2", color: "#b91c1c" },
   "In Progress": { background: "#dbeafe", color: "#1d4ed8" },
@@ -4505,7 +3603,7 @@ function DevNotesTaskListModal({
     formatDate,
     tasks
   } = useTaskListData();
-  useEffect11(() => {
+  useEffect7(() => {
     if (!open) return void 0;
     const onKeyDown = (e) => {
       if (e.key === "Escape") {
@@ -4522,23 +3620,23 @@ function DevNotesTaskListModal({
   if (!open) return null;
   const SortIcon = ({ field }) => {
     if (sortField !== field) return null;
-    return sortDir === "desc" ? /* @__PURE__ */ jsx8(FiChevronDown, { size: 12 }) : /* @__PURE__ */ jsx8(FiChevronUp, { size: 12 });
+    return sortDir === "desc" ? /* @__PURE__ */ jsx5(FiChevronDown, { size: 12 }) : /* @__PURE__ */ jsx5(FiChevronUp, { size: 12 });
   };
-  const sortableHeader = (label, field, extra) => /* @__PURE__ */ jsx8(
+  const sortableHeader = (label, field, extra) => /* @__PURE__ */ jsx5(
     "th",
     {
       style: { ...thStyle, cursor: "pointer", userSelect: "none", ...extra },
       onClick: () => handleSort(field),
-      children: /* @__PURE__ */ jsxs7("span", { style: { display: "inline-flex", alignItems: "center", gap: 4 }, children: [
+      children: /* @__PURE__ */ jsxs4("span", { style: { display: "inline-flex", alignItems: "center", gap: 4 }, children: [
         label,
         " ",
-        /* @__PURE__ */ jsx8(SortIcon, { field })
+        /* @__PURE__ */ jsx5(SortIcon, { field })
       ] })
     }
   );
   const renderBody = () => {
     if (selectedReport) {
-      return /* @__PURE__ */ jsx8(
+      return /* @__PURE__ */ jsx5(
         DevNotesForm,
         {
           pageUrl: selectedReport.page_url,
@@ -4565,7 +3663,7 @@ function DevNotesTaskListModal({
       );
     }
     if (loading && tasks.length === 0 || visibleReportIds === null) {
-      return /* @__PURE__ */ jsx8("div", { style: { display: "flex", justifyContent: "center", padding: "48px 0" }, children: /* @__PURE__ */ jsx8(
+      return /* @__PURE__ */ jsx5("div", { style: { display: "flex", justifyContent: "center", padding: "48px 0" }, children: /* @__PURE__ */ jsx5(
         "div",
         {
           style: {
@@ -4579,10 +3677,10 @@ function DevNotesTaskListModal({
         }
       ) });
     }
-    return /* @__PURE__ */ jsxs7("div", { style: { display: "flex", flexDirection: "column", gap: 16 }, children: [
-      /* @__PURE__ */ jsxs7("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between" }, children: [
-        /* @__PURE__ */ jsx8("h2", { style: { fontSize: 18, fontWeight: 600, color: "#111827", margin: 0 }, children: title }),
-        /* @__PURE__ */ jsx8(
+    return /* @__PURE__ */ jsxs4("div", { style: { display: "flex", flexDirection: "column", gap: 16 }, children: [
+      /* @__PURE__ */ jsxs4("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between" }, children: [
+        /* @__PURE__ */ jsx5("h2", { style: { fontSize: 18, fontWeight: 600, color: "#111827", margin: 0 }, children: title }),
+        /* @__PURE__ */ jsx5(
           "button",
           {
             type: "button",
@@ -4597,11 +3695,11 @@ function DevNotesTaskListModal({
               cursor: "pointer",
               display: "inline-flex"
             },
-            children: /* @__PURE__ */ jsx8(FiX4, { size: 18 })
+            children: /* @__PURE__ */ jsx5(FiX3, { size: 18 })
           }
         )
       ] }),
-      /* @__PURE__ */ jsx8(
+      /* @__PURE__ */ jsx5(
         "div",
         {
           style: {
@@ -4616,7 +3714,7 @@ function DevNotesTaskListModal({
             ["Resolved", stats.resolved, "#16a34a"],
             ["Closed", stats.closed, "#6b7280"],
             ["Total", stats.total, "#374151"]
-          ].map(([label, count, color]) => /* @__PURE__ */ jsxs7(
+          ].map(([label, count, color]) => /* @__PURE__ */ jsxs4(
             "div",
             {
               style: {
@@ -4626,24 +3724,24 @@ function DevNotesTaskListModal({
                 padding: "8px 0"
               },
               children: [
-                /* @__PURE__ */ jsx8("div", { style: { fontSize: 20, fontWeight: 700, color }, children: count }),
-                /* @__PURE__ */ jsx8("div", { style: { fontSize: 10.5, color: "#6b7280" }, children: label })
+                /* @__PURE__ */ jsx5("div", { style: { fontSize: 20, fontWeight: 700, color }, children: count }),
+                /* @__PURE__ */ jsx5("div", { style: { fontSize: 10.5, color: "#6b7280" }, children: label })
               ]
             },
             label
           ))
         }
       ),
-      /* @__PURE__ */ jsxs7("div", { style: { display: "flex", flexWrap: "wrap", gap: 8 }, children: [
-        /* @__PURE__ */ jsxs7("div", { style: { position: "relative", flex: 1, minWidth: 180 }, children: [
-          /* @__PURE__ */ jsx8(
+      /* @__PURE__ */ jsxs4("div", { style: { display: "flex", flexWrap: "wrap", gap: 8 }, children: [
+        /* @__PURE__ */ jsxs4("div", { style: { position: "relative", flex: 1, minWidth: 180 }, children: [
+          /* @__PURE__ */ jsx5(
             FiSearch2,
             {
               size: 14,
               style: { position: "absolute", left: 10, top: 10, color: "#9ca3af" }
             }
           ),
-          /* @__PURE__ */ jsx8(
+          /* @__PURE__ */ jsx5(
             "input",
             {
               type: "text",
@@ -4654,37 +3752,37 @@ function DevNotesTaskListModal({
             }
           )
         ] }),
-        /* @__PURE__ */ jsxs7(
+        /* @__PURE__ */ jsxs4(
           "select",
           {
             value: filterStatus,
             onChange: (e) => setFilterStatus(e.target.value),
             style: controlStyle,
             children: [
-              /* @__PURE__ */ jsx8("option", { value: "all", children: "All Statuses" }),
-              /* @__PURE__ */ jsx8("option", { value: "Open", children: "Open" }),
-              /* @__PURE__ */ jsx8("option", { value: "In Progress", children: "In Progress" }),
-              /* @__PURE__ */ jsx8("option", { value: "Needs Review", children: "Needs Review" }),
-              /* @__PURE__ */ jsx8("option", { value: "Resolved", children: "Resolved" })
+              /* @__PURE__ */ jsx5("option", { value: "all", children: "All Statuses" }),
+              /* @__PURE__ */ jsx5("option", { value: "Open", children: "Open" }),
+              /* @__PURE__ */ jsx5("option", { value: "In Progress", children: "In Progress" }),
+              /* @__PURE__ */ jsx5("option", { value: "Needs Review", children: "Needs Review" }),
+              /* @__PURE__ */ jsx5("option", { value: "Resolved", children: "Resolved" })
             ]
           }
         ),
-        /* @__PURE__ */ jsxs7(
+        /* @__PURE__ */ jsxs4(
           "select",
           {
             value: filterSeverity,
             onChange: (e) => setFilterSeverity(e.target.value),
             style: controlStyle,
             children: [
-              /* @__PURE__ */ jsx8("option", { value: "all", children: "All Severities" }),
-              /* @__PURE__ */ jsx8("option", { value: "Critical", children: "Critical" }),
-              /* @__PURE__ */ jsx8("option", { value: "High", children: "High" }),
-              /* @__PURE__ */ jsx8("option", { value: "Medium", children: "Medium" }),
-              /* @__PURE__ */ jsx8("option", { value: "Low", children: "Low" })
+              /* @__PURE__ */ jsx5("option", { value: "all", children: "All Severities" }),
+              /* @__PURE__ */ jsx5("option", { value: "Critical", children: "Critical" }),
+              /* @__PURE__ */ jsx5("option", { value: "High", children: "High" }),
+              /* @__PURE__ */ jsx5("option", { value: "Medium", children: "Medium" }),
+              /* @__PURE__ */ jsx5("option", { value: "Low", children: "Low" })
             ]
           }
         ),
-        /* @__PURE__ */ jsx8(
+        /* @__PURE__ */ jsx5(
           "button",
           {
             type: "button",
@@ -4702,7 +3800,7 @@ function DevNotesTaskListModal({
           }
         )
       ] }),
-      /* @__PURE__ */ jsxs7("div", { style: { fontSize: 12, color: "#6b7280" }, children: [
+      /* @__PURE__ */ jsxs4("div", { style: { fontSize: 12, color: "#6b7280" }, children: [
         filteredReports.length,
         " of ",
         showClosed ? stats.closed : stats.total - stats.closed,
@@ -4710,7 +3808,7 @@ function DevNotesTaskListModal({
         showClosed ? "closed" : "active",
         " tasks"
       ] }),
-      filteredReports.length === 0 ? /* @__PURE__ */ jsxs7(
+      filteredReports.length === 0 ? /* @__PURE__ */ jsxs4(
         "div",
         {
           style: {
@@ -4721,24 +3819,24 @@ function DevNotesTaskListModal({
             color: "#9ca3af"
           },
           children: [
-            /* @__PURE__ */ jsx8(FiAlertTriangle2, { size: 32, style: { marginBottom: 12 } }),
-            /* @__PURE__ */ jsx8("p", { style: { fontSize: 14, margin: 0, textAlign: "center", maxWidth: 420 }, children: accessibleReports.length === 0 ? "No visible tasks yet. You will only see tasks you own, are assigned to, commented on, or were mentioned in." : "No tasks match your filters." })
+            /* @__PURE__ */ jsx5(FiAlertTriangle, { size: 32, style: { marginBottom: 12 } }),
+            /* @__PURE__ */ jsx5("p", { style: { fontSize: 14, margin: 0, textAlign: "center", maxWidth: 420 }, children: accessibleReports.length === 0 ? "No visible tasks yet. You will only see tasks you own, are assigned to, commented on, or were mentioned in." : "No tasks match your filters." })
           ]
         }
-      ) : /* @__PURE__ */ jsx8("div", { style: { border: "1px solid #e5e7eb", borderRadius: 8, overflow: "hidden" }, children: /* @__PURE__ */ jsxs7("table", { style: { width: "100%", fontSize: 14, borderCollapse: "collapse" }, children: [
-        /* @__PURE__ */ jsx8("thead", { children: /* @__PURE__ */ jsxs7("tr", { style: { background: "#f9fafb" }, children: [
-          /* @__PURE__ */ jsx8("th", { style: thStyle, children: "Title" }),
+      ) : /* @__PURE__ */ jsx5("div", { style: { border: "1px solid #e5e7eb", borderRadius: 8, overflow: "hidden" }, children: /* @__PURE__ */ jsxs4("table", { style: { width: "100%", fontSize: 14, borderCollapse: "collapse" }, children: [
+        /* @__PURE__ */ jsx5("thead", { children: /* @__PURE__ */ jsxs4("tr", { style: { background: "#f9fafb" }, children: [
+          /* @__PURE__ */ jsx5("th", { style: thStyle, children: "Title" }),
           sortableHeader("Status", "status"),
           sortableHeader("Severity", "severity"),
-          /* @__PURE__ */ jsx8("th", { style: thStyle, children: "Page" }),
-          /* @__PURE__ */ jsx8("th", { style: thStyle, children: "Assigned" }),
+          /* @__PURE__ */ jsx5("th", { style: thStyle, children: "Page" }),
+          /* @__PURE__ */ jsx5("th", { style: thStyle, children: "Assigned" }),
           sortableHeader("Freshness", "stale"),
           sortableHeader("Date", "created_at")
         ] }) }),
-        /* @__PURE__ */ jsx8("tbody", { children: filteredReports.map((report) => {
+        /* @__PURE__ */ jsx5("tbody", { children: filteredReports.map((report) => {
           const unread = unreadCounts[report.id] || 0;
           const stale = getStaleMeta(report);
-          return /* @__PURE__ */ jsxs7(
+          return /* @__PURE__ */ jsxs4(
             "tr",
             {
               style: { cursor: "pointer" },
@@ -4750,9 +3848,9 @@ function DevNotesTaskListModal({
                 e.currentTarget.style.background = "";
               },
               children: [
-                /* @__PURE__ */ jsxs7("td", { style: { ...tdStyle, maxWidth: 280 }, children: [
-                  /* @__PURE__ */ jsxs7("div", { style: { display: "flex", alignItems: "center", gap: 8 }, children: [
-                    /* @__PURE__ */ jsx8(
+                /* @__PURE__ */ jsxs4("td", { style: { ...tdStyle, maxWidth: 280 }, children: [
+                  /* @__PURE__ */ jsxs4("div", { style: { display: "flex", alignItems: "center", gap: 8 }, children: [
+                    /* @__PURE__ */ jsx5(
                       "span",
                       {
                         style: {
@@ -4765,7 +3863,7 @@ function DevNotesTaskListModal({
                         children: report.title
                       }
                     ),
-                    unread > 0 && /* @__PURE__ */ jsx8(
+                    unread > 0 && /* @__PURE__ */ jsx5(
                       "span",
                       {
                         style: pill({
@@ -4780,7 +3878,7 @@ function DevNotesTaskListModal({
                         children: unread
                       }
                     ),
-                    stale.isStale && /* @__PURE__ */ jsxs7(
+                    stale.isStale && /* @__PURE__ */ jsxs4(
                       "span",
                       {
                         style: {
@@ -4790,7 +3888,7 @@ function DevNotesTaskListModal({
                           gap: 4
                         },
                         children: [
-                          /* @__PURE__ */ jsx8(FiClock2, { size: 10 }),
+                          /* @__PURE__ */ jsx5(FiClock2, { size: 10 }),
                           "Stale ",
                           stale.ageDays,
                           "d"
@@ -4798,7 +3896,7 @@ function DevNotesTaskListModal({
                       }
                     )
                   ] }),
-                  report.types.length > 0 && /* @__PURE__ */ jsx8("div", { style: { display: "flex", gap: 4, marginTop: 2 }, children: report.types.slice(0, 2).map((t) => /* @__PURE__ */ jsx8(
+                  report.types.length > 0 && /* @__PURE__ */ jsx5("div", { style: { display: "flex", gap: 4, marginTop: 2 }, children: report.types.slice(0, 2).map((t) => /* @__PURE__ */ jsx5(
                     "span",
                     {
                       style: {
@@ -4813,10 +3911,10 @@ function DevNotesTaskListModal({
                     t
                   )) })
                 ] }),
-                /* @__PURE__ */ jsx8("td", { style: tdStyle, children: /* @__PURE__ */ jsx8("span", { style: pill(STATUS_STYLES[report.status] || { background: "#f3f4f6", color: "#4b5563" }), children: report.status }) }),
-                /* @__PURE__ */ jsx8("td", { style: tdStyle, children: /* @__PURE__ */ jsx8("span", { style: pill(SEVERITY_STYLES[report.severity] || { background: "#f3f4f6", color: "#4b5563" }), children: report.severity }) }),
-                /* @__PURE__ */ jsx8("td", { style: tdStyle, children: /* @__PURE__ */ jsxs7("div", { style: { display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#6b7280" }, children: [
-                  /* @__PURE__ */ jsx8(
+                /* @__PURE__ */ jsx5("td", { style: tdStyle, children: /* @__PURE__ */ jsx5("span", { style: pill(STATUS_STYLES[report.status] || { background: "#f3f4f6", color: "#4b5563" }), children: report.status }) }),
+                /* @__PURE__ */ jsx5("td", { style: tdStyle, children: /* @__PURE__ */ jsx5("span", { style: pill(SEVERITY_STYLES[report.severity] || { background: "#f3f4f6", color: "#4b5563" }), children: report.severity }) }),
+                /* @__PURE__ */ jsx5("td", { style: tdStyle, children: /* @__PURE__ */ jsxs4("div", { style: { display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#6b7280" }, children: [
+                  /* @__PURE__ */ jsx5(
                     "span",
                     {
                       style: {
@@ -4828,7 +3926,7 @@ function DevNotesTaskListModal({
                       children: getPageLabel(report.page_url)
                     }
                   ),
-                  onNavigateToPage && /* @__PURE__ */ jsx8(
+                  onNavigateToPage && /* @__PURE__ */ jsx5(
                     "button",
                     {
                       type: "button",
@@ -4847,12 +3945,12 @@ function DevNotesTaskListModal({
                         cursor: "pointer",
                         display: "inline-flex"
                       },
-                      children: /* @__PURE__ */ jsx8(FiExternalLink2, { size: 12 })
+                      children: /* @__PURE__ */ jsx5(FiExternalLink2, { size: 12 })
                     }
                   )
                 ] }) }),
-                /* @__PURE__ */ jsx8("td", { style: { ...tdStyle, fontSize: 12, color: "#6b7280" }, children: getProfileName(report.assigned_to) || "\u2014" }),
-                /* @__PURE__ */ jsx8("td", { style: tdStyle, children: stale.isStale ? /* @__PURE__ */ jsxs7(
+                /* @__PURE__ */ jsx5("td", { style: { ...tdStyle, fontSize: 12, color: "#6b7280" }, children: getProfileName(report.assigned_to) || "\u2014" }),
+                /* @__PURE__ */ jsx5("td", { style: tdStyle, children: stale.isStale ? /* @__PURE__ */ jsxs4(
                   "span",
                   {
                     style: {
@@ -4862,13 +3960,13 @@ function DevNotesTaskListModal({
                       gap: 4
                     },
                     children: [
-                      /* @__PURE__ */ jsx8(FiClock2, { size: 11 }),
+                      /* @__PURE__ */ jsx5(FiClock2, { size: 11 }),
                       stale.ageDays,
                       "d stale"
                     ]
                   }
-                ) : /* @__PURE__ */ jsx8("span", { style: pill({ background: "#ecfdf5", color: "#047857" }), children: "Fresh" }) }),
-                /* @__PURE__ */ jsx8("td", { style: { ...tdStyle, fontSize: 12, color: "#6b7280", whiteSpace: "nowrap" }, children: formatDate(report.created_at) })
+                ) : /* @__PURE__ */ jsx5("span", { style: pill({ background: "#ecfdf5", color: "#047857" }), children: "Fresh" }) }),
+                /* @__PURE__ */ jsx5("td", { style: { ...tdStyle, fontSize: 12, color: "#6b7280", whiteSpace: "nowrap" }, children: formatDate(report.created_at) })
               ]
             },
             report.id
@@ -4877,7 +3975,7 @@ function DevNotesTaskListModal({
       ] }) })
     ] });
   };
-  return /* @__PURE__ */ jsxs7(
+  return /* @__PURE__ */ jsxs4(
     "div",
     {
       style: {
@@ -4891,15 +3989,15 @@ function DevNotesTaskListModal({
         padding: 16
       },
       children: [
-        /* @__PURE__ */ jsx8("style", { children: "@keyframes devnotes-spin{to{transform:rotate(360deg)}}" }),
-        /* @__PURE__ */ jsx8(
+        /* @__PURE__ */ jsx5("style", { children: "@keyframes devnotes-spin{to{transform:rotate(360deg)}}" }),
+        /* @__PURE__ */ jsx5(
           "div",
           {
             style: { position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)" },
             onClick: () => selectedReport ? setSelectedReport(null) : onClose()
           }
         ),
-        /* @__PURE__ */ jsx8(
+        /* @__PURE__ */ jsx5(
           "div",
           {
             role: "dialog",
@@ -4921,6 +4019,969 @@ function DevNotesTaskListModal({
         )
       ]
     }
+  );
+}
+
+// src/DevNotesMenu.tsx
+import { jsx as jsx6, jsxs as jsxs5 } from "react/jsx-runtime";
+function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position = "bottom-right", dropdownDirection = "down", onNavigateToPage }) {
+  const {
+    isEnabled,
+    setIsEnabled,
+    showTasksAlways,
+    setShowTasksAlways,
+    hideResolvedClosed,
+    setHideResolvedClosed,
+    tasks,
+    role
+  } = useDevNotes();
+  const [open, setOpen] = useState7(false);
+  const [showTaskModal, setShowTaskModal] = useState7(false);
+  const menuRef = useRef6(null);
+  useEffect8(() => {
+    if (!open) return void 0;
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+  const openBugCount = tasks.filter(
+    (r) => r.status === "Open" || r.status === "In Progress" || r.status === "Needs Review"
+  ).length;
+  if (role === "none") return null;
+  const handleIconClick = (e) => {
+    if (isEnabled) {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsEnabled(false);
+      return;
+    }
+    setOpen((prev) => !prev);
+  };
+  return /* @__PURE__ */ jsxs5(
+    "div",
+    {
+      ref: menuRef,
+      "data-bug-menu": true,
+      className: "relative",
+      style: { zIndex: isEnabled ? 9995 : "auto" },
+      children: [
+        /* @__PURE__ */ jsx6(
+          "button",
+          {
+            type: "button",
+            "aria-label": isEnabled ? "Click to disable task creation" : "Task menu",
+            onClick: handleIconClick,
+            className: "inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-700 transition hover:text-emerald-600",
+            title: "Tasks",
+            children: /* @__PURE__ */ jsxs5("span", { className: "relative", children: [
+              IconComponent ? /* @__PURE__ */ jsx6(IconComponent, { size: 20, color: isEnabled ? "#E53E3E" : void 0 }) : /* @__PURE__ */ jsx6(FiAlertTriangle2, { size: 20, color: isEnabled ? "#E53E3E" : void 0 }),
+              openBugCount > 0 && /* @__PURE__ */ jsx6("span", { className: "absolute -right-2 -top-1 inline-flex min-w-[16px] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white", children: openBugCount })
+            ] })
+          }
+        ),
+        open && /* @__PURE__ */ jsxs5(
+          "div",
+          {
+            style: {
+              position: "absolute",
+              ...position?.includes("left") ? { left: 0 } : { right: 0 },
+              ...dropdownDirection === "up" ? { bottom: "100%", marginBottom: 8 } : { top: "100%", marginTop: 8 },
+              width: 320,
+              zIndex: 50,
+              borderRadius: 8,
+              border: "1px solid #e5e7eb",
+              backgroundColor: "#ffffff",
+              paddingTop: 8,
+              paddingBottom: 8,
+              boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)"
+            },
+            children: [
+              /* @__PURE__ */ jsx6("div", { className: "px-3 py-2", children: /* @__PURE__ */ jsx6("p", { className: "text-xs font-semibold text-gray-500", children: "DEV NOTES" }) }),
+              /* @__PURE__ */ jsx6("div", { className: "my-1 border-t border-gray-200" }),
+              /* @__PURE__ */ jsxs5(
+                "button",
+                {
+                  type: "button",
+                  "data-menu-item": true,
+                  onClick: () => {
+                    setIsEnabled(!isEnabled);
+                    setOpen(false);
+                  },
+                  className: "flex w-full items-center justify-between gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50",
+                  children: [
+                    /* @__PURE__ */ jsxs5("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
+                      isEnabled ? /* @__PURE__ */ jsx6(FiToggleRight, { className: "text-green-600" }) : /* @__PURE__ */ jsx6(FiToggleLeft, {}),
+                      isEnabled ? "Stop Creating Tasks" : "Create Task"
+                    ] }),
+                    /* @__PURE__ */ jsx6(
+                      "span",
+                      {
+                        role: "switch",
+                        "aria-checked": isEnabled,
+                        className: `relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ${isEnabled ? "bg-green-500" : "bg-gray-300"}`,
+                        children: /* @__PURE__ */ jsx6(
+                          "span",
+                          {
+                            className: `inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${isEnabled ? "translate-x-4" : "translate-x-0.5"} mt-0.5`
+                          }
+                        )
+                      }
+                    )
+                  ]
+                }
+              ),
+              /* @__PURE__ */ jsxs5(
+                "button",
+                {
+                  type: "button",
+                  "data-menu-item": true,
+                  onClick: () => setShowTasksAlways(!showTasksAlways),
+                  className: "flex w-full items-center justify-between gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50",
+                  children: [
+                    /* @__PURE__ */ jsxs5("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
+                      showTasksAlways ? /* @__PURE__ */ jsx6(FiEye2, { className: "text-blue-600" }) : /* @__PURE__ */ jsx6(FiEyeOff, {}),
+                      "Show Tasks Always"
+                    ] }),
+                    /* @__PURE__ */ jsx6(
+                      "span",
+                      {
+                        role: "switch",
+                        "aria-checked": showTasksAlways,
+                        className: `relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ${showTasksAlways ? "bg-green-500" : "bg-gray-300"}`,
+                        children: /* @__PURE__ */ jsx6(
+                          "span",
+                          {
+                            className: `inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${showTasksAlways ? "translate-x-4" : "translate-x-0.5"} mt-0.5`
+                          }
+                        )
+                      }
+                    )
+                  ]
+                }
+              ),
+              /* @__PURE__ */ jsxs5(
+                "button",
+                {
+                  type: "button",
+                  "data-menu-item": true,
+                  onClick: () => setHideResolvedClosed(!hideResolvedClosed),
+                  className: "flex w-full items-center justify-between gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50",
+                  children: [
+                    /* @__PURE__ */ jsxs5("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
+                      /* @__PURE__ */ jsx6(
+                        FiFilter,
+                        {
+                          className: hideResolvedClosed ? "text-green-600" : "text-gray-500"
+                        }
+                      ),
+                      "Hide Resolved/Closed"
+                    ] }),
+                    /* @__PURE__ */ jsx6(
+                      "span",
+                      {
+                        role: "switch",
+                        "aria-checked": hideResolvedClosed,
+                        className: `relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ${hideResolvedClosed ? "bg-green-500" : "bg-gray-300"}`,
+                        children: /* @__PURE__ */ jsx6(
+                          "span",
+                          {
+                            className: `inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${hideResolvedClosed ? "translate-x-4" : "translate-x-0.5"} mt-0.5`
+                          }
+                        )
+                      }
+                    )
+                  ]
+                }
+              ),
+              /* @__PURE__ */ jsx6("div", { className: "my-1 border-t border-gray-200" }),
+              /* @__PURE__ */ jsxs5(
+                "button",
+                {
+                  type: "button",
+                  "data-menu-item": true,
+                  onClick: () => {
+                    setOpen(false);
+                    if (onViewTasks) {
+                      onViewTasks();
+                    } else {
+                      setShowTaskModal(true);
+                    }
+                  },
+                  style: {
+                    display: "flex",
+                    width: "100%",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    padding: "8px 12px",
+                    fontSize: 14,
+                    color: "#1f2937",
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer"
+                  },
+                  onMouseEnter: (e) => {
+                    e.currentTarget.style.background = "#f9fafb";
+                  },
+                  onMouseLeave: (e) => {
+                    e.currentTarget.style.background = "transparent";
+                  },
+                  children: [
+                    /* @__PURE__ */ jsxs5("span", { style: { display: "inline-flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" }, children: [
+                      /* @__PURE__ */ jsx6(FiList, { style: { flexShrink: 0 } }),
+                      "View All Tasks"
+                    ] }),
+                    openBugCount > 0 && /* @__PURE__ */ jsx6(
+                      "span",
+                      {
+                        style: {
+                          display: "inline-flex",
+                          minWidth: 20,
+                          alignItems: "center",
+                          justifyContent: "center",
+                          borderRadius: 9999,
+                          background: "#fee2e2",
+                          padding: "2px 8px",
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: "#b91c1c"
+                        },
+                        children: openBugCount
+                      }
+                    )
+                  ]
+                }
+              ),
+              onSettings && /* @__PURE__ */ jsx6(
+                "button",
+                {
+                  type: "button",
+                  "data-menu-item": true,
+                  onClick: () => {
+                    setOpen(false);
+                    onSettings();
+                  },
+                  className: "flex w-full items-center gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50",
+                  children: /* @__PURE__ */ jsxs5("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
+                    /* @__PURE__ */ jsx6(FiSettings, { className: "flex-shrink-0" }),
+                    "Settings"
+                  ] })
+                }
+              )
+            ]
+          }
+        ),
+        !onViewTasks && /* @__PURE__ */ jsx6(
+          DevNotesTaskListModal,
+          {
+            open: showTaskModal,
+            onClose: () => setShowTaskModal(false),
+            onNavigateToPage
+          }
+        )
+      ]
+    }
+  );
+}
+
+// src/DevNotesOverlay.tsx
+import { useState as useState10, useCallback as useCallback7, useEffect as useEffect11, useRef as useRef8, useMemo as useMemo5 } from "react";
+import { createPortal } from "react-dom";
+import { FiCrosshair, FiMove as FiMove2 } from "react-icons/fi";
+
+// src/DevNotesDot.tsx
+import {
+  useState as useState9,
+  useCallback as useCallback6,
+  useEffect as useEffect10,
+  useRef as useRef7
+} from "react";
+import {
+  FiAlertCircle as FiAlertCircle2,
+  FiLoader as FiLoader2,
+  FiEye as FiEye3,
+  FiCheckCircle as FiCheckCircle2,
+  FiArchive as FiArchive2,
+  FiMove,
+  FiCheck as FiCheck3,
+  FiX as FiX4
+} from "react-icons/fi";
+
+// src/hooks/useBugReportPosition.ts
+import { useState as useState8, useEffect as useEffect9, useCallback as useCallback5 } from "react";
+var subscribers = /* @__PURE__ */ new Set();
+var cleanupGlobalListeners = null;
+var rafId = null;
+var schedulePositionUpdate = () => {
+  if (typeof window === "undefined") return;
+  if (rafId !== null) return;
+  rafId = window.requestAnimationFrame(() => {
+    rafId = null;
+    subscribers.forEach((subscriber) => {
+      try {
+        subscriber();
+      } catch {
+      }
+    });
+  });
+};
+var ensureGlobalListeners = () => {
+  if (cleanupGlobalListeners || typeof window === "undefined" || typeof document === "undefined") {
+    return;
+  }
+  const handleUpdate = () => {
+    schedulePositionUpdate();
+  };
+  const observer = new MutationObserver(handleUpdate);
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true
+  });
+  window.addEventListener("resize", handleUpdate);
+  window.addEventListener("scroll", handleUpdate, true);
+  document.addEventListener("scroll", handleUpdate, true);
+  cleanupGlobalListeners = () => {
+    window.removeEventListener("resize", handleUpdate);
+    window.removeEventListener("scroll", handleUpdate, true);
+    document.removeEventListener("scroll", handleUpdate, true);
+    observer.disconnect();
+    if (rafId !== null) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+    cleanupGlobalListeners = null;
+  };
+};
+var subscribeToPositionUpdates = (subscriber) => {
+  subscribers.add(subscriber);
+  ensureGlobalListeners();
+  return () => {
+    subscribers.delete(subscriber);
+    if (subscribers.size === 0 && cleanupGlobalListeners) {
+      cleanupGlobalListeners();
+    }
+  };
+};
+var useBugReportPosition = (report) => {
+  const calculate = useCallback5(() => {
+    if (!report) return null;
+    return resolveBugReportCoordinates(report);
+  }, [report]);
+  const [position, setPosition] = useState8(() => calculate());
+  useEffect9(() => {
+    setPosition(calculate());
+  }, [calculate]);
+  useEffect9(() => {
+    if (!report) return void 0;
+    return subscribeToPositionUpdates(() => {
+      setPosition(calculate());
+    });
+  }, [report, calculate]);
+  return position;
+};
+
+// src/DevNotesDot.tsx
+import { Fragment as Fragment3, jsx as jsx7, jsxs as jsxs6 } from "react/jsx-runtime";
+var statusConfig = {
+  Open: { color: "red", bgClass: "bg-red-500", bgHoverClass: "bg-red-600", icon: FiAlertCircle2 },
+  "In Progress": { color: "blue", bgClass: "bg-blue-500", bgHoverClass: "bg-blue-600", icon: FiLoader2 },
+  "Needs Review": { color: "purple", bgClass: "bg-purple-500", bgHoverClass: "bg-purple-600", icon: FiEye3 },
+  Resolved: { color: "green", bgClass: "bg-green-500", bgHoverClass: "bg-green-600", icon: FiCheckCircle2 },
+  Closed: { color: "gray", bgClass: "bg-gray-500", bgHoverClass: "bg-gray-600", icon: FiArchive2 }
+};
+var severityBadgeColors = {
+  Critical: "bg-red-100 text-red-800",
+  High: "bg-orange-100 text-orange-800",
+  Medium: "bg-yellow-100 text-yellow-800",
+  Low: "bg-green-100 text-green-800"
+};
+var MIN_DRAG_DISTANCE = 5;
+var DEFAULT_DOT_Z_INDEX = 9998;
+var resolveAttachedElementZIndex = (selector) => {
+  if (!selector || typeof document === "undefined" || typeof window === "undefined") return null;
+  const targetElement = document.querySelector(selector);
+  if (!targetElement) return null;
+  let currentElement = targetElement;
+  while (currentElement && currentElement !== document.body && currentElement !== document.documentElement) {
+    const computed = window.getComputedStyle(currentElement).zIndex;
+    if (computed !== "auto") {
+      const parsed = Number.parseInt(computed, 10);
+      if (!Number.isNaN(parsed)) {
+        return parsed;
+      }
+    }
+    currentElement = currentElement.parentElement;
+  }
+  return 0;
+};
+function DevNotesDot({ report }) {
+  const { deleteTask, taskTypes, updateTask, compensate } = useDevNotes();
+  const [isFormOpen, setIsFormOpen] = useState9(false);
+  const [isDragging, setIsDragging] = useState9(false);
+  const [dragPosition, setDragPosition] = useState9(null);
+  const [pendingMove, setPendingMove] = useState9(null);
+  const [showTooltip, setShowTooltip] = useState9(false);
+  const dragStartRef = useRef7(null);
+  const didDragRef = useRef7(false);
+  const dotRef = useRef7(null);
+  const handleDelete = async () => {
+    const success = await deleteTask(report.id);
+    if (success) {
+      setIsFormOpen(false);
+    }
+  };
+  const getTypeNames = useCallback6(() => {
+    return report.types.map((typeId) => {
+      const type = taskTypes.find((t) => t.id === typeId);
+      return type?.name || "Unknown";
+    }).join(", ");
+  }, [report.types, taskTypes]);
+  const persistPosition = useCallback6(
+    async (clientX, clientY) => {
+      const payload = calculateBugPositionFromPoint({
+        clientX,
+        clientY,
+        elementsToIgnore: [dotRef.current]
+      });
+      await updateTask(report.id, {
+        x_position: payload.x,
+        y_position: payload.y,
+        target_selector: payload.targetSelector,
+        target_relative_x: payload.targetRelativeX,
+        target_relative_y: payload.targetRelativeY,
+        page_url: normalizePageUrl(`${window.location.pathname}${window.location.search}`)
+      });
+    },
+    [report.id, updateTask]
+  );
+  const anchoredPosition = useBugReportPosition(report);
+  const resolvedPosition = anchoredPosition ?? resolveBugReportCoordinates(report);
+  const handleDragStart = useCallback6(
+    (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      didDragRef.current = false;
+      const currentPosition = dragPosition || resolvedPosition;
+      if (!currentPosition) return;
+      dragStartRef.current = {
+        x: event.clientX,
+        y: event.clientY,
+        dotX: currentPosition.x,
+        dotY: currentPosition.y,
+        hasMoved: false
+      };
+      setIsDragging(true);
+      setDragPosition(currentPosition);
+    },
+    [dragPosition, resolvedPosition]
+  );
+  const handleDragMove = useCallback6(
+    (event) => {
+      if (!isDragging || !dragStartRef.current) return;
+      const deltaX = event.clientX - dragStartRef.current.x;
+      const deltaY = event.clientY - dragStartRef.current.y;
+      if (!dragStartRef.current.hasMoved && Math.sqrt(deltaX * deltaX + deltaY * deltaY) > MIN_DRAG_DISTANCE) {
+        dragStartRef.current.hasMoved = true;
+      }
+      setDragPosition({
+        x: dragStartRef.current.dotX + deltaX,
+        y: dragStartRef.current.dotY + deltaY
+      });
+    },
+    [isDragging]
+  );
+  const handleDragEnd = useCallback6(
+    (event) => {
+      if (!isDragging || !dragStartRef.current) return;
+      const hasMoved = dragStartRef.current.hasMoved;
+      didDragRef.current = hasMoved;
+      setIsDragging(false);
+      dragStartRef.current = null;
+      if (hasMoved && event) {
+        setPendingMove({ clientX: event.clientX, clientY: event.clientY });
+      } else {
+        setDragPosition(null);
+        if (!pendingMove) {
+          setIsFormOpen(true);
+        }
+      }
+    },
+    [isDragging, pendingMove]
+  );
+  const confirmMove = useCallback6(async () => {
+    if (!pendingMove) return;
+    await persistPosition(pendingMove.clientX, pendingMove.clientY);
+    setPendingMove(null);
+    setDragPosition(null);
+  }, [pendingMove, persistPosition]);
+  const cancelMove = useCallback6(() => {
+    setPendingMove(null);
+    setDragPosition(null);
+  }, []);
+  useEffect10(() => {
+    if (!isDragging) return void 0;
+    window.addEventListener("mousemove", handleDragMove);
+    window.addEventListener("mouseup", handleDragEnd);
+    return () => {
+      window.removeEventListener("mousemove", handleDragMove);
+      window.removeEventListener("mouseup", handleDragEnd);
+    };
+  }, [isDragging, handleDragMove, handleDragEnd]);
+  if (!resolvedPosition && !dragPosition) {
+    return null;
+  }
+  const displayPosition = dragPosition || resolvedPosition;
+  const attachedElementZIndex = resolveAttachedElementZIndex(report.target_selector);
+  const dotZIndex = attachedElementZIndex !== null ? attachedElementZIndex + 1 : DEFAULT_DOT_Z_INDEX;
+  const config = statusConfig[report.status] || statusConfig.Open;
+  const StatusIcon = config.icon;
+  const handleKeyDown = (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      setIsFormOpen(true);
+    }
+  };
+  const creatorName = report.creator?.full_name || report.creator?.email || report.created_by || "Unknown";
+  const descriptionPreview = report.description?.trim() || "No description provided.";
+  const createdLabel = new Date(report.created_at).toLocaleString();
+  const needsApproval = !report.approved && !report.ai_ready;
+  const compensated = compensate(displayPosition.x, displayPosition.y);
+  return /* @__PURE__ */ jsxs6(Fragment3, { children: [
+    /* @__PURE__ */ jsxs6(
+      "div",
+      {
+        className: "group",
+        style: {
+          position: "absolute",
+          left: `${compensated.x}px`,
+          top: `${compensated.y}px`,
+          transform: "translate(-50%, -50%)",
+          zIndex: isDragging ? dotZIndex + 1 : dotZIndex
+        },
+        onMouseEnter: () => !isFormOpen && !isDragging && setShowTooltip(true),
+        onMouseLeave: () => setShowTooltip(false),
+        children: [
+          /* @__PURE__ */ jsxs6(
+            "div",
+            {
+              ref: dotRef,
+              className: `${isDragging ? `${config.bgHoverClass} w-8 h-8` : `${config.bgClass} w-6 h-6`} rounded-full border-[3px] border-white flex items-center justify-center transition-all duration-150 ${isDragging ? "shadow-[0_4px_16px_rgba(0,0,0,0.4)] cursor-grabbing" : "shadow-[0_2px_8px_rgba(0,0,0,0.3)] cursor-pointer hover:scale-[1.2] hover:shadow-[0_4px_12px_rgba(0,0,0,0.4)]"}`,
+              onMouseDown: handleDragStart,
+              onClick: (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                if (didDragRef.current) {
+                  didDragRef.current = false;
+                  return;
+                }
+                if (pendingMove) return;
+                setIsFormOpen(true);
+              },
+              onKeyDown: handleKeyDown,
+              tabIndex: 0,
+              role: "button",
+              children: [
+                isDragging ? /* @__PURE__ */ jsx7(FiMove, { color: "white", size: 14 }) : /* @__PURE__ */ jsx7(StatusIcon, { color: "white", size: 12 }),
+                needsApproval && /* @__PURE__ */ jsx7("span", { className: "absolute -top-2 -right-2 text-base font-bold text-orange-500 pointer-events-none leading-none", children: "*" })
+              ]
+            }
+          ),
+          showTooltip && !pendingMove && /* @__PURE__ */ jsxs6("div", { className: "absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-[280px] bg-gray-800 text-white rounded-lg p-3 shadow-xl z-[2147483647] pointer-events-none", children: [
+            /* @__PURE__ */ jsx7("div", { className: "font-bold text-sm mb-1", children: report.title }),
+            /* @__PURE__ */ jsxs6("div", { className: "flex items-center gap-2 mb-1 flex-wrap", children: [
+              /* @__PURE__ */ jsx7("span", { className: `text-xs px-1.5 py-0.5 rounded ${severityBadgeColors[report.severity] || "bg-gray-100 text-gray-800"}`, children: report.severity }),
+              /* @__PURE__ */ jsxs6("span", { className: `text-xs px-1.5 py-0.5 rounded flex items-center gap-1 ${config.color === "red" ? "bg-red-100 text-red-800" : config.color === "blue" ? "bg-blue-100 text-blue-800" : config.color === "purple" ? "bg-purple-100 text-purple-800" : config.color === "green" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`, children: [
+                /* @__PURE__ */ jsx7(StatusIcon, { size: 10 }),
+                report.status
+              ] }),
+              report.approved && /* @__PURE__ */ jsx7("span", { className: "text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-800", children: "Approved" }),
+              report.ai_ready && /* @__PURE__ */ jsx7("span", { className: "text-xs px-1.5 py-0.5 rounded bg-purple-100 text-purple-800", children: "AI Ready" })
+            ] }),
+            /* @__PURE__ */ jsx7("div", { className: "text-xs text-gray-300", children: getTypeNames() }),
+            /* @__PURE__ */ jsx7("div", { className: "text-xs text-gray-200 mt-2", children: descriptionPreview }),
+            /* @__PURE__ */ jsxs6("div", { className: "text-xs text-gray-300 mt-2", children: [
+              "Created by ",
+              creatorName,
+              " on ",
+              createdLabel
+            ] }),
+            /* @__PURE__ */ jsx7("div", { className: "text-xs text-gray-400 mt-1", children: "Click to view/edit or drag to reposition" }),
+            /* @__PURE__ */ jsx7("div", { className: "absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800" })
+          ] }),
+          pendingMove && !isDragging && /* @__PURE__ */ jsxs6("div", { className: "absolute top-full left-1/2 -translate-x-1/2 mt-2 flex gap-1.5", style: { pointerEvents: "auto" }, children: [
+            /* @__PURE__ */ jsx7(
+              "button",
+              {
+                className: "w-8 h-8 rounded-full bg-green-500 hover:bg-green-600 flex items-center justify-center shadow-lg border-2 border-white cursor-pointer transition-colors",
+                onClick: (e) => {
+                  e.stopPropagation();
+                  confirmMove();
+                },
+                title: "Confirm new position",
+                children: /* @__PURE__ */ jsx7(FiCheck3, { color: "white", size: 14 })
+              }
+            ),
+            /* @__PURE__ */ jsx7(
+              "button",
+              {
+                className: "w-8 h-8 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center shadow-lg border-2 border-white cursor-pointer transition-colors",
+                onClick: (e) => {
+                  e.stopPropagation();
+                  cancelMove();
+                },
+                title: "Cancel move",
+                children: /* @__PURE__ */ jsx7(FiX4, { color: "white", size: 14 })
+              }
+            )
+          ] })
+        ]
+      }
+    ),
+    isFormOpen && /* @__PURE__ */ jsxs6(Fragment3, { children: [
+      /* @__PURE__ */ jsx7(
+        "div",
+        {
+          style: { position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)", zIndex: 9998, pointerEvents: "auto" },
+          onClick: () => setIsFormOpen(false)
+        }
+      ),
+      /* @__PURE__ */ jsx7("div", { style: { position: "absolute", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", padding: 16 }, children: /* @__PURE__ */ jsx7("div", { className: "pointer-events-auto max-h-[calc(100vh-32px)] overflow-y-auto rounded-lg shadow-xl", "data-bug-form": true, children: /* @__PURE__ */ jsx7(
+        DevNotesForm,
+        {
+          pageUrl: report.page_url,
+          xPosition: report.x_position,
+          yPosition: report.y_position,
+          targetSelector: report.target_selector ?? null,
+          targetRelativeX: report.target_relative_x ?? null,
+          targetRelativeY: report.target_relative_y ?? null,
+          existingReport: report,
+          onSave: () => setIsFormOpen(false),
+          onCancel: () => setIsFormOpen(false),
+          onDelete: handleDelete
+        }
+      ) }) })
+    ] })
+  ] });
+}
+
+// src/DevNotesOverlay.tsx
+import { Fragment as Fragment4, jsx as jsx8, jsxs as jsxs7 } from "react/jsx-runtime";
+function DevNotesOverlay({
+  openReportId,
+  onOpenReportClose
+} = {}) {
+  const {
+    isEnabled,
+    setIsEnabled,
+    showTasksAlways,
+    hideResolvedClosed,
+    tasks,
+    currentPageTasks,
+    deleteTask,
+    updateTask,
+    dotContainer,
+    compensate,
+    role,
+    user
+  } = useDevNotes();
+  const [pendingDot, setPendingDot] = useState10(null);
+  const [showPendingForm, setShowPendingForm] = useState10(false);
+  const [openedReport, setOpenedReport] = useState10(null);
+  const pendingDotRef = useRef8(null);
+  const [isDragging, setIsDragging] = useState10(false);
+  const dragStartRef = useRef8(null);
+  const didDragRef = useRef8(false);
+  const justEnabledRef = useRef8(false);
+  useEffect11(() => {
+    if (isEnabled) {
+      justEnabledRef.current = true;
+      const timer = setTimeout(() => {
+        justEnabledRef.current = false;
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+    justEnabledRef.current = false;
+    return void 0;
+  }, [isEnabled]);
+  useEffect11(() => {
+    if (openReportId) {
+      const report = tasks.find((r) => r.id === openReportId);
+      if (report) {
+        setOpenedReport(report);
+      }
+    }
+  }, [openReportId, tasks]);
+  useEffect11(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        if (showPendingForm) {
+          setShowPendingForm(false);
+        } else if (pendingDot) {
+          setPendingDot(null);
+        } else if (isEnabled) {
+          setIsEnabled(false);
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isEnabled, setIsEnabled, pendingDot, showPendingForm]);
+  useEffect11(() => {
+    if (isEnabled && !showPendingForm) {
+      document.body.style.cursor = "crosshair";
+      return () => {
+        document.body.style.cursor = "";
+      };
+    }
+    return void 0;
+  }, [isEnabled, showPendingForm]);
+  const handleCloseOpenedReport = useCallback7(() => {
+    setOpenedReport(null);
+    onOpenReportClose?.();
+  }, [onOpenReportClose]);
+  const handleDeleteOpenedReport = useCallback7(async () => {
+    if (openedReport) {
+      await deleteTask(openedReport.id);
+      setOpenedReport(null);
+      onOpenReportClose?.();
+    }
+  }, [openedReport, deleteTask, onOpenReportClose]);
+  const handleArchiveOpenedReport = useCallback7(async () => {
+    if (!openedReport) return;
+    const archived = await updateTask(openedReport.id, {
+      status: "Closed",
+      resolved_by: openedReport.resolved_by || user.id
+    });
+    if (archived) {
+      setOpenedReport(null);
+      onOpenReportClose?.();
+    }
+  }, [openedReport, updateTask, onOpenReportClose, user.id]);
+  useEffect11(() => {
+    if (!isEnabled || showPendingForm) return void 0;
+    const handleDocumentClick = (e) => {
+      if (justEnabledRef.current) return;
+      const target = e.target;
+      if (target.closest("[data-bug-form]") || target.closest("[data-bug-dot]") || target.closest("[data-bug-menu]") || target.closest("[data-pending-dot]")) {
+        return;
+      }
+      const position = calculateBugPositionFromPoint({
+        clientX: e.clientX,
+        clientY: e.clientY
+      });
+      setPendingDot(position);
+    };
+    document.addEventListener("click", handleDocumentClick);
+    return () => document.removeEventListener("click", handleDocumentClick);
+  }, [isEnabled, showPendingForm]);
+  const handleSave = useCallback7((_report) => {
+    setPendingDot(null);
+    setShowPendingForm(false);
+  }, []);
+  const handleCancel = useCallback7(() => {
+    setPendingDot(null);
+    setShowPendingForm(false);
+  }, []);
+  const handlePendingDotClick = useCallback7((e) => {
+    e.stopPropagation();
+    if (didDragRef.current) {
+      didDragRef.current = false;
+      return;
+    }
+    setIsDragging(false);
+    setShowPendingForm(true);
+  }, []);
+  const handleDragStart = useCallback7(
+    (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!pendingDot) return;
+      didDragRef.current = false;
+      setIsDragging(true);
+      dragStartRef.current = {
+        x: e.clientX,
+        y: e.clientY,
+        dotX: pendingDot.x,
+        dotY: pendingDot.y
+      };
+    },
+    [pendingDot]
+  );
+  const handleDragMove = useCallback7(
+    (e) => {
+      if (!isDragging || !dragStartRef.current || !pendingDot) return;
+      const deltaX = e.clientX - dragStartRef.current.x;
+      const deltaY = e.clientY - dragStartRef.current.y;
+      if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
+        didDragRef.current = true;
+      }
+      setPendingDot(
+        (prev) => prev ? {
+          ...prev,
+          x: dragStartRef.current.dotX + deltaX,
+          y: dragStartRef.current.dotY + deltaY
+        } : prev
+      );
+    },
+    [isDragging, pendingDot]
+  );
+  const handleDragEnd = useCallback7((event) => {
+    setIsDragging(false);
+    dragStartRef.current = null;
+    if (event && didDragRef.current) {
+      const position = calculateBugPositionFromPoint({
+        clientX: event.clientX,
+        clientY: event.clientY,
+        elementsToIgnore: [pendingDotRef.current]
+      });
+      setPendingDot(position);
+    }
+  }, []);
+  useEffect11(() => {
+    if (isDragging) {
+      window.addEventListener("mousemove", handleDragMove);
+      window.addEventListener("mouseup", handleDragEnd);
+      return () => {
+        window.removeEventListener("mousemove", handleDragMove);
+        window.removeEventListener("mouseup", handleDragEnd);
+      };
+    }
+    return void 0;
+  }, [isDragging, handleDragMove, handleDragEnd]);
+  const visiblePageReports = useMemo5(
+    () => currentPageTasks.filter((report) => {
+      if (hideResolvedClosed) {
+        return report.status !== "Closed" && report.status !== "Resolved";
+      }
+      return true;
+    }),
+    [currentPageTasks, hideResolvedClosed]
+  );
+  const renderOpenedReportModal = () => {
+    if (!openedReport) return null;
+    return /* @__PURE__ */ jsxs7(Fragment4, { children: [
+      /* @__PURE__ */ jsx8(
+        "div",
+        {
+          style: { position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)", zIndex: 9997, pointerEvents: "auto" },
+          onClick: handleCloseOpenedReport
+        }
+      ),
+      /* @__PURE__ */ jsx8("div", { style: { position: "absolute", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", padding: 16 }, children: /* @__PURE__ */ jsx8(
+        "div",
+        {
+          className: "pointer-events-auto max-h-[calc(100vh-32px)] overflow-y-auto rounded-lg shadow-xl",
+          "data-bug-form": true,
+          children: /* @__PURE__ */ jsx8(
+            DevNotesForm,
+            {
+              pageUrl: openedReport.page_url,
+              xPosition: openedReport.x_position,
+              yPosition: openedReport.y_position,
+              targetSelector: openedReport.target_selector ?? null,
+              targetRelativeX: openedReport.target_relative_x ?? null,
+              targetRelativeY: openedReport.target_relative_y ?? null,
+              existingReport: openedReport,
+              onSave: handleCloseOpenedReport,
+              onCancel: handleCloseOpenedReport,
+              onDelete: handleDeleteOpenedReport,
+              onArchive: handleArchiveOpenedReport
+            }
+          )
+        }
+      ) })
+    ] });
+  };
+  if (role === "none") return null;
+  if (!isEnabled) {
+    if (!showTasksAlways && !openedReport) {
+      return null;
+    }
+    return /* @__PURE__ */ jsxs7(Fragment4, { children: [
+      showTasksAlways && dotContainer && createPortal(
+        /* @__PURE__ */ jsxs7(Fragment4, { children: [
+          visiblePageReports.map((report) => /* @__PURE__ */ jsx8("div", { "data-bug-dot": true, style: { pointerEvents: "auto" }, children: /* @__PURE__ */ jsx8(DevNotesDot, { report }) }, report.id)),
+          renderOpenedReportModal()
+        ] }),
+        dotContainer
+      ),
+      !dotContainer && renderOpenedReportModal()
+    ] });
+  }
+  if (!dotContainer) return null;
+  const pendingViewport = pendingDot ? compensate(
+    pendingDot.x - (typeof window !== "undefined" ? window.scrollX : 0),
+    pendingDot.y - (typeof window !== "undefined" ? window.scrollY : 0)
+  ) : null;
+  return createPortal(
+    /* @__PURE__ */ jsxs7(Fragment4, { children: [
+      /* @__PURE__ */ jsxs7(
+        "div",
+        {
+          style: { position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)", zIndex: 9991, pointerEvents: "auto" },
+          className: "bg-red-500 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2",
+          children: [
+            pendingDot && !showPendingForm ? /* @__PURE__ */ jsx8(FiMove2, {}) : /* @__PURE__ */ jsx8(FiCrosshair, {}),
+            /* @__PURE__ */ jsx8("span", { className: "text-sm font-medium", children: pendingDot && !showPendingForm ? "Click pin to add details, or click elsewhere to reposition" : "Click anywhere to create a task" })
+          ]
+        }
+      ),
+      visiblePageReports.map((report) => /* @__PURE__ */ jsx8("div", { "data-bug-dot": true, style: { pointerEvents: "auto" }, children: /* @__PURE__ */ jsx8(DevNotesDot, { report }) }, report.id)),
+      pendingDot && pendingViewport && /* @__PURE__ */ jsx8(
+        "div",
+        {
+          "data-pending-dot": true,
+          ref: pendingDotRef,
+          className: `w-8 h-8 rounded-full border-[3px] border-white z-[9998] flex items-center justify-center transition-all duration-150 ${isDragging ? "bg-red-600 shadow-[0_4px_16px_rgba(0,0,0,0.4)] cursor-grabbing" : "bg-red-500 shadow-[0_2px_8px_rgba(0,0,0,0.3)] cursor-grab animate-devnotes-pulse hover:scale-110"}`,
+          style: {
+            position: "absolute",
+            left: `${pendingViewport.x}px`,
+            top: `${pendingViewport.y}px`,
+            transform: "translate(-50%, -50%)",
+            pointerEvents: "auto"
+          },
+          onMouseDown: handleDragStart,
+          onClick: handlePendingDotClick,
+          title: "Drag to reposition, click to add details",
+          children: /* @__PURE__ */ jsx8(FiMove2, { color: "white", size: 14 })
+        }
+      ),
+      pendingDot && /* @__PURE__ */ jsxs7(Fragment4, { children: [
+        showPendingForm && /* @__PURE__ */ jsx8(
+          "div",
+          {
+            style: { position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)", zIndex: 9997, pointerEvents: "auto" },
+            onClick: handleCancel
+          }
+        ),
+        showPendingForm && /* @__PURE__ */ jsx8("div", { style: { position: "absolute", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", padding: 16 }, children: /* @__PURE__ */ jsx8(
+          "div",
+          {
+            className: "pointer-events-auto max-h-[calc(100vh-32px)] overflow-y-auto rounded-lg shadow-xl",
+            "data-bug-form": true,
+            children: /* @__PURE__ */ jsx8(
+              DevNotesForm,
+              {
+                pageUrl: `${window.location.pathname}${window.location.search}`,
+                xPosition: pendingDot.x,
+                yPosition: pendingDot.y,
+                targetSelector: pendingDot.targetSelector,
+                targetRelativeX: pendingDot.targetRelativeX,
+                targetRelativeY: pendingDot.targetRelativeY,
+                onSave: handleSave,
+                onCancel: handleCancel
+              }
+            )
+          }
+        ) })
+      ] }),
+      openedReport && !pendingDot && renderOpenedReportModal()
+    ] }),
+    dotContainer
   );
 }
 

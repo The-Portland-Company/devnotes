@@ -97,8 +97,12 @@ type DevNotesOverlayProps = {
 declare function DevNotesOverlay({ openReportId, onOpenReportClose, }?: DevNotesOverlayProps): react_jsx_runtime.JSX.Element | null;
 
 type DevNotesMenuProps = {
-    /** Called when user clicks "View All Tasks" — always rendered, opens the built-in modal */
-    onViewTasks: () => void;
+    /**
+     * Called when the user clicks "View All Tasks". Optional — when omitted, the
+     * menu opens its own built-in, self-contained All Tasks modal so the host app
+     * doesn't have to render or wire one up.
+     */
+    onViewTasks?: () => void;
     /** Called when user clicks "Settings" */
     onSettings?: () => void;
     /** Custom icon component for the menu trigger */
@@ -110,8 +114,10 @@ type DevNotesMenuProps = {
     position?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
     /** Direction the dropdown opens — default 'down' */
     dropdownDirection?: 'up' | 'down';
+    /** Forwarded to the built-in modal: navigate to the page a report was filed on */
+    onNavigateToPage?: (pageUrl: string, reportId: string) => void;
 };
-declare function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position, dropdownDirection }: DevNotesMenuProps): react_jsx_runtime.JSX.Element | null;
+declare function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position, dropdownDirection, onNavigateToPage }: DevNotesMenuProps): react_jsx_runtime.JSX.Element | null;
 
 type DevNotesFormProps = {
     pageUrl: string;

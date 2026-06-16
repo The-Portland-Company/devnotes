@@ -10,10 +10,15 @@ import {
   FiToggleRight,
 } from 'react-icons/fi';
 import { useDevNotes } from './DevNotesProvider';
+import DevNotesTaskListModal from './DevNotesTaskListModal';
 
 type DevNotesMenuProps = {
-  /** Called when user clicks "View All Tasks" — always rendered, opens the built-in modal */
-  onViewTasks: () => void;
+  /**
+   * Called when the user clicks "View All Tasks". Optional — when omitted, the
+   * menu opens its own built-in, self-contained All Tasks modal so the host app
+   * doesn't have to render or wire one up.
+   */
+  onViewTasks?: () => void;
   /** Called when user clicks "Settings" */
   onSettings?: () => void;
   /** Custom icon component for the menu trigger */
@@ -22,9 +27,11 @@ type DevNotesMenuProps = {
   position?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
   /** Direction the dropdown opens — default 'down' */
   dropdownDirection?: 'up' | 'down';
+  /** Forwarded to the built-in modal: navigate to the page a report was filed on */
+  onNavigateToPage?: (pageUrl: string, reportId: string) => void;
 };
 
-export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position = 'bottom-right', dropdownDirection = 'down' }: DevNotesMenuProps) {
+export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position = 'bottom-right', dropdownDirection = 'down', onNavigateToPage }: DevNotesMenuProps) {
   const {
     isEnabled,
     setIsEnabled,
@@ -36,6 +43,7 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
     role,
   } = useDevNotes();
   const [open, setOpen] = useState(false);
+  const [showTaskModal, setShowTaskModal] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -212,7 +220,11 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
             data-menu-item
             onClick={() => {
               setOpen(false);
-              onViewTasks();
+              if (onViewTasks) {
+                onViewTasks();
+              } else {
+                setShowTaskModal(true);
+              }
             }}
             style={{
               display: 'flex',
@@ -275,6 +287,15 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
             </button>
           )}
         </div>
+      )}
+
+      {/* Built-in self-contained modal, used when the host app doesn't supply onViewTasks */}
+      {!onViewTasks && (
+        <DevNotesTaskListModal
+          open={showTaskModal}
+          onClose={() => setShowTaskModal(false)}
+          onNavigateToPage={onNavigateToPage}
+        />
       )}
     </div>
   );

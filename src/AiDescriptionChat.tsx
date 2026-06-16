@@ -18,6 +18,11 @@ type AiDescriptionChatProps = {
   aiProvider: AiProvider;
   onAccept: (aiDescription: string) => void;
   onCancel: () => void;
+  /**
+   * Save the report without AI refinement (used when AI is unavailable or the
+   * user chooses to skip it). Falls back to onCancel when not provided.
+   */
+  onSaveWithoutAi?: () => void;
 };
 
 export default function AiDescriptionChat({
@@ -26,6 +31,7 @@ export default function AiDescriptionChat({
   aiProvider,
   onAccept,
   onCancel,
+  onSaveWithoutAi,
 }: AiDescriptionChatProps) {
   const [conversationHistory, setConversationHistory] = useState<AiConversationMessage[]>([]);
   const [userInput, setUserInput] = useState('');
@@ -169,6 +175,14 @@ export default function AiDescriptionChat({
     await callAiAssist(conversationHistory);
   };
 
+  const handleSaveWithoutAi = () => {
+    if (onSaveWithoutAi) {
+      onSaveWithoutAi();
+    } else {
+      onCancel();
+    }
+  };
+
   // Count exchanges (assistant messages)
   const assistantMessageCount = conversationHistory.filter((m) => m.role === 'assistant').length;
   const showFinalizeButton = !finalizedDescription && assistantMessageCount >= 3;
@@ -280,30 +294,51 @@ export default function AiDescriptionChat({
             </div>
           )}
 
-          {/* Error handling */}
+          {/* Error handling — always let the user save the report as-is so a
+              failed/unavailable AI never blocks task creation. */}
           {error && !isLoading && (() => {
             const isConfigError = /edge function|fetch|network/i.test(error);
             return isConfigError ? (
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                <p className="text-sm text-gray-600 mb-2">AI refinement is not available. Your description will be saved as-is.</p>
-                <button
-                  type="button"
-                  className="px-2 py-1 text-xs rounded border border-gray-300 text-gray-600 hover:bg-gray-100"
-                  onClick={onCancel}
-                >
-                  Dismiss
-                </button>
+                <p className="text-sm text-gray-600 mb-2">AI refinement is not available right now. You can save your description as-is, or try again.</p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded bg-green-600 text-white hover:bg-green-700"
+                    onClick={handleSaveWithoutAi}
+                  >
+                    <FiCheck size={14} />
+                    Save without AI
+                  </button>
+                  <button
+                    type="button"
+                    className="px-2 py-1 text-xs rounded border border-gray-300 text-gray-600 hover:bg-gray-100"
+                    onClick={handleRetry}
+                  >
+                    Retry
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                 <p className="text-sm text-red-600 mb-2">{error}</p>
-                <button
-                  type="button"
-                  className="px-2 py-1 text-xs rounded border border-red-300 text-red-600 hover:bg-red-100"
-                  onClick={handleRetry}
-                >
-                  Retry
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className="px-2 py-1 text-xs rounded border border-red-300 text-red-600 hover:bg-red-100"
+                    onClick={handleRetry}
+                  >
+                    Retry
+                  </button>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded bg-green-600 text-white hover:bg-green-700"
+                    onClick={handleSaveWithoutAi}
+                  >
+                    <FiCheck size={14} />
+                    Save without AI
+                  </button>
+                </div>
               </div>
             );
           })()}
