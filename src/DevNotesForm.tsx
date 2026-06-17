@@ -268,10 +268,12 @@ export default function DevNotesForm({
 
   useEffect(() => {
     if (existingReport || selectedTypes.length > 0) return;
+    if (taskTypes.length === 0) return;
+    // Prefer a "bug" type when one exists, otherwise fall back to the first
+    // available type. A new report's create guard requires a type, so an empty
+    // default (when no type happens to be named "bug") made Save silently no-op.
     const bugType = taskTypes.find((t) => t.name.toLowerCase() === 'bug');
-    if (bugType) {
-      setSelectedTypes([bugType.id]);
-    }
+    setSelectedTypes([(bugType || taskTypes[0]).id]);
   }, [taskTypes, existingReport, selectedTypes.length]);
 
   const [severity, setSeverity] = useState<'Critical' | 'High' | 'Medium' | 'Low'>(
@@ -653,13 +655,21 @@ export default function DevNotesForm({
   const requiresAiBeforeCreate = Boolean(
     aiProvider && !existingReport && !aiDescription && !aiUnavailable
   );
+  // A new report can only be created with a task list and at least one type.
+  // These are surfaced as validation so Save never silently no-ops.
+  const missingTaskList = !existingReport && !taskListId;
+  const missingType = !existingReport && selectedTypes.length === 0;
   const submitDisabled = loading || !hasNarrative || statusRequired;
-  const submitTitle = requiresAiBeforeCreate
-    ? 'Save will start AI clarification before creating the task'
+  const submitTitle = !hasNarrative
+    ? 'Add a description, expected behavior, or actual behavior'
+    : missingTaskList
+      ? 'Select a task list before saving'
+    : missingType
+      ? 'Select at least one type before saving'
     : statusRequired
       ? 'Select a status before saving'
-    : !hasNarrative
-      ? 'Add a description, expected behavior, or actual behavior'
+    : requiresAiBeforeCreate
+      ? 'Save will start AI clarification before creating the task'
       : existingReport
         ? 'Update'
         : 'Save';
@@ -751,8 +761,30 @@ export default function DevNotesForm({
 
   const handleSubmit = async () => {
     setSubmitAttempted(true);
-    if (!title.trim() || !taskListId || selectedTypes.length === 0 || !hasNarrative) return;
-    if (statusRequired) return;
+    // Tell the user exactly what's missing instead of silently no-opping —
+    // a blocked Save with no feedback reads as an "unresponsive" button.
+    if (!title.trim()) {
+      setSubmitError('Add a title before saving.');
+      return;
+    }
+    if (!hasNarrative) {
+      setSubmitError('Add a description, expected behavior, or actual behavior.');
+      return;
+    }
+    if (!taskListId) {
+      setSubmitError('Select a task list before saving.');
+      return;
+    }
+    if (selectedTypes.length === 0) {
+      setSubmitError('Select at least one type before saving.');
+      return;
+    }
+    if (statusRequired) {
+      setSubmitError('Select a status before saving.');
+      return;
+    }
+
+    setSubmitError(null);
 
     if (requiresAiBeforeCreate) {
       setShowAiChat(true);

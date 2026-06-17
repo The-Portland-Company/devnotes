@@ -2147,10 +2147,9 @@ function DevNotesForm({
   const [selectedTypes, setSelectedTypes] = (0, import_react5.useState)(existingReport?.types || []);
   (0, import_react5.useEffect)(() => {
     if (existingReport || selectedTypes.length > 0) return;
+    if (taskTypes.length === 0) return;
     const bugType = taskTypes.find((t) => t.name.toLowerCase() === "bug");
-    if (bugType) {
-      setSelectedTypes([bugType.id]);
-    }
+    setSelectedTypes([(bugType || taskTypes[0]).id]);
   }, [taskTypes, existingReport, selectedTypes.length]);
   const [severity, setSeverity] = (0, import_react5.useState)(
     existingReport?.severity || "Medium"
@@ -2481,8 +2480,10 @@ function DevNotesForm({
   const requiresAiBeforeCreate = Boolean(
     aiProvider && !existingReport && !aiDescription && !aiUnavailable
   );
+  const missingTaskList = !existingReport && !taskListId;
+  const missingType = !existingReport && selectedTypes.length === 0;
   const submitDisabled = loading || !hasNarrative || statusRequired;
-  const submitTitle = requiresAiBeforeCreate ? "Save will start AI clarification before creating the task" : statusRequired ? "Select a status before saving" : !hasNarrative ? "Add a description, expected behavior, or actual behavior" : existingReport ? "Update" : "Save";
+  const submitTitle = !hasNarrative ? "Add a description, expected behavior, or actual behavior" : missingTaskList ? "Select a task list before saving" : missingType ? "Select at least one type before saving" : statusRequired ? "Select a status before saving" : requiresAiBeforeCreate ? "Save will start AI clarification before creating the task" : existingReport ? "Update" : "Save";
   const aiSeedDescription = hasDescription ? trimmedDescription : hasBehavior ? [trimmedExpectedBehavior, trimmedActualBehavior].filter(Boolean).join("\n") : title.trim();
   const canReviewDescriptionWithAi = Boolean(aiProvider && trimmedDescription);
   const narrativeTabs = [
@@ -2554,8 +2555,27 @@ function DevNotesForm({
   };
   const handleSubmit = async () => {
     setSubmitAttempted(true);
-    if (!title.trim() || !taskListId || selectedTypes.length === 0 || !hasNarrative) return;
-    if (statusRequired) return;
+    if (!title.trim()) {
+      setSubmitError("Add a title before saving.");
+      return;
+    }
+    if (!hasNarrative) {
+      setSubmitError("Add a description, expected behavior, or actual behavior.");
+      return;
+    }
+    if (!taskListId) {
+      setSubmitError("Select a task list before saving.");
+      return;
+    }
+    if (selectedTypes.length === 0) {
+      setSubmitError("Select at least one type before saving.");
+      return;
+    }
+    if (statusRequired) {
+      setSubmitError("Select a status before saving.");
+      return;
+    }
+    setSubmitError(null);
     if (requiresAiBeforeCreate) {
       setShowAiChat(true);
       return;
