@@ -361,7 +361,11 @@ export function DevNotesProvider({ adapter, user, config, children }: DevNotesPr
 
       try {
         const data = await adapter.createTask(report);
-        if (!data || !data.id || !data.page_url || !data.created_by) {
+        // Only the id is essential to consider the task created — page_url and
+        // created_by can legitimately be empty (e.g. tasks created from the All
+        // Tasks modal with no page anchor), so requiring them silently dropped
+        // valid creations.
+        if (!data || !data.id) {
           throw new Error('Task creation returned an invalid response.');
         }
         setBugReports((prev) => [data, ...prev]);
@@ -385,7 +389,7 @@ export function DevNotesProvider({ adapter, user, config, children }: DevNotesPr
 
       try {
         const data = await adapter.updateTask(id, updates);
-        if (!data || !data.id || !data.page_url || !data.created_by) {
+        if (!data || !data.id) {
           throw new Error('Task update returned an invalid response.');
         }
 

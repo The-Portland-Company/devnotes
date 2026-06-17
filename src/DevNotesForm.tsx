@@ -329,6 +329,9 @@ export default function DevNotesForm({
   // Set when AI refinement is unavailable/errors so the user can still save the
   // report as-is instead of being permanently blocked behind the AI gate.
   const [aiUnavailable, setAiUnavailable] = useState(false);
+  // Surfaced to the user when a save attempt fails so it never fails silently.
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [activeNarrativeTab, setActiveNarrativeTab] = useState<NarrativeTab>(
     getInitialNarrativeTab()
   );
@@ -709,22 +712,40 @@ export default function DevNotesForm({
 
     let result: BugReport | null = null;
 
-    if (existingReport) {
-      result = await updateTask(existingReport.id, {
-        ...reportData,
-        capture_context: existingReport.capture_context || capturedContext,
-        assigned_to: assignedTo,
-        resolved_by: resolvedBy,
-      });
-    } else {
-      result = await createTask({
-        ...reportData,
-        capture_context: capturedContext,
-      });
+    setSubmitError(null);
+    setIsSaving(true);
+    try {
+      if (existingReport) {
+        result = await updateTask(existingReport.id, {
+          ...reportData,
+          capture_context: existingReport.capture_context || capturedContext,
+          assigned_to: assignedTo,
+          resolved_by: resolvedBy,
+        });
+      } else {
+        result = await createTask({
+          ...reportData,
+          capture_context: capturedContext,
+        });
+      }
+    } catch (err: any) {
+      result = null;
+      setSubmitError(err?.message || 'Failed to save. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
 
     if (result) {
+      setSubmitError(null);
       onSave(result);
+    } else {
+      // createTask/updateTask returned null (error already logged in the
+      // provider). Surface it so the save never fails silently.
+      setSubmitError(
+        (prev) =>
+          prev ||
+          'Could not save the task. Please try again, and check that you have access to this project.'
+      );
     }
   };
 
@@ -825,11 +846,11 @@ export default function DevNotesForm({
         type="button"
         className="p-1.5 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:hover:bg-blue-600 self-center"
         onClick={handleSubmit}
-        disabled={submitDisabled}
+        disabled={submitDisabled || isSaving}
         aria-label={existingReport ? 'Update' : 'Save'}
         title={submitTitle}
       >
-        {loading ? (
+        {loading || isSaving ? (
           <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
         ) : (
           <FiSave size={16} />
@@ -837,6 +858,17 @@ export default function DevNotesForm({
       </button>
     </div>
   );
+
+  const saveErrorMessage = submitError || bugReportingError;
+  const renderSaveError = () =>
+    saveErrorMessage ? (
+      <p
+        role="alert"
+        className="mt-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700"
+      >
+        {saveErrorMessage}
+      </p>
+    ) : null;
 
   return (
     <div className="relative mx-auto w-full min-w-[320px] max-w-[1040px] rounded-3xl border border-slate-200 bg-gradient-to-b from-white via-slate-50/90 to-slate-100 p-4 shadow-[0_24px_90px_rgba(15,23,42,0.14)] md:p-6">
@@ -1581,6 +1613,7 @@ export default function DevNotesForm({
             {renderStatusSaveActions('footer')}
           </div>
         </div>
+        {renderSaveError()}
       </div>
     </div>
   );

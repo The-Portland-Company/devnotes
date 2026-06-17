@@ -346,7 +346,7 @@ function DevNotesProvider({ adapter, user, config, children }) {
       setError(null);
       try {
         const data = await adapter.createTask(report);
-        if (!data || !data.id || !data.page_url || !data.created_by) {
+        if (!data || !data.id) {
           throw new Error("Task creation returned an invalid response.");
         }
         setBugReports((prev) => [data, ...prev]);
@@ -368,7 +368,7 @@ function DevNotesProvider({ adapter, user, config, children }) {
       setError(null);
       try {
         const data = await adapter.updateTask(id, updates);
-        if (!data || !data.id || !data.page_url || !data.created_by) {
+        if (!data || !data.id) {
           throw new Error("Task update returned an invalid response.");
         }
         setBugReports(
@@ -2198,6 +2198,8 @@ function DevNotesForm({
   );
   const [showAiChat, setShowAiChat] = useState5(false);
   const [aiUnavailable, setAiUnavailable] = useState5(false);
+  const [submitError, setSubmitError] = useState5(null);
+  const [isSaving, setIsSaving] = useState5(false);
   const [activeNarrativeTab, setActiveNarrativeTab] = useState5(
     getInitialNarrativeTab()
   );
@@ -2512,21 +2514,35 @@ function DevNotesForm({
       ai_description: overrides?.aiDescription ?? aiDescription
     };
     let result = null;
-    if (existingReport) {
-      result = await updateTask(existingReport.id, {
-        ...reportData,
-        capture_context: existingReport.capture_context || capturedContext,
-        assigned_to: assignedTo,
-        resolved_by: resolvedBy
-      });
-    } else {
-      result = await createTask({
-        ...reportData,
-        capture_context: capturedContext
-      });
+    setSubmitError(null);
+    setIsSaving(true);
+    try {
+      if (existingReport) {
+        result = await updateTask(existingReport.id, {
+          ...reportData,
+          capture_context: existingReport.capture_context || capturedContext,
+          assigned_to: assignedTo,
+          resolved_by: resolvedBy
+        });
+      } else {
+        result = await createTask({
+          ...reportData,
+          capture_context: capturedContext
+        });
+      }
+    } catch (err) {
+      result = null;
+      setSubmitError(err?.message || "Failed to save. Please try again.");
+    } finally {
+      setIsSaving(false);
     }
     if (result) {
+      setSubmitError(null);
       onSave(result);
+    } else {
+      setSubmitError(
+        (prev) => prev || "Could not save the task. Please try again, and check that you have access to this project."
+      );
     }
   };
   const handleSubmit = async () => {
@@ -2615,13 +2631,22 @@ function DevNotesForm({
         type: "button",
         className: "p-1.5 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:hover:bg-blue-600 self-center",
         onClick: handleSubmit,
-        disabled: submitDisabled,
+        disabled: submitDisabled || isSaving,
         "aria-label": existingReport ? "Update" : "Save",
         title: submitTitle,
-        children: loading ? /* @__PURE__ */ jsx4("div", { className: "w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" }) : /* @__PURE__ */ jsx4(FiSave, { size: 16 })
+        children: loading || isSaving ? /* @__PURE__ */ jsx4("div", { className: "w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" }) : /* @__PURE__ */ jsx4(FiSave, { size: 16 })
       }
     )
   ] });
+  const saveErrorMessage = submitError || bugReportingError;
+  const renderSaveError = () => saveErrorMessage ? /* @__PURE__ */ jsx4(
+    "p",
+    {
+      role: "alert",
+      className: "mt-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700",
+      children: saveErrorMessage
+    }
+  ) : null;
   return /* @__PURE__ */ jsxs3("div", { className: "relative mx-auto w-full min-w-[320px] max-w-[1040px] rounded-3xl border border-slate-200 bg-gradient-to-b from-white via-slate-50/90 to-slate-100 p-4 shadow-[0_24px_90px_rgba(15,23,42,0.14)] md:p-6", children: [
     /* @__PURE__ */ jsxs3("div", { className: "mb-5 flex items-start justify-between gap-4", children: [
       /* @__PURE__ */ jsxs3("div", { className: "space-y-2", children: [
@@ -3320,7 +3345,8 @@ function DevNotesForm({
           ),
           renderStatusSaveActions("footer")
         ] })
-      ] })
+      ] }),
+      renderSaveError()
     ] })
   ] });
 }
