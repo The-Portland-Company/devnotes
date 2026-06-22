@@ -1501,7 +1501,17 @@ export function createDevNotesServerHandler(options: DevNotesServerOptions) {
           status: String(body.status || 'Open'),
         };
         const normalizedTaskInput = normalizeTaskDescriptionAndMeta(payload);
-        const devnotesMeta = normalizedTaskInput.devnotesMeta || buildDevNotesReportToken(payload);
+        // The client-supplied meta token leaves creator fields blank (the browser
+        // doesn't know the authenticated identity). Stamp the server-verified user
+        // onto the persisted meta so the submitter is always attributable.
+        const baseMeta =
+          normalizedTaskInput.parsedMeta || buildDevNotesReportMeta(payload);
+        const devnotesMeta = toDevNotesMetaToken({
+          ...baseMeta,
+          created_by: user.id,
+          creator_name: user.fullName || '',
+          creator_email: user.email || '',
+        });
         const createPath = '/api/mobile/tasks';
         const assignedTo =
           payload.assigned_to === null || payload.assigned_to === undefined

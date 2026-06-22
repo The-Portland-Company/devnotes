@@ -1,0 +1,57 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - text: Our product is in Beta. Thank you for participating in the Pilot Program.
+      - link "You can click here to see the Terms & Conditions for Beta users." [ref=e4] [cursor=pointer]:
+        - /url: https://app.politogyvrm.com/beta-terms-and-conditions
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - img "Politogy" [ref=e8]
+        - generic [ref=e9]:
+          - generic [ref=e10]
+          - button "Relationship Mode" [ref=e20] [cursor=pointer]
+          - link [ref=e30] [cursor=pointer]:
+            - /url: /relationship/dashboard
+          - link [ref=e37] [cursor=pointer]:
+            - /url: /relationship/contacts/dashboard
+          - link [ref=e46] [cursor=pointer]:
+            - /url: /relationship/email/dashboard
+          - link [ref=e53] [cursor=pointer]:
+            - /url: /relationship/sms-mms-blast/dashboard
+          - link [ref=e59] [cursor=pointer]:
+            - /url: /relationship/cta-database/dashboard
+          - link [ref=e65] [cursor=pointer]:
+            - /url: /relationship/forms
+          - link [ref=e71] [cursor=pointer]:
+            - /url: /relationship/social-media-management
+          - link [ref=e81] [cursor=pointer]:
+            - /url: /relationship/email-signature
+          - link [ref=e88] [cursor=pointer]:
+            - /url: /relationship/services
+          - link [ref=e96] [cursor=pointer]:
+            - /url: /relationship/roadmap/overview
+          - link [ref=e103] [cursor=pointer]:
+            - /url: /admin
+          - link [ref=e110] [cursor=pointer]:
+            - /url: "#"
+        - generic [ref=e122]:
+          - generic [ref=e124]
+          - generic [ref=e130]
+      - generic [ref=e144]:
+        - generic [ref=e146]:
+          - paragraph [ref=e147]: Development Roadmap
+          - paragraph [ref=e150]: Roadmap
+        - generic [ref=e151]:
+          - generic [ref=e152]
+          - button "Spencer Hill Spencer Hill agency@theportlandcompany.com" [ref=e182] [cursor=pointer]
+      - main [ref=e185]:
+        - generic [ref=e187]:
+          - tablist [ref=e190]
+          - tabpanel "Tasks" [ref=e203]
+  - generic:
+    - region "Notifications-top"
+    - region "Notifications-top-left"
+    - region "Notifications-top-right"
+    - region "Notifications-bottom-left"
+    - region "Notifications-bottom"
+    - region "Notifications-bottom-right"

@@ -378,9 +378,6 @@ function buildDevNotesReportMeta(report) {
     response: report.response === null || report.response === void 0 ? null : String(report.response)
   };
 }
-function buildDevNotesReportToken(report) {
-  return toDevNotesMetaToken(buildDevNotesReportMeta(report));
-}
 function isDevNotesForgeTask(task) {
   const normalized = normalizeTaskDescriptionAndMeta(task);
   if (normalized.parsedMeta?.kind === "report") return true;
@@ -1051,7 +1048,13 @@ function createDevNotesServerHandler(options) {
           status: String(body.status || "Open")
         };
         const normalizedTaskInput = normalizeTaskDescriptionAndMeta(payload);
-        const devnotesMeta = normalizedTaskInput.devnotesMeta || buildDevNotesReportToken(payload);
+        const baseMeta = normalizedTaskInput.parsedMeta || buildDevNotesReportMeta(payload);
+        const devnotesMeta = toDevNotesMetaToken({
+          ...baseMeta,
+          created_by: user.id,
+          creator_name: user.fullName || "",
+          creator_email: user.email || ""
+        });
         const createPath = "/api/mobile/tasks";
         const assignedTo = payload.assigned_to === null || payload.assigned_to === void 0 ? void 0 : String(payload.assigned_to);
         const response = await fetchForgeOrThrow(forgeContext, createPath, {
