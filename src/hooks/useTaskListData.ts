@@ -23,7 +23,6 @@ export function useTaskListData() {
     unreadCounts,
     deleteTask,
     updateTask,
-    adapter,
     user,
   } = useDevNotes();
 
@@ -36,68 +35,18 @@ export function useTaskListData() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [visibleReportIds, setVisibleReportIds] = useState<Set<string> | null>(null);
 
+  // The backend already returns only the reports this user may see — for
+  // privileged roles that's everything; otherwise it's the reports they created,
+  // are assigned to, or are involved in via messages (@mentions / authored
+  // comments), computed server-side. We therefore trust `tasks` directly.
+  //
+  // This replaces a former per-task `fetchMessages` fan-out that issued one
+  // request per task purely to recompute visibility client-side. With large
+  // projects that N+1 saturated the backend and produced 504s (which also broke
+  // saving). Visibility is now a single, free derivation from already-loaded data.
   useEffect(() => {
-    let cancelled = false;
-
-    const normalize = (value: string | null | undefined) => value?.trim().toLowerCase() || null;
-    const mentionTargets = new Set<string>();
-    const fullName = normalize(user.fullName);
-    const email = normalize(user.email);
-    const emailLocalPart = email?.split('@')[0] || null;
-    const profile = userProfiles[user.id];
-    const profileName = normalize(profile?.full_name);
-    const profileEmail = normalize(profile?.email);
-    const profileEmailLocalPart = profileEmail?.split('@')[0] || null;
-
-    [fullName, email, emailLocalPart, profileName, profileEmail, profileEmailLocalPart]
-      .filter((value): value is string => Boolean(value))
-      .forEach((value) => mentionTargets.add(value));
-
-    const collectVisibleReports = async () => {
-      const baseVisibleIds = new Set<string>();
-
-      tasks.forEach((report) => {
-        if (report.created_by === user.id || report.assigned_to === user.id) {
-          baseVisibleIds.add(report.id);
-        }
-      });
-
-      const messageResults = await Promise.all(
-        tasks.map(async (report) => {
-          try {
-            const messages = await adapter.fetchMessages(report.id);
-            return { reportId: report.id, messages };
-          } catch (error) {
-            console.error('[useTaskListData] Failed to load messages for report visibility', error);
-            return { reportId: report.id, messages: [] };
-          }
-        })
-      );
-
-      messageResults.forEach(({ reportId, messages }) => {
-        const involved = messages.some((message) => {
-          if (message.author_id === user.id) return true;
-          const normalizedBody = message.body.toLowerCase();
-          return Array.from(mentionTargets).some((target) => normalizedBody.includes(`@${target}`));
-        });
-
-        if (involved) {
-          baseVisibleIds.add(reportId);
-        }
-      });
-
-      if (!cancelled) {
-        setVisibleReportIds(baseVisibleIds);
-      }
-    };
-
-    setVisibleReportIds(null);
-    collectVisibleReports();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [adapter, tasks, user.id, user.email, user.fullName, userProfiles]);
+    setVisibleReportIds(new Set(tasks.map((report) => report.id)));
+  }, [tasks]);
 
   const getStaleMeta = (report: BugReport) => {
     const updatedTs = new Date(report.updated_at || report.created_at).getTime();

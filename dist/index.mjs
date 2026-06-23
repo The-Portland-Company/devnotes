@@ -1961,7 +1961,7 @@ function formatAiFixPayloadForCopy(payload) {
 }
 
 // src/version.ts
-var DEVNOTES_VERSION = "0.5.18";
+var DEVNOTES_VERSION = "0.5.19";
 
 // src/internal/formState.ts
 function getInitialTaskStatus(existingStatus) {
@@ -3399,7 +3399,6 @@ function useTaskListData() {
     unreadCounts,
     deleteTask,
     updateTask,
-    adapter,
     user
   } = useDevNotes();
   const [searchQuery, setSearchQuery] = useState6("");
@@ -3411,55 +3410,8 @@ function useTaskListData() {
   const [sortDir, setSortDir] = useState6("desc");
   const [visibleReportIds, setVisibleReportIds] = useState6(null);
   useEffect6(() => {
-    let cancelled = false;
-    const normalize = (value) => value?.trim().toLowerCase() || null;
-    const mentionTargets = /* @__PURE__ */ new Set();
-    const fullName = normalize(user.fullName);
-    const email = normalize(user.email);
-    const emailLocalPart = email?.split("@")[0] || null;
-    const profile = userProfiles[user.id];
-    const profileName = normalize(profile?.full_name);
-    const profileEmail = normalize(profile?.email);
-    const profileEmailLocalPart = profileEmail?.split("@")[0] || null;
-    [fullName, email, emailLocalPart, profileName, profileEmail, profileEmailLocalPart].filter((value) => Boolean(value)).forEach((value) => mentionTargets.add(value));
-    const collectVisibleReports = async () => {
-      const baseVisibleIds = /* @__PURE__ */ new Set();
-      tasks.forEach((report) => {
-        if (report.created_by === user.id || report.assigned_to === user.id) {
-          baseVisibleIds.add(report.id);
-        }
-      });
-      const messageResults = await Promise.all(
-        tasks.map(async (report) => {
-          try {
-            const messages = await adapter.fetchMessages(report.id);
-            return { reportId: report.id, messages };
-          } catch (error) {
-            console.error("[useTaskListData] Failed to load messages for report visibility", error);
-            return { reportId: report.id, messages: [] };
-          }
-        })
-      );
-      messageResults.forEach(({ reportId, messages }) => {
-        const involved = messages.some((message) => {
-          if (message.author_id === user.id) return true;
-          const normalizedBody = message.body.toLowerCase();
-          return Array.from(mentionTargets).some((target) => normalizedBody.includes(`@${target}`));
-        });
-        if (involved) {
-          baseVisibleIds.add(reportId);
-        }
-      });
-      if (!cancelled) {
-        setVisibleReportIds(baseVisibleIds);
-      }
-    };
-    setVisibleReportIds(null);
-    collectVisibleReports();
-    return () => {
-      cancelled = true;
-    };
-  }, [adapter, tasks, user.id, user.email, user.fullName, userProfiles]);
+    setVisibleReportIds(new Set(tasks.map((report) => report.id)));
+  }, [tasks]);
   const getStaleMeta = (report) => {
     const updatedTs = new Date(report.updated_at || report.created_at).getTime();
     if (Number.isNaN(updatedTs)) {
