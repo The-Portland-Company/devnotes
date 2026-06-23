@@ -23,6 +23,12 @@ type AiDescriptionChatProps = {
    * user chooses to skip it). Falls back to onCancel when not provided.
    */
   onSaveWithoutAi?: () => void;
+  /**
+   * Fired the first time the user answers the AI's questions. The report is
+   * considered "AI Ready" once the author has responded to the first round of
+   * clarifying questions, even before a final description is accepted.
+   */
+  onUserResponded?: () => void;
 };
 
 export default function AiDescriptionChat({
@@ -32,6 +38,7 @@ export default function AiDescriptionChat({
   onAccept,
   onCancel,
   onSaveWithoutAi,
+  onUserResponded,
 }: AiDescriptionChatProps) {
   const [conversationHistory, setConversationHistory] = useState<AiConversationMessage[]>([]);
   const [userInput, setUserInput] = useState('');
@@ -133,6 +140,11 @@ export default function AiDescriptionChat({
 
     const newUserMessage: AiConversationMessage = { role: 'user', content: trimmed };
     const updatedHistory = [...conversationHistory, newUserMessage];
+    // Mark the report AI Ready as soon as the author answers the first round of
+    // clarifying questions — they have engaged with the AI flow.
+    if (!conversationHistory.some((m) => m.role === 'user')) {
+      onUserResponded?.();
+    }
     setConversationHistory(updatedHistory);
     setUserInput('');
 

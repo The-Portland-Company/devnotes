@@ -1247,7 +1247,8 @@ function AiDescriptionChat({
   aiProvider,
   onAccept,
   onCancel,
-  onSaveWithoutAi
+  onSaveWithoutAi,
+  onUserResponded
 }) {
   const [conversationHistory, setConversationHistory] = (0, import_react4.useState)([]);
   const [userInput, setUserInput] = (0, import_react4.useState)("");
@@ -1328,6 +1329,9 @@ function AiDescriptionChat({
     if (!trimmed || isLoading) return;
     const newUserMessage = { role: "user", content: trimmed };
     const updatedHistory = [...conversationHistory, newUserMessage];
+    if (!conversationHistory.some((m) => m.role === "user")) {
+      onUserResponded?.();
+    }
     setConversationHistory(updatedHistory);
     setUserInput("");
     await callAiAssist(updatedHistory);
@@ -1962,6 +1966,9 @@ function formatAiFixPayloadForCopy(payload) {
     "```"
   ].join("\n");
 }
+
+// src/version.ts
+var DEVNOTES_VERSION = "0.5.18";
 
 // src/internal/formState.ts
 function getInitialTaskStatus(existingStatus) {
@@ -2949,6 +2956,7 @@ function DevNotesForm({
               await saveReport({ aiReady: false });
             }
           },
+          onUserResponded: () => setAiReady(true),
           onCancel: () => setShowAiChat(false)
         }
       ),
@@ -3294,9 +3302,13 @@ function DevNotesForm({
       /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "flex flex-col-reverse gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between", children: [
         /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "relative flex flex-wrap items-center gap-3", children: [
           isAdmin && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
-            "span",
+            "button",
             {
-              className: `inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${aiReady ? "bg-violet-100 text-violet-800" : "bg-slate-100 text-slate-500"}`,
+              type: "button",
+              onClick: () => setAiReady((prev) => !prev),
+              "aria-pressed": aiReady,
+              title: aiReady ? "Marked AI Ready \u2014 click to override and mark Not Ready" : "Click to manually override and mark AI Ready",
+              className: `inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold transition hover:ring-2 hover:ring-violet-200 ${aiReady ? "bg-violet-100 text-violet-800" : "bg-slate-100 text-slate-500"}`,
               children: aiReady ? "AI Ready" : "AI Not Ready"
             }
           ),
@@ -3373,7 +3385,11 @@ function DevNotesForm({
           renderStatusSaveActions("footer")
         ] })
       ] }),
-      renderSaveError()
+      renderSaveError(),
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "mt-2 text-right text-[10px] font-medium tracking-wide text-slate-400", children: [
+        "DevNotes v",
+        DEVNOTES_VERSION
+      ] })
     ] })
   ] });
 }

@@ -25,6 +25,7 @@ import {
   deriveRouteLabelFromUrl,
 } from './internal/captureContext';
 import { buildAiFixPayload, formatAiFixPayloadForCopy } from './internal/aiPayload';
+import { DEVNOTES_VERSION } from './version';
 import {
   getInitialNarrativeTab,
   getInitialTaskStatus,
@@ -1198,6 +1199,7 @@ export default function DevNotesForm({
                 await saveReport({ aiReady: false });
               }
             }}
+            onUserResponded={() => setAiReady(true)}
             onCancel={() => setShowAiChat(false)}
           />
         )}
@@ -1558,13 +1560,21 @@ export default function DevNotesForm({
         <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="relative flex flex-wrap items-center gap-3">
             {isAdmin && (
-              <span
-                className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
+              <button
+                type="button"
+                onClick={() => setAiReady((prev) => !prev)}
+                aria-pressed={aiReady}
+                title={
+                  aiReady
+                    ? 'Marked AI Ready — click to override and mark Not Ready'
+                    : 'Click to manually override and mark AI Ready'
+                }
+                className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold transition hover:ring-2 hover:ring-violet-200 ${
                   aiReady ? 'bg-violet-100 text-violet-800' : 'bg-slate-100 text-slate-500'
                 }`}
               >
                 {aiReady ? 'AI Ready' : 'AI Not Ready'}
-              </span>
+              </button>
             )}
             {existingReport && (onDelete || onArchive) ? (
               <>
@@ -1646,6 +1656,9 @@ export default function DevNotesForm({
           </div>
         </div>
         {renderSaveError()}
+        <div className="mt-2 text-right text-[10px] font-medium tracking-wide text-slate-400">
+          DevNotes v{DEVNOTES_VERSION}
+        </div>
       </div>
     </div>
   );
