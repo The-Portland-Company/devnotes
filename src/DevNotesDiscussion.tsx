@@ -106,7 +106,6 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
     });
   }, [mentionCandidates, mentionQuery, mentionRange]);
 
-  const messageCountLabel = messages.length === 1 ? '1 note' : `${messages.length} notes`;
   const hasNoMentionResults = Boolean(mentionRange && mentionOptions.length === 0);
 
   useEffect(() => {
@@ -404,16 +403,8 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
   };
 
   return (
-    <div className="flex h-full flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50/90 p-4 shadow-sm">
-      <div className="flex items-center justify-between gap-3 border-b border-slate-200 pb-3">
-        <div>
-          <p className="text-sm font-semibold text-slate-900">Discussion</p>
-          <p className="text-xs text-slate-500">{messageCountLabel}</p>
-        </div>
-        <p className="text-xs text-slate-500">Mentions notify teammates in real time.</p>
-      </div>
-
-      <div className="flex-1 min-h-[240px] max-h-[360px] overflow-y-auto pr-1">
+    <div className="flex h-full flex-col gap-4">
+      <div className="flex-1 min-h-0 max-h-[360px] overflow-y-auto pr-1">
         {loadingMessages ? (
           <div className="flex justify-center py-12">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-slate-900" />
@@ -584,10 +575,13 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
           )}
         </div>
         <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-xs leading-5 text-slate-500">
-            Notes are visible to everyone with access to Dev Notes. Use{' '}
-            <span className="font-bold">@</span> to mention a teammate.
-          </p>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-600">
+            <FiAtSign size={12} className="shrink-0 text-slate-400" />
+            <span>
+              Notes are visible to everyone with access to Dev Notes. Use{' '}
+              <span className="font-semibold">@</span> to mention a teammate.
+            </span>
+          </span>
           <button
             type="button"
             className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:opacity-50"

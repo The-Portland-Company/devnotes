@@ -12,7 +12,6 @@ import {
   FiEye,
   FiCheckCircle,
   FiArchive,
-  FiZap,
   FiCheck,
   FiClock,
 } from 'react-icons/fi';
@@ -83,9 +82,6 @@ const floatingLabelClass = (isSuperscript: boolean) =>
     ? 'absolute -top-2.5 left-3 z-[2] rounded-full border border-slate-200 bg-white px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 pointer-events-none'
     : 'mb-2 block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500';
 
-const sectionLabelClass =
-  'text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500';
-
 function SearchableSingleSelect({
   label,
   options,
@@ -127,50 +123,44 @@ function SearchableSingleSelect({
         {label}
       </label>
       <div className="relative">
-        <div className={FIELD_SURFACE_CLASS}>
-          <div className="flex items-center gap-2 px-3 py-2">
-            <FiSearch size={14} className="shrink-0 text-slate-400" />
-            <div className="h-4 w-px bg-slate-200" />
-          </div>
-          <div className="flex min-h-[40px] flex-wrap items-center gap-1 px-3 pb-2 pt-0">
-            {selectedOption && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700">
-                {selectedOption.label}
-                <button
-                  type="button"
-                  className="ml-0.5 text-slate-400 transition hover:text-slate-700"
-                  onClick={() => {
-                    onChange(null);
-                    setSearchTerm('');
-                    setShowDropdown(false);
-                  }}
-                >
-                  &times;
-                </button>
-              </span>
-            )}
-            <input
-              type="text"
-              className={`flex-1 ${minInputWidthClassName} border-none outline-none text-sm bg-transparent text-slate-900 placeholder:text-slate-400`}
-              placeholder={selectedOption ? 'Type to refine' : placeholder}
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setShowDropdown(true);
-              }}
-              onFocus={() => setShowDropdown(true)}
-              onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  if (filteredOptions.length > 0) {
-                    handleSelect(filteredOptions[0].id);
-                  }
+        <div className={`${FIELD_SURFACE_CLASS} flex flex-wrap items-center gap-1.5 px-3 py-2`}>
+          <FiSearch size={14} className="shrink-0 text-slate-400" />
+          {selectedOption && (
+            <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700">
+              {selectedOption.label}
+              <button
+                type="button"
+                className="ml-0.5 text-slate-400 transition hover:text-slate-700"
+                onClick={() => {
+                  onChange(null);
+                  setSearchTerm('');
+                  setShowDropdown(false);
+                }}
+              >
+                &times;
+              </button>
+            </span>
+          )}
+          <input
+            type="text"
+            className={`flex-1 ${minInputWidthClassName} border-none bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400`}
+            placeholder={selectedOption ? 'Type to refine' : placeholder}
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setShowDropdown(true);
+            }}
+            onFocus={() => setShowDropdown(true)}
+            onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                if (filteredOptions.length > 0) {
+                  handleSelect(filteredOptions[0].id);
                 }
-              }}
-            />
-            <span className="shrink-0 text-[11px] text-slate-400">Type to search</span>
-          </div>
+              }
+            }}
+          />
         </div>
         {showDropdown && (
           <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-20 max-h-[240px] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10">
@@ -679,18 +669,9 @@ export default function DevNotesForm({
     : hasBehavior
       ? [trimmedExpectedBehavior, trimmedActualBehavior].filter(Boolean).join('\n')
       : title.trim();
-  const canReviewDescriptionWithAi = Boolean(aiProvider && trimmedDescription);
-  const narrativeTabs: Array<{ id: NarrativeTab; label: string; hint: string }> = [
-    {
-      id: 'description',
-      label: 'Standard Description',
-      hint: 'Single narrative field',
-    },
-    {
-      id: 'issue-details',
-      label: 'Issue Details',
-      hint: 'Expected vs actual',
-    },
+  const narrativeTabs: Array<{ id: NarrativeTab; label: string }> = [
+    { id: 'description', label: 'Standard Description' },
+    { id: 'issue-details', label: 'Expected Behavior vs Actual' },
   ];
 
   const saveReport = async (overrides?: {
@@ -877,7 +858,7 @@ export default function DevNotesForm({
       />
       <button
         type="button"
-        className="p-1.5 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:hover:bg-blue-600 self-center"
+        className="p-1.5 rounded bg-blue-600 text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:hover:bg-slate-300 self-center"
         onClick={handleSubmit}
         disabled={submitDisabled || isSaving}
         aria-label={existingReport ? 'Update' : 'Save'}
@@ -1011,33 +992,6 @@ export default function DevNotesForm({
 
       <div className="space-y-5">
         <section className={SECTION_CARD_CLASS}>
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <span className={sectionLabelClass}>Core details</span>
-            {aiProvider && (
-              <button
-                type="button"
-                className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition ${
-                  canReviewDescriptionWithAi
-                    ? 'border border-violet-200 bg-violet-50 text-violet-700 hover:border-violet-300 hover:bg-violet-100'
-                    : 'cursor-not-allowed border border-slate-200 bg-slate-100 text-slate-400'
-                }`}
-                onClick={() => {
-                  if (!canReviewDescriptionWithAi) return;
-                  setShowAiChat(true);
-                }}
-                disabled={!canReviewDescriptionWithAi}
-                title={
-                  canReviewDescriptionWithAi
-                    ? 'Review the description with AI'
-                    : 'Add a description to review it with AI'
-                }
-              >
-                <FiZap size={12} />
-                Review with AI
-              </button>
-            )}
-          </div>
-
           <div className={isSuperscriptLabels ? 'relative' : ''}>
             <label className={floatingLabelClass(isSuperscriptLabels)}>
               Title <span className="text-rose-500">*</span>
@@ -1053,27 +1007,23 @@ export default function DevNotesForm({
         </section>
 
         <section className={SECTION_CARD_CLASS}>
-          <div className="mb-4 border-b border-slate-200">
-            <div className="flex flex-wrap items-end gap-2">
+          <div className="mb-4">
+            <div className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white p-1 shadow-sm shadow-slate-900/5">
               {narrativeTabs.map((tab) => {
                 const isActive = activeNarrativeTab === tab.id;
                 return (
                   <button
                     key={tab.id}
                     type="button"
-                    className={`rounded-t-2xl border px-4 py-2 text-left transition ${
+                    className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
                       isActive
-                        ? 'border-slate-300 border-b-slate-50 bg-slate-50 text-slate-900 shadow-sm shadow-slate-900/5'
-                        : 'border-transparent bg-transparent text-slate-500 hover:border-slate-200 hover:bg-white hover:text-slate-700'
+                        ? 'bg-slate-900 text-white shadow-sm'
+                        : 'bg-transparent text-slate-500 hover:text-slate-700'
                     }`}
                     onClick={() => setActiveNarrativeTab(tab.id)}
                     aria-pressed={isActive}
                   >
-                    <span className="block text-[11px] font-semibold uppercase tracking-[0.16em]">
-                      Description
-                    </span>
-                    <span className="mt-1 block text-sm font-medium">{tab.label}</span>
-                    <span className="mt-1 block text-xs text-slate-500">{tab.hint}</span>
+                    {tab.label}
                   </button>
                 );
               })}
@@ -1082,10 +1032,6 @@ export default function DevNotesForm({
 
           {activeNarrativeTab === 'description' ? (
             <div className="space-y-4">
-              <div className="flex items-center justify-between gap-3">
-                <span className={sectionLabelClass}>Standard description</span>
-                <span className="text-xs text-slate-500">Use one clear narrative field</span>
-              </div>
               <div className={isSuperscriptLabels ? 'relative' : ''}>
                 <label className={floatingLabelClass(isSuperscriptLabels)}>Description</label>
                 <textarea
@@ -1102,10 +1048,6 @@ export default function DevNotesForm({
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="flex items-center justify-between gap-3">
-                <span className={sectionLabelClass}>Issue details</span>
-                <span className="text-xs text-slate-500">Use one or both fields below</span>
-              </div>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className={isSuperscriptLabels ? 'relative' : ''}>
                   <label className={floatingLabelClass(isSuperscriptLabels)}>Expected Behavior</label>
@@ -1243,52 +1185,42 @@ export default function DevNotesForm({
         )}
 
         <section className={SECTION_CARD_CLASS}>
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <span className={sectionLabelClass}>Workflow</span>
-            <span className="text-xs text-slate-500">Search or add where allowed</span>
-          </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             <div className={isSuperscriptLabels ? 'relative' : ''}>
               <label className={floatingLabelClass(isSuperscriptLabels)}>Type(s)</label>
               <div className="relative">
-                <div className={FIELD_SURFACE_CLASS}>
-                  <div className="flex items-center gap-2 px-3 py-2">
-                    <FiSearch size={14} className="shrink-0 text-slate-400" />
-                    <div className="h-4 w-px bg-slate-200" />
-                  </div>
-                  <div className="flex min-h-[40px] flex-wrap items-center gap-1 px-3 pb-2 pt-0">
-                    {selectedTypes.map((typeId) => (
-                      <span
-                        key={typeId}
-                        className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700"
+                <div className={`${FIELD_SURFACE_CLASS} flex flex-wrap items-center gap-1.5 px-3 py-2`}>
+                  <FiSearch size={14} className="shrink-0 text-slate-400" />
+                  {selectedTypes.map((typeId) => (
+                    <span
+                      key={typeId}
+                      className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700"
+                    >
+                      {getTypeName(typeId)}
+                      <button
+                        type="button"
+                        className="ml-0.5 text-slate-400 transition hover:text-slate-700"
+                        onClick={() => handleTypeRemove(typeId)}
                       >
-                        {getTypeName(typeId)}
-                        <button
-                          type="button"
-                          className="ml-0.5 text-slate-400 transition hover:text-slate-700"
-                          onClick={() => handleTypeRemove(typeId)}
-                        >
-                          &times;
-                        </button>
-                      </span>
-                    ))}
-                    <input
-                      ref={typeInputRef}
-                      type="text"
-                      className="flex-1 min-w-[140px] border-none bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
-                      placeholder="Type to search or add..."
-                      value={newTypeName}
-                      onChange={(e) => {
-                        setPendingTypeName(null);
-                        setNewTypeName(e.target.value);
-                        setShowTypeDropdown(true);
-                      }}
-                      onFocus={() => setShowTypeDropdown(true)}
-                      onBlur={() => setTimeout(() => setShowTypeDropdown(false), 200)}
-                      onKeyDown={handleTypeKeyDown}
-                    />
-                    <span className="shrink-0 text-[11px] text-slate-400">Enter to select</span>
-                  </div>
+                        &times;
+                      </button>
+                    </span>
+                  ))}
+                  <input
+                    ref={typeInputRef}
+                    type="text"
+                    className="flex-1 min-w-[120px] border-none bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                    placeholder="Type to search or add..."
+                    value={newTypeName}
+                    onChange={(e) => {
+                      setPendingTypeName(null);
+                      setNewTypeName(e.target.value);
+                      setShowTypeDropdown(true);
+                    }}
+                    onFocus={() => setShowTypeDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowTypeDropdown(false), 200)}
+                    onKeyDown={handleTypeKeyDown}
+                  />
                 </div>
 
                 {showTypeDropdown && (
@@ -1406,41 +1338,35 @@ export default function DevNotesForm({
             <div className={isSuperscriptLabels ? 'relative' : ''}>
               <label className={floatingLabelClass(isSuperscriptLabels)}>Task List</label>
               <div className="relative">
-                <div className={FIELD_SURFACE_CLASS}>
-                  <div className="flex items-center gap-2 px-3 py-2">
-                    <FiSearch size={14} className="shrink-0 text-slate-400" />
-                    <div className="h-4 w-px bg-slate-200" />
-                  </div>
-                  <div className="flex min-h-[40px] flex-wrap items-center gap-1 px-3 pb-2 pt-0">
-                    {taskListId && (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700">
-                        {getTaskListName(taskListId)}
-                        <button
-                          type="button"
-                          className="ml-0.5 text-slate-400 transition hover:text-slate-700"
-                          onClick={() => setTaskListId('')}
-                        >
-                          &times;
-                        </button>
-                      </span>
-                    )}
-                    <input
-                      ref={taskListInputRef}
-                      type="text"
-                      className="flex-1 min-w-[140px] border-none bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
-                      placeholder="Type to search or add..."
-                      value={taskListSearchTerm}
-                      onChange={(e) => {
-                        setPendingTaskListName(null);
-                        setTaskListSearchTerm(e.target.value);
-                        setShowTaskListDropdown(true);
-                      }}
-                      onFocus={() => setShowTaskListDropdown(true)}
-                      onBlur={() => setTimeout(() => setShowTaskListDropdown(false), 200)}
-                      onKeyDown={handleTaskListKeyDown}
-                    />
-                    <span className="shrink-0 text-[11px] text-slate-400">Enter to select</span>
-                  </div>
+                <div className={`${FIELD_SURFACE_CLASS} flex flex-wrap items-center gap-1.5 px-3 py-2`}>
+                  <FiSearch size={14} className="shrink-0 text-slate-400" />
+                  {taskListId && (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700">
+                      {getTaskListName(taskListId)}
+                      <button
+                        type="button"
+                        className="ml-0.5 text-slate-400 transition hover:text-slate-700"
+                        onClick={() => setTaskListId('')}
+                      >
+                        &times;
+                      </button>
+                    </span>
+                  )}
+                  <input
+                    ref={taskListInputRef}
+                    type="text"
+                    className="flex-1 min-w-[120px] border-none bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                    placeholder="Type to search or add..."
+                    value={taskListSearchTerm}
+                    onChange={(e) => {
+                      setPendingTaskListName(null);
+                      setTaskListSearchTerm(e.target.value);
+                      setShowTaskListDropdown(true);
+                    }}
+                    onFocus={() => setShowTaskListDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowTaskListDropdown(false), 200)}
+                    onKeyDown={handleTaskListKeyDown}
+                  />
                 </div>
 
                 {showTaskListDropdown && (
@@ -1548,34 +1474,13 @@ export default function DevNotesForm({
         </section>
 
         {existingReport && (
-          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-900/5">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <span className={sectionLabelClass}>Discussion</span>
-              <span className="text-xs text-slate-500">Visible to collaborators with access</span>
-            </div>
+          <div>
             <DevNotesDiscussion report={existingReport} />
-          </section>
+          </div>
         )}
 
         <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="relative flex flex-wrap items-center gap-3">
-            {isAdmin && (
-              <button
-                type="button"
-                onClick={() => setAiReady((prev) => !prev)}
-                aria-pressed={aiReady}
-                title={
-                  aiReady
-                    ? 'Marked AI Ready — click to override and mark Not Ready'
-                    : 'Click to manually override and mark AI Ready'
-                }
-                className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold transition hover:ring-2 hover:ring-violet-200 ${
-                  aiReady ? 'bg-violet-100 text-violet-800' : 'bg-slate-100 text-slate-500'
-                }`}
-              >
-                {aiReady ? 'AI Ready' : 'AI Not Ready'}
-              </button>
-            )}
             {existingReport && (onDelete || onArchive) ? (
               <>
                 {onArchive && (
@@ -1643,15 +1548,6 @@ export default function DevNotesForm({
             ) : null}
           </div>
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className={ACTION_ICON_BUTTON_CLASS}
-              onClick={onCancel}
-              aria-label="Cancel"
-              title="Cancel"
-            >
-              <FiX size={16} />
-            </button>
             {renderStatusSaveActions('footer')}
           </div>
         </div>
