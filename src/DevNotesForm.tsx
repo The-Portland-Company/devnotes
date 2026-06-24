@@ -143,7 +143,7 @@ function SearchableSingleSelect({
           )}
           <input
             type="text"
-            className={`flex-1 ${minInputWidthClassName} !border-0 !bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400`}
+            className={`flex-1 ${minInputWidthClassName} dn-flat-input !border-0 !bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400`}
             placeholder={selectedOption ? 'Type to refine' : placeholder}
             value={searchTerm}
             onChange={(e) => {
@@ -335,7 +335,7 @@ export default function DevNotesForm({
     [existingReport?.capture_context, reportPageUrl]
   );
 
-  const isSuperscriptLabels = Boolean(existingReport);
+  const isSuperscriptLabels = true;
 
   const severityOptions: SearchableOption[] = [
     { id: 'Critical', label: 'Critical' },
@@ -1209,7 +1209,7 @@ export default function DevNotesForm({
                   <input
                     ref={typeInputRef}
                     type="text"
-                    className="flex-1 min-w-[120px] !border-0 !bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                    className="flex-1 min-w-[120px] dn-flat-input !border-0 !bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
                     placeholder="Type to search or add..."
                     value={newTypeName}
                     onChange={(e) => {
@@ -1352,7 +1352,7 @@ export default function DevNotesForm({
                   <input
                     ref={taskListInputRef}
                     type="text"
-                    className="flex-1 min-w-[120px] !border-0 !bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                    className="flex-1 min-w-[120px] dn-flat-input !border-0 !bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
                     placeholder="Type to search or add..."
                     value={taskListSearchTerm}
                     onChange={(e) => {

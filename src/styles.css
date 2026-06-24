@@ -5,3 +5,14 @@
   from { transform: translateX(100%); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
 }
+
+/* Host app forces `input:not(...) { border-width:1px !important }` (specificity
+   0,3,1) on all inputs, which overrides Tailwind border utilities and makes the
+   flattened DevNotes search fields look double-bordered (selected chips appear
+   outside the inner input box). This scoped rule has higher specificity (0,4,1)
+   + !important so the inner input is truly borderless and reads as one field. */
+input.dn-flat-input:not([type='checkbox']):not([type='radio']):not([type='file']) {
+  border: 0 !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+}

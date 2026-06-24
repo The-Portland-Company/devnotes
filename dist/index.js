@@ -1963,7 +1963,7 @@ function formatAiFixPayloadForCopy(payload) {
 }
 
 // src/version.ts
-var DEVNOTES_VERSION = "0.5.21";
+var DEVNOTES_VERSION = "0.5.22";
 
 // src/internal/formState.ts
 function getInitialTaskStatus(existingStatus) {
@@ -2042,7 +2042,7 @@ function SearchableSingleSelect({
           "input",
           {
             type: "text",
-            className: `flex-1 ${minInputWidthClassName} !border-0 !bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400`,
+            className: `flex-1 ${minInputWidthClassName} dn-flat-input !border-0 !bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400`,
             placeholder: selectedOption ? "Type to refine" : placeholder,
             value: searchTerm,
             onChange: (e) => {
@@ -2210,7 +2210,7 @@ function DevNotesForm({
     () => existingReport?.capture_context || buildCaptureContext(reportPageUrl),
     [existingReport?.capture_context, reportPageUrl]
   );
-  const isSuperscriptLabels = Boolean(existingReport);
+  const isSuperscriptLabels = true;
   const severityOptions = [
     { id: "Critical", label: "Critical" },
     { id: "High", label: "High" },
@@ -2962,7 +2962,7 @@ function DevNotesForm({
                 {
                   ref: typeInputRef,
                   type: "text",
-                  className: "flex-1 min-w-[120px] !border-0 !bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400",
+                  className: "flex-1 min-w-[120px] dn-flat-input !border-0 !bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400",
                   placeholder: "Type to search or add...",
                   value: newTypeName,
                   onChange: (e) => {
@@ -3105,7 +3105,7 @@ function DevNotesForm({
                 {
                   ref: taskListInputRef,
                   type: "text",
-                  className: "flex-1 min-w-[120px] !border-0 !bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400",
+                  className: "flex-1 min-w-[120px] dn-flat-input !border-0 !bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400",
                   placeholder: "Type to search or add...",
                   value: taskListSearchTerm,
                   onChange: (e) => {
