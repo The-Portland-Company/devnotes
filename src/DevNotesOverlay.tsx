@@ -4,6 +4,8 @@ import { FiCrosshair, FiMove } from 'react-icons/fi';
 import { useDevNotes } from './DevNotesProvider';
 import DevNotesForm from './DevNotesForm';
 import DevNotesDot from './DevNotesDot';
+import DevNotesStepDot from './DevNotesStepDot';
+import DevNotesStoryRecorder from './DevNotesStoryRecorder';
 import { calculateBugPositionFromPoint } from './utils/bugAnchors';
 import type { BugReport } from './types';
 
@@ -31,6 +33,8 @@ export default function DevNotesOverlay({
     compensate,
     role,
     user,
+    showStepDots,
+    currentPageStepDots,
   } = useDevNotes();
 
   const [pendingDot, setPendingDot] = useState<{
@@ -291,13 +295,29 @@ export default function DevNotesOverlay({
 
   if (role === 'none') return null;
 
-  if (!isEnabled) {
-    if (!showTasksAlways && !openedReport) {
-      return null;
-    }
+  // Step dots + the story recorder render independently of bug-creation mode.
+  // The recorder uses position:fixed so it needs no container; step dots are
+  // portalled into the dot container alongside bug dots.
+  const sharedLayer = (
+    <>
+      <DevNotesStoryRecorder />
+      {showStepDots &&
+        dotContainer &&
+        createPortal(
+          <>
+            {currentPageStepDots.map((dot) => (
+              <DevNotesStepDot key={dot.id} dot={dot} />
+            ))}
+          </>,
+          dotContainer
+        )}
+    </>
+  );
 
+  if (!isEnabled) {
     return (
       <>
+        {sharedLayer}
         {showTasksAlways && dotContainer &&
           createPortal(
             <>
@@ -315,7 +335,7 @@ export default function DevNotesOverlay({
     );
   }
 
-  if (!dotContainer) return null;
+  if (!dotContainer) return sharedLayer;
 
   const pendingViewport = pendingDot
     ? compensate(
@@ -324,7 +344,10 @@ export default function DevNotesOverlay({
       )
     : null;
 
-  return createPortal(
+  return (
+    <>
+      {sharedLayer}
+      {createPortal(
     <>
       {/* Visual indicator that task management is enabled */}
       <div
@@ -408,5 +431,7 @@ export default function DevNotesOverlay({
       {openedReport && !pendingDot && renderOpenedReportModal()}
     </>,
     dotContainer
+      )}
+    </>
   );
 }

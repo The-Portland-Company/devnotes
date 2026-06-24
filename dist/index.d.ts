@@ -1,9 +1,27 @@
 import * as react_jsx_runtime from 'react/jsx-runtime';
 import { ReactNode } from 'react';
-import { D as DevNotesClientAdapter, a as DevNotesUser, b as DevNotesConfig, B as BugReport, c as BugReportType, T as TaskList, d as BugReportCreator, N as NotifyEvent, A as AiProvider, e as DevNotesRole, f as Task, g as TaskCaptureContext } from './types-CnCGjCRT.js';
-export { h as AiAssistResult, i as AiConversationMessage, j as AiProviderOption, k as BugCaptureContext, l as BugReportCreateData, m as BugReportMessage, n as TaskCreateData, o as TaskCreator, p as TaskMessage, q as TaskType } from './types-CnCGjCRT.js';
+import { D as DevNotesClientAdapter, a as DevNotesUser, b as DevNotesConfig, U as UserStoryStepDot, B as BugReport, c as BugReportType, T as TaskList, d as BugReportCreator, N as NotifyEvent, A as AiProvider, e as DevNotesRole, f as Task, g as TaskCaptureContext } from './types-Cz12QCWk.js';
+export { h as AiAssistResult, i as AiConversationMessage, j as AiProviderOption, k as BugCaptureContext, l as BugReportCreateData, m as BugReportMessage, n as TaskCreateData, o as TaskCreator, p as TaskMessage, q as TaskType, r as USER_STORY_TYPE_NAME, s as UserStoryCreateResult, t as UserStoryDraft, u as UserStoryStepInput, v as UserStoryWithSteps } from './types-Cz12QCWk.js';
 import { D as DevNotesCapabilities, a as DevNotesAppLinkStatus, b as DevNotesClientOptions } from './types-DPJ2ViSN.js';
 export { c as DevNotesLinkAppInput } from './types-DPJ2ViSN.js';
+
+type StoryStepAction = 'click' | 'input' | 'select' | 'navigate' | 'note';
+type RecordedStep = {
+    /** Stable client-side id (not persisted server-side). */
+    id: string;
+    action: StoryStepAction;
+    /** Human-readable instruction, e.g. "Click the \"Save\" button". */
+    body: string;
+    /** CSS selector of the touched element (null for navigation/notes). */
+    selector: string | null;
+    /** The value the user entered/selected, when relevant. */
+    value: string | null;
+    /** Normalized page path the step occurred on. */
+    page_url: string;
+    /** Page-level coordinates (clientX + scrollX). null for navigation/notes. */
+    x: number | null;
+    y: number | null;
+};
 
 type DevNotesContextValue = {
     isEnabled: boolean;
@@ -12,6 +30,26 @@ type DevNotesContextValue = {
     setShowTasksAlways: (show: boolean) => void;
     hideResolvedClosed: boolean;
     setHideResolvedClosed: (hide: boolean) => void;
+    showStepDots: boolean;
+    setShowStepDots: (show: boolean) => void;
+    canRecordUserStory: boolean;
+    isRecordingStory: boolean;
+    recordedSteps: RecordedStep[];
+    savingStory: boolean;
+    storyError: string | null;
+    startUserStoryRecording: () => void;
+    stopUserStoryRecording: () => void;
+    cancelUserStoryRecording: () => void;
+    updateRecordedStep: (id: string, body: string) => void;
+    deleteRecordedStep: (id: string) => void;
+    moveRecordedStep: (id: string, direction: 'up' | 'down') => void;
+    saveUserStory: (input: {
+        title: string;
+        description_md?: string | null;
+        test_url?: string | null;
+    }) => Promise<boolean>;
+    userStoryStepDots: UserStoryStepDot[];
+    currentPageStepDots: UserStoryStepDot[];
     tasks: BugReport[];
     taskTypes: BugReportType[];
     taskLists: TaskList[];
@@ -138,6 +176,22 @@ type DevNotesDotProps = {
     report: BugReport;
 };
 declare function DevNotesDot({ report }: DevNotesDotProps): react_jsx_runtime.JSX.Element | null;
+
+type DevNotesStepDotProps = {
+    dot: UserStoryStepDot;
+};
+declare function DevNotesStepDot({ dot }: DevNotesStepDotProps): react_jsx_runtime.JSX.Element | null;
+
+/**
+ * Floating UI for recording a User Story (Test Case):
+ *   1. While recording — a HUD showing the live step count + Stop / Cancel.
+ *   2. After Stop (steps captured) — a review modal to title the story, edit /
+ *      reorder / delete steps, then Save (writes to the Specs API via the host
+ *      onCreateUserStory callback).
+ *
+ * Tagged data-devnotes-recorder so the recorder ignores clicks on its own UI.
+ */
+declare function DevNotesStoryRecorder(): react_jsx_runtime.JSX.Element | null;
 
 type DevNotesDiscussionProps = {
     report: BugReport;
@@ -294,4 +348,4 @@ declare const useBugReportPosition: (report: Task | null) => {
     y: number;
 } | null;
 
-export { type AiFixPayload, AiProvider, BugReport, BugReportCreator, BugReportType, type BuildAiFixPayloadParams, DevNotesAppLinkStatus, DevNotesButton, DevNotesCapabilities, DevNotesClientOptions, DevNotesConfig, DevNotesDiscussion, DevNotesDot, DevNotesForm, DevNotesMenu, DevNotesOverlay, DevNotesProvider, DevNotesRole, DevNotesTaskList, DevNotesTaskListModal, DevNotesUser, type NarrativeTab, NotifyEvent, Task, TaskCaptureContext, TaskList, buildAiFixPayload, buildCaptureContext, calculateBugPositionFromPoint, createDevNotesClient, deriveRouteLabelFromUrl, detectBrowserName, formatAiFixPayloadForCopy, getInitialNarrativeTab, getInitialTaskStatus, normalizePageUrl, resolveBugReportCoordinates, shouldRequireExplicitStatusSelection, useBugReportPosition, useDevNotes };
+export { type AiFixPayload, AiProvider, BugReport, BugReportCreator, BugReportType, type BuildAiFixPayloadParams, DevNotesAppLinkStatus, DevNotesButton, DevNotesCapabilities, DevNotesClientOptions, DevNotesConfig, DevNotesDiscussion, DevNotesDot, DevNotesForm, DevNotesMenu, DevNotesOverlay, DevNotesProvider, DevNotesRole, DevNotesStepDot, DevNotesStoryRecorder, DevNotesTaskList, DevNotesTaskListModal, DevNotesUser, type NarrativeTab, NotifyEvent, type RecordedStep, type StoryStepAction, Task, TaskCaptureContext, TaskList, UserStoryStepDot, buildAiFixPayload, buildCaptureContext, calculateBugPositionFromPoint, createDevNotesClient, deriveRouteLabelFromUrl, detectBrowserName, formatAiFixPayloadForCopy, getInitialNarrativeTab, getInitialTaskStatus, normalizePageUrl, resolveBugReportCoordinates, shouldRequireExplicitStatusSelection, useBugReportPosition, useDevNotes };

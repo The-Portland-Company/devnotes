@@ -7,6 +7,8 @@ export { default as DevNotesOverlay } from './DevNotesOverlay';
 export { default as DevNotesMenu } from './DevNotesMenu';
 export { default as DevNotesForm } from './DevNotesForm';
 export { default as DevNotesDot } from './DevNotesDot';
+export { default as DevNotesStepDot } from './DevNotesStepDot';
+export { default as DevNotesStoryRecorder } from './DevNotesStoryRecorder';
 export { default as DevNotesDiscussion } from './DevNotesDiscussion';
 export { default as DevNotesTaskList } from './DevNotesTaskList';
 export { default as DevNotesTaskListModal } from './DevNotesTaskListModal';
@@ -41,7 +43,14 @@ export type {
   BugReportCreator,
   BugReportMessage,
   BugCaptureContext,
+  UserStoryStepInput,
+  UserStoryDraft,
+  UserStoryCreateResult,
+  UserStoryStepDot,
+  UserStoryWithSteps,
 } from './types';
+export { USER_STORY_TYPE_NAME } from './types';
+export type { RecordedStep, StoryStepAction } from './internal/storyRecorder';
 
 // Utils
 export {

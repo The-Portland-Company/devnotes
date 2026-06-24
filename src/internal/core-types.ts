@@ -152,6 +152,19 @@ export type DevNotesConfig = {
   superUsers?: string[];
   /** Role of the current user for access control */
   role?: DevNotesRole;
+  /**
+   * Persist a recorded User Story (Test Case) to the host's backend / the
+   * Specs API. The host owns transport + auth (e.g. forwarding to
+   * specs.politogyvrm.com with a server-side bearer token). When omitted, the
+   * "Record User Story" affordance is hidden.
+   */
+  onCreateUserStory?: (draft: UserStoryDraft) => Promise<UserStoryCreateResult>;
+  /**
+   * Optional: load existing User Stories (with positioned steps) so their step
+   * dots can be rendered across sessions/users. When omitted, DevNotes falls
+   * back to locally-persisted stories recorded on this device.
+   */
+  fetchUserStories?: () => Promise<UserStoryWithSteps[]>;
 };
 
 export type BugReportCreator = TaskCreator;
@@ -159,3 +172,65 @@ export type BugReportType = TaskType;
 export type BugCaptureContext = TaskCaptureContext;
 export type BugReport = Task;
 export type BugReportMessage = TaskMessage;
+
+// ---------------------------------------------------------------------------
+// User Stories (Test Cases)
+// ---------------------------------------------------------------------------
+
+/** Canonical name of the DevNotes type that switches the menu into recording. */
+export const USER_STORY_TYPE_NAME = 'User Stories (Test Cases)';
+
+/** A single recorded/edited step that is sent to the Specs API on save. */
+export type UserStoryStepInput = {
+  body: string;
+  app_mode?: string | null;
+  url?: string | null;
+  hitl?: boolean;
+  page_url?: string | null;
+  x_position?: number | null;
+  y_position?: number | null;
+  target_selector?: string | null;
+};
+
+/** The payload handed to the host app's onCreateUserStory callback on save. */
+export type UserStoryDraft = {
+  title: string;
+  description_md?: string | null;
+  test_url?: string | null;
+  steps: UserStoryStepInput[];
+};
+
+/** Result the host returns after persisting a story to the Specs API. */
+export type UserStoryCreateResult = {
+  slug?: string | null;
+  error?: string | null;
+};
+
+/** A persisted step as read back for rendering dots on the page. */
+export type UserStoryStepDot = {
+  id: string;
+  storySlug: string;
+  storyTitle: string;
+  /** 1-based ordinal within the story. */
+  index: number;
+  body: string;
+  page_url: string | null;
+  x_position: number | null;
+  y_position: number | null;
+  target_selector: string | null;
+};
+
+/** A story with the subset of step fields DevNotes needs to draw dots. */
+export type UserStoryWithSteps = {
+  slug: string;
+  title: string;
+  test_url?: string | null;
+  steps: Array<{
+    id?: string;
+    body: string;
+    page_url?: string | null;
+    x_position?: number | null;
+    y_position?: number | null;
+    target_selector?: string | null;
+  }>;
+};

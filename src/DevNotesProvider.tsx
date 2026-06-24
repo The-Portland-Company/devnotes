@@ -21,8 +21,17 @@ import type {
   AiProvider,
   DevNotesCapabilities,
   DevNotesAppLinkStatus,
+  UserStoryDraft,
+  UserStoryCreateResult,
+  UserStoryStepDot,
 } from './types';
 import { useDevNotesContainer } from './hooks/useContainerOffset';
+import {
+  startStoryRecording,
+  type RecordedStep,
+  type RecorderHandle,
+} from './internal/storyRecorder';
+import { USER_STORY_TYPE_NAME } from './internal/core-types';
 
 type DevNotesContextValue = {
   isEnabled: boolean;
@@ -31,6 +40,27 @@ type DevNotesContextValue = {
   setShowTasksAlways: (show: boolean) => void;
   hideResolvedClosed: boolean;
   setHideResolvedClosed: (hide: boolean) => void;
+  showStepDots: boolean;
+  setShowStepDots: (show: boolean) => void;
+  // ----- User Stories (Test Cases) -----
+  canRecordUserStory: boolean;
+  isRecordingStory: boolean;
+  recordedSteps: RecordedStep[];
+  savingStory: boolean;
+  storyError: string | null;
+  startUserStoryRecording: () => void;
+  stopUserStoryRecording: () => void;
+  cancelUserStoryRecording: () => void;
+  updateRecordedStep: (id: string, body: string) => void;
+  deleteRecordedStep: (id: string) => void;
+  moveRecordedStep: (id: string, direction: 'up' | 'down') => void;
+  saveUserStory: (input: {
+    title: string;
+    description_md?: string | null;
+    test_url?: string | null;
+  }) => Promise<boolean>;
+  userStoryStepDots: UserStoryStepDot[];
+  currentPageStepDots: UserStoryStepDot[];
   tasks: BugReport[];
   taskTypes: BugReportType[];
   taskLists: TaskList[];
@@ -102,9 +132,14 @@ export function DevNotesProvider({ adapter, user, config, children }: DevNotesPr
   const aiProvider = config?.disableAi ? undefined : config?.aiProvider;
   const requireAi = Boolean(config?.requireAi && aiProvider);
   const role: DevNotesRole = config?.role ?? 'admin';
+  const onCreateUserStory = config?.onCreateUserStory;
+  const fetchUserStories = config?.fetchUserStories;
+  const canRecordUserStory = Boolean(onCreateUserStory);
 
   const SHOW_BUGS_ALWAYS_KEY = `${storagePrefix}_show_bugs_always`;
   const HIDE_RESOLVED_CLOSED_KEY = `${storagePrefix}_hide_resolved_closed`;
+  const SHOW_STEP_DOTS_KEY = `${storagePrefix}_show_step_dots`;
+  const STORY_DOTS_KEY = `${storagePrefix}_user_story_dots`;
 
   const [isEnabled, setIsEnabled] = useState(false);
   const [showTasksAlways, setShowBugsAlwaysState] = useState(() => {
@@ -122,6 +157,21 @@ export function DevNotesProvider({ adapter, user, config, children }: DevNotesPr
       return true;
     }
   });
+  const [showStepDots, setShowStepDotsState] = useState(() => {
+    try {
+      const stored = localStorage.getItem(SHOW_STEP_DOTS_KEY);
+      return stored === null ? true : stored === 'true';
+    } catch {
+      return true;
+    }
+  });
+  const [isRecordingStory, setIsRecordingStory] = useState(false);
+  const [recordedSteps, setRecordedSteps] = useState<RecordedStep[]>([]);
+  const [savingStory, setSavingStory] = useState(false);
+  const [storyError, setStoryError] = useState<string | null>(null);
+  const [userStoryStepDots, setUserStoryStepDots] = useState<UserStoryStepDot[]>([]);
+  const recorderRef = useRef<RecorderHandle | null>(null);
+  const ensuredStoryTypeRef = useRef(false);
   const [tasks, setBugReports] = useState<BugReport[]>([]);
   const [taskTypes, setBugReportTypes] = useState<BugReportType[]>([]);
   const [taskLists, setTaskLists] = useState<TaskList[]>([]);
@@ -163,6 +213,152 @@ export function DevNotesProvider({ adapter, user, config, children }: DevNotesPr
       } catch {}
     },
     [HIDE_RESOLVED_CLOSED_KEY]
+  );
+
+  const setShowStepDots = useCallback(
+    (show: boolean) => {
+      setShowStepDotsState(show);
+      try {
+        localStorage.setItem(SHOW_STEP_DOTS_KEY, String(show));
+      } catch {}
+    },
+    [SHOW_STEP_DOTS_KEY]
+  );
+
+  // ----- User Story recording -----
+
+  const persistStepDots = useCallback(
+    (dots: UserStoryStepDot[]) => {
+      try {
+        localStorage.setItem(STORY_DOTS_KEY, JSON.stringify(dots));
+      } catch {}
+    },
+    [STORY_DOTS_KEY]
+  );
+
+  const startUserStoryRecording = useCallback(() => {
+    if (!canRecordUserStory) return;
+    setStoryError(null);
+    setRecordedSteps([]);
+    recorderRef.current?.stop();
+    recorderRef.current = startStoryRecording((step) => {
+      setRecordedSteps((prev) => [...prev, step]);
+    });
+    setIsRecordingStory(true);
+  }, [canRecordUserStory]);
+
+  const stopUserStoryRecording = useCallback(() => {
+    recorderRef.current?.stop();
+    recorderRef.current = null;
+    setIsRecordingStory(false);
+  }, []);
+
+  const cancelUserStoryRecording = useCallback(() => {
+    recorderRef.current?.stop();
+    recorderRef.current = null;
+    setIsRecordingStory(false);
+    setRecordedSteps([]);
+    setStoryError(null);
+  }, []);
+
+  const updateRecordedStep = useCallback((id: string, body: string) => {
+    setRecordedSteps((prev) => prev.map((s) => (s.id === id ? { ...s, body } : s)));
+  }, []);
+
+  const deleteRecordedStep = useCallback((id: string) => {
+    setRecordedSteps((prev) => prev.filter((s) => s.id !== id));
+  }, []);
+
+  const moveRecordedStep = useCallback((id: string, direction: 'up' | 'down') => {
+    setRecordedSteps((prev) => {
+      const index = prev.findIndex((s) => s.id === id);
+      if (index === -1) return prev;
+      const target = direction === 'up' ? index - 1 : index + 1;
+      if (target < 0 || target >= prev.length) return prev;
+      const next = [...prev];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  }, []);
+
+  const saveUserStory = useCallback(
+    async (input: {
+      title: string;
+      description_md?: string | null;
+      test_url?: string | null;
+    }): Promise<boolean> => {
+      if (!onCreateUserStory) {
+        setStoryError('Saving user stories is not configured for this app.');
+        return false;
+      }
+      const title = input.title.trim();
+      if (!title) {
+        setStoryError('Add a title before saving.');
+        return false;
+      }
+      if (recordedSteps.length === 0) {
+        setStoryError('Record at least one step before saving.');
+        return false;
+      }
+
+      setSavingStory(true);
+      setStoryError(null);
+      const draft: UserStoryDraft = {
+        title,
+        description_md: input.description_md?.trim() || null,
+        test_url: input.test_url?.trim() || null,
+        steps: recordedSteps.map((s) => ({
+          body: s.body,
+          url: s.page_url || null,
+          page_url: s.page_url || null,
+          x_position: s.x,
+          y_position: s.y,
+          target_selector: s.selector,
+        })),
+      };
+
+      let result: UserStoryCreateResult;
+      try {
+        result = await onCreateUserStory(draft);
+      } catch (err: any) {
+        setSavingStory(false);
+        setStoryError(err?.message || 'Failed to save the user story.');
+        return false;
+      }
+      setSavingStory(false);
+
+      if (result?.error) {
+        setStoryError(result.error);
+        return false;
+      }
+
+      // Persist positioned step dots locally so they render immediately and
+      // survive a reload, even when no fetchUserStories is configured.
+      const slug = result?.slug || title;
+      const newDots: UserStoryStepDot[] = recordedSteps.map((s, i) => ({
+        id: `${slug}:${s.id}`,
+        storySlug: slug,
+        storyTitle: title,
+        index: i + 1,
+        body: s.body,
+        page_url: s.page_url || null,
+        x_position: s.x,
+        y_position: s.y,
+        target_selector: s.selector,
+      }));
+      setUserStoryStepDots((prev) => {
+        const merged = [...prev.filter((d) => d.storySlug !== slug), ...newDots];
+        persistStepDots(merged);
+        return merged;
+      });
+
+      setRecordedSteps([]);
+      setIsRecordingStory(false);
+      recorderRef.current?.stop();
+      recorderRef.current = null;
+      return true;
+    },
+    [onCreateUserStory, recordedSteps, persistStepDots]
   );
 
   useEffect(() => {
@@ -218,6 +414,89 @@ export function DevNotesProvider({ adapter, user, config, children }: DevNotesPr
     const currentPath = toPath(currentRoutePath);
     return visibleTasks.filter((report) => toPath(report.page_url) === currentPath);
   }, [visibleTasks, currentRoutePath]);
+
+  const currentPageStepDots = useMemo(() => {
+    const toPath = (url: string | null) =>
+      (url || '').split('#')[0].split('?')[0].replace(/\/+$/, '') || '/';
+    const currentPath = toPath(currentRoutePath);
+    return userStoryStepDots.filter(
+      (dot) =>
+        dot.x_position != null &&
+        dot.y_position != null &&
+        toPath(dot.page_url) === currentPath
+    );
+  }, [userStoryStepDots, currentRoutePath]);
+
+  // Load persisted step dots on mount, then hydrate from the host if available.
+  useEffect(() => {
+    let cancelled = false;
+    try {
+      const stored = localStorage.getItem(STORY_DOTS_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) setUserStoryStepDots(parsed as UserStoryStepDot[]);
+      }
+    } catch {}
+
+    if (fetchUserStories) {
+      fetchUserStories()
+        .then((stories) => {
+          if (cancelled || !Array.isArray(stories)) return;
+          const dots: UserStoryStepDot[] = [];
+          stories.forEach((story) => {
+            (story.steps || []).forEach((step, i) => {
+              dots.push({
+                id: `${story.slug}:${step.id ?? i}`,
+                storySlug: story.slug,
+                storyTitle: story.title,
+                index: i + 1,
+                body: step.body,
+                page_url: step.page_url ?? null,
+                x_position: step.x_position ?? null,
+                y_position: step.y_position ?? null,
+                target_selector: step.target_selector ?? null,
+              });
+            });
+          });
+          setUserStoryStepDots(dots);
+          try {
+            localStorage.setItem(STORY_DOTS_KEY, JSON.stringify(dots));
+          } catch {}
+        })
+        .catch((err) => console.error('[DevNotes] Error loading user stories:', err));
+    }
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Detach the recorder if the provider unmounts mid-recording.
+  useEffect(() => {
+    return () => {
+      recorderRef.current?.stop();
+      recorderRef.current = null;
+    };
+  }, []);
+
+  // Make sure the "User Stories (Test Cases)" type exists in the project once
+  // recording is enabled, so it shows up as a first-class type in DevNotes.
+  useEffect(() => {
+    if (!canRecordUserStory || ensuredStoryTypeRef.current) return;
+    if (taskTypes.length === 0) return; // wait for the initial type load
+    const exists = taskTypes.some(
+      (t) => t.name.trim().toLowerCase() === USER_STORY_TYPE_NAME.toLowerCase()
+    );
+    ensuredStoryTypeRef.current = true;
+    if (!exists) {
+      adapter
+        .createTaskType(USER_STORY_TYPE_NAME)
+        .then((created) => setBugReportTypes((prev) => [...prev, created]))
+        .catch((err) =>
+          console.error('[DevNotes] Failed to ensure user story type:', err)
+        );
+    }
+  }, [canRecordUserStory, taskTypes, adapter]);
 
   useEffect(() => {
     userProfilesRef.current = userProfiles;
@@ -528,6 +807,22 @@ export function DevNotesProvider({ adapter, user, config, children }: DevNotesPr
       setShowTasksAlways,
       hideResolvedClosed,
       setHideResolvedClosed,
+      showStepDots,
+      setShowStepDots,
+      canRecordUserStory,
+      isRecordingStory,
+      recordedSteps,
+      savingStory,
+      storyError,
+      startUserStoryRecording,
+      stopUserStoryRecording,
+      cancelUserStoryRecording,
+      updateRecordedStep,
+      deleteRecordedStep,
+      moveRecordedStep,
+      saveUserStory,
+      userStoryStepDots,
+      currentPageStepDots,
       tasks: visibleTasks,
       bugReports: visibleTasks,
       taskTypes,
@@ -580,6 +875,22 @@ export function DevNotesProvider({ adapter, user, config, children }: DevNotesPr
       setShowTasksAlways,
       hideResolvedClosed,
       setHideResolvedClosed,
+      showStepDots,
+      setShowStepDots,
+      canRecordUserStory,
+      isRecordingStory,
+      recordedSteps,
+      savingStory,
+      storyError,
+      startUserStoryRecording,
+      stopUserStoryRecording,
+      cancelUserStoryRecording,
+      updateRecordedStep,
+      deleteRecordedStep,
+      moveRecordedStep,
+      saveUserStory,
+      userStoryStepDots,
+      currentPageStepDots,
       visibleTasks,
       taskTypes,
       taskLists,
@@ -627,6 +938,22 @@ const defaultContextValue: DevNotesContextValue = {
   setShowBugsAlways: () => {},
   hideResolvedClosed: true,
   setHideResolvedClosed: () => {},
+  showStepDots: true,
+  setShowStepDots: () => {},
+  canRecordUserStory: false,
+  isRecordingStory: false,
+  recordedSteps: [],
+  savingStory: false,
+  storyError: null,
+  startUserStoryRecording: () => {},
+  stopUserStoryRecording: () => {},
+  cancelUserStoryRecording: () => {},
+  updateRecordedStep: () => {},
+  deleteRecordedStep: () => {},
+  moveRecordedStep: () => {},
+  saveUserStory: async () => false,
+  userStoryStepDots: [],
+  currentPageStepDots: [],
   tasks: [],
   bugReports: [],
   taskTypes: [],

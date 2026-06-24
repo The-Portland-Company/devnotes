@@ -18,7 +18,13 @@ export type {
   BugReportCreator,
   BugReportMessage,
   BugCaptureContext,
+  UserStoryStepInput,
+  UserStoryDraft,
+  UserStoryCreateResult,
+  UserStoryStepDot,
+  UserStoryWithSteps,
 } from './internal/core-types';
+export { USER_STORY_TYPE_NAME } from './internal/core-types';
 
 export type DevNotesCapabilities = {
   ai: boolean;

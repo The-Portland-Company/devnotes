@@ -27,8 +27,11 @@ __export(index_exports, {
   DevNotesMenu: () => DevNotesMenu,
   DevNotesOverlay: () => DevNotesOverlay,
   DevNotesProvider: () => DevNotesProvider,
+  DevNotesStepDot: () => DevNotesStepDot,
+  DevNotesStoryRecorder: () => DevNotesStoryRecorder,
   DevNotesTaskList: () => DevNotesTaskList,
   DevNotesTaskListModal: () => DevNotesTaskListModal,
+  USER_STORY_TYPE_NAME: () => USER_STORY_TYPE_NAME,
   buildAiFixPayload: () => buildAiFixPayload,
   buildCaptureContext: () => buildCaptureContext,
   calculateBugPositionFromPoint: () => calculateBugPositionFromPoint,
@@ -149,6 +152,417 @@ function useDevNotesContainer() {
   return { container, compensate };
 }
 
+// src/internal/bugAnchors.ts
+var normalizePageUrl = (value) => {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  const [pathAndQuery] = trimmed.split("#");
+  const [rawPath, queryString] = pathAndQuery.split("?");
+  const withoutTrailing = rawPath.replace(/\/+$/, "") || "/";
+  if (queryString) {
+    const params = new URLSearchParams(queryString);
+    const normalizedQuery = params.toString();
+    if (normalizedQuery) {
+      return `${withoutTrailing}?${normalizedQuery}`;
+    }
+  }
+  return withoutTrailing;
+};
+var ELEMENT_SELECTOR_MAX_DEPTH = 8;
+var PREFERRED_ATTRIBUTES = ["data-bug-anchor", "data-testid", "data-id", "data-role", "aria-label"];
+var cssEscape = typeof CSS !== "undefined" && typeof CSS.escape === "function" ? CSS.escape : (value) => value.replace(/([ #.;?+<>~*:()[\]\\])/g, "\\$1");
+var clamp = (value, min = 0, max = 1) => Math.min(Math.max(value, min), max);
+var isNumber = (value) => typeof value === "number" && !Number.isNaN(value);
+var parseNumberish = (value) => {
+  if (isNumber(value)) return value;
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+var shouldIgnoreClass = (className) => {
+  return !className || className.startsWith("css-");
+};
+var buildSelectorSegment = (element) => {
+  if (element.id) {
+    return `#${cssEscape(element.id)}`;
+  }
+  for (const attr of PREFERRED_ATTRIBUTES) {
+    const attrValue = element.getAttribute(attr);
+    if (attrValue) {
+      return `${element.tagName.toLowerCase()}[${attr}="${cssEscape(attrValue)}"]`;
+    }
+  }
+  const stableClass = Array.from(element.classList).find(
+    (className) => !shouldIgnoreClass(className)
+  );
+  const base = stableClass ? `${element.tagName.toLowerCase()}.${cssEscape(stableClass)}` : element.tagName.toLowerCase();
+  if (!element.parentElement) {
+    return base;
+  }
+  let index = 1;
+  let sibling = element.previousElementSibling;
+  while (sibling) {
+    if (sibling.tagName === element.tagName) {
+      index += 1;
+    }
+    sibling = sibling.previousElementSibling;
+  }
+  return `${base}:nth-of-type(${index})`;
+};
+var buildElementSelector = (element) => {
+  if (!element || typeof document === "undefined") {
+    return null;
+  }
+  const segments = [];
+  let current = element;
+  let depth = 0;
+  while (current && depth < ELEMENT_SELECTOR_MAX_DEPTH) {
+    const segment = buildSelectorSegment(current);
+    segments.unshift(segment);
+    if (segment.startsWith("#") || segment.includes("[")) {
+      break;
+    }
+    current = current.parentElement;
+    depth += 1;
+  }
+  if (!segments.length) {
+    return null;
+  }
+  return segments.join(" > ");
+};
+var disablePointerEvents = (elements) => {
+  const restored = [];
+  elements.forEach((element) => {
+    if (!element) return;
+    restored.push({ element, pointerEvents: element.style.pointerEvents });
+    element.style.pointerEvents = "none";
+  });
+  return () => {
+    restored.forEach(({ element, pointerEvents }) => {
+      element.style.pointerEvents = pointerEvents;
+    });
+  };
+};
+var calculateBugPositionFromPoint = ({
+  clientX,
+  clientY,
+  elementsToIgnore = []
+}) => {
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    return {
+      x: clientX,
+      y: clientY,
+      targetSelector: null,
+      targetRelativeX: null,
+      targetRelativeY: null
+    };
+  }
+  const restorePointerEvents = disablePointerEvents(elementsToIgnore);
+  let target = document.elementFromPoint(clientX, clientY);
+  restorePointerEvents();
+  if (target && (target.hasAttribute("data-bug-dot") || target.closest("[data-bug-dot]"))) {
+    target = target.closest("[data-bug-dot]");
+  }
+  let targetSelector = null;
+  let targetRelativeX = null;
+  let targetRelativeY = null;
+  if (target && target !== document.documentElement && target !== document.body) {
+    targetSelector = buildElementSelector(target);
+    const rect = target.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) {
+      targetRelativeX = clamp((clientX - rect.left) / rect.width);
+      targetRelativeY = clamp((clientY - rect.top) / rect.height);
+    }
+  }
+  return {
+    x: clientX + window.scrollX,
+    y: clientY + window.scrollY,
+    targetSelector,
+    targetRelativeX,
+    targetRelativeY
+  };
+};
+var resolveStoredCoordinates = (x, y) => {
+  if (typeof window === "undefined") {
+    return { x, y };
+  }
+  if (x <= 100 && y <= 100) {
+    return {
+      x: x / 100 * window.innerWidth,
+      y: y / 100 * window.innerHeight
+    };
+  }
+  return {
+    x: x - window.scrollX,
+    y: y - window.scrollY
+  };
+};
+var isElementVisible = (element) => {
+  if (element === document.body || element === document.documentElement) {
+    return true;
+  }
+  const style = window.getComputedStyle(element);
+  if (style.display === "none" || style.visibility === "hidden") {
+    return false;
+  }
+  if (element.offsetParent === null && style.position !== "fixed") {
+    return false;
+  }
+  const rect = element.getBoundingClientRect();
+  if (rect.width === 0 && rect.height === 0) {
+    return false;
+  }
+  return true;
+};
+var resolveBugReportCoordinates = (report) => {
+  if (typeof document !== "undefined") {
+    const relativeX = parseNumberish(report.target_relative_x);
+    const relativeY = parseNumberish(report.target_relative_y);
+    if (report.target_selector && relativeX !== null && relativeY !== null) {
+      let element = null;
+      try {
+        element = document.querySelector(report.target_selector);
+      } catch {
+      }
+      if (element) {
+        if (!isElementVisible(element)) {
+          return null;
+        }
+        const rect = element.getBoundingClientRect();
+        const x = rect.left + rect.width * relativeX;
+        const y = rect.top + rect.height * relativeY;
+        return { x, y };
+      }
+    }
+  }
+  return resolveStoredCoordinates(report.x_position, report.y_position);
+};
+
+// src/internal/storyRecorder.ts
+var MAX_LABEL_LENGTH = 60;
+var MAX_VALUE_LENGTH = 120;
+var stepCounter = 0;
+var nextStepId = () => {
+  stepCounter += 1;
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `step-${Date.now()}-${stepCounter}`;
+};
+var truncate = (value, max) => value.length > max ? `${value.slice(0, max - 1).trimEnd()}\u2026` : value;
+var collapseWhitespace = (value) => value.replace(/\s+/g, " ").trim();
+var currentPageUrl = () => {
+  if (typeof window === "undefined") return "";
+  return normalizePageUrl(`${window.location.pathname}${window.location.search}`);
+};
+var describeElement = (element) => {
+  if (!element) return "element";
+  const aria = element.getAttribute("aria-label");
+  if (aria && aria.trim()) return truncate(collapseWhitespace(aria), MAX_LABEL_LENGTH);
+  const labelledBy = element.getAttribute("aria-labelledby");
+  if (labelledBy) {
+    const labelEl = document.getElementById(labelledBy);
+    const text2 = labelEl?.textContent && collapseWhitespace(labelEl.textContent);
+    if (text2) return truncate(text2, MAX_LABEL_LENGTH);
+  }
+  if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement) {
+    if (element.id) {
+      const explicit = document.querySelector(`label[for="${CSS?.escape ? CSS.escape(element.id) : element.id}"]`);
+      const text2 = explicit?.textContent && collapseWhitespace(explicit.textContent);
+      if (text2) return truncate(text2, MAX_LABEL_LENGTH);
+    }
+    const wrappingLabel = element.closest("label");
+    const wrapText = wrappingLabel?.textContent && collapseWhitespace(wrappingLabel.textContent);
+    if (wrapText) return truncate(wrapText, MAX_LABEL_LENGTH);
+    const placeholder = element.placeholder;
+    if (placeholder && placeholder.trim()) return truncate(collapseWhitespace(placeholder), MAX_LABEL_LENGTH);
+    const name = element.getAttribute("name");
+    if (name) return truncate(name, MAX_LABEL_LENGTH);
+  }
+  const text = element.textContent && collapseWhitespace(element.textContent);
+  if (text) return truncate(text, MAX_LABEL_LENGTH);
+  const title = element.getAttribute("title");
+  if (title && title.trim()) return truncate(collapseWhitespace(title), MAX_LABEL_LENGTH);
+  const alt = element.getAttribute("alt");
+  if (alt && alt.trim()) return truncate(collapseWhitespace(alt), MAX_LABEL_LENGTH);
+  return element.tagName.toLowerCase();
+};
+var describeRole = (element) => {
+  const tag = element.tagName.toLowerCase();
+  const role = element.getAttribute("role");
+  if (tag === "a") return "link";
+  if (tag === "button" || role === "button") return "button";
+  if (tag === "select" || role === "combobox") return "dropdown";
+  if (tag === "input") {
+    const type = element.type;
+    if (type === "checkbox") return "checkbox";
+    if (type === "radio") return "radio option";
+    if (type === "submit" || type === "button") return "button";
+    return "field";
+  }
+  if (tag === "textarea") return "field";
+  if (role === "tab") return "tab";
+  if (role === "menuitem") return "menu item";
+  return "element";
+};
+var isInteractiveClickTarget = (element) => {
+  if (element.closest(
+    "[data-bug-form],[data-bug-dot],[data-bug-menu],[data-pending-dot],[data-devnotes-recorder]"
+  )) {
+    return false;
+  }
+  return true;
+};
+var maskValue = (element, raw) => {
+  const type = element instanceof HTMLInputElement ? element.type : "";
+  if (type === "password") return "\u2022".repeat(Math.min(raw.length, 8));
+  return truncate(raw, MAX_VALUE_LENGTH);
+};
+var startStoryRecording = (onStep) => {
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    return { stop: () => {
+    } };
+  }
+  const emit = (partial) => {
+    onStep({
+      id: nextStepId(),
+      page_url: partial.page_url ?? currentPageUrl(),
+      ...partial
+    });
+  };
+  const resolveClickTarget = (raw) => {
+    const interactive = raw.closest(
+      'button,a,[role="button"],[role="tab"],[role="menuitem"],input,select,label,[onclick]'
+    );
+    return interactive || raw;
+  };
+  const handleClick = (event) => {
+    const raw = event.target;
+    if (!raw || !isInteractiveClickTarget(raw)) return;
+    const target = resolveClickTarget(raw);
+    if (target instanceof HTMLTextAreaElement) return;
+    if (target instanceof HTMLInputElement) {
+      const type = target.type;
+      if (type !== "checkbox" && type !== "radio" && type !== "submit" && type !== "button") {
+        return;
+      }
+    }
+    const label = describeElement(target);
+    const role = describeRole(target);
+    emit({
+      action: "click",
+      body: label && label !== role ? `Click the "${label}" ${role}` : `Click the ${role}`,
+      selector: buildElementSelector(target),
+      value: null,
+      x: event.clientX + window.scrollX,
+      y: event.clientY + window.scrollY
+    });
+  };
+  const handleChange = (event) => {
+    const target = event.target;
+    if (!target || !isInteractiveClickTarget(target)) return;
+    const rect = target.getBoundingClientRect();
+    const x = rect.left + rect.width / 2 + window.scrollX;
+    const y = rect.top + rect.height / 2 + window.scrollY;
+    const selector = buildElementSelector(target);
+    const label = describeElement(target);
+    if (target instanceof HTMLSelectElement) {
+      const chosen = target.selectedOptions?.[0]?.textContent;
+      const value = chosen ? collapseWhitespace(chosen) : target.value;
+      emit({
+        action: "select",
+        body: `Select "${truncate(value, MAX_VALUE_LENGTH)}" in the "${label}" dropdown`,
+        selector,
+        value,
+        x,
+        y
+      });
+      return;
+    }
+    if (target instanceof HTMLInputElement) {
+      const type = target.type;
+      if (type === "checkbox" || type === "radio") {
+        return;
+      }
+      const raw = target.value ?? "";
+      if (!raw.trim()) return;
+      const value = maskValue(target, raw);
+      emit({
+        action: "input",
+        body: `Enter "${value}" into the "${label}" field`,
+        selector,
+        value,
+        x,
+        y
+      });
+      return;
+    }
+    if (target instanceof HTMLTextAreaElement) {
+      const raw = target.value ?? "";
+      if (!raw.trim()) return;
+      const value = truncate(raw, MAX_VALUE_LENGTH);
+      emit({
+        action: "input",
+        body: `Enter "${value}" into the "${label}" field`,
+        selector,
+        value,
+        x,
+        y
+      });
+    }
+  };
+  let lastPath = currentPageUrl();
+  const handleNavigation = () => {
+    const next = currentPageUrl();
+    if (next === lastPath) return;
+    lastPath = next;
+    emit({
+      action: "navigate",
+      body: `Navigate to ${next || "/"}`,
+      selector: null,
+      value: next,
+      x: null,
+      y: null,
+      page_url: next
+    });
+  };
+  const originalPushState = window.history.pushState;
+  const originalReplaceState = window.history.replaceState;
+  const patchedPushState = (...args) => {
+    originalPushState.apply(window.history, args);
+    handleNavigation();
+  };
+  const patchedReplaceState = (...args) => {
+    originalReplaceState.apply(window.history, args);
+    handleNavigation();
+  };
+  window.history.pushState = patchedPushState;
+  window.history.replaceState = patchedReplaceState;
+  document.addEventListener("click", handleClick, true);
+  document.addEventListener("change", handleChange, true);
+  window.addEventListener("popstate", handleNavigation);
+  window.addEventListener("hashchange", handleNavigation);
+  return {
+    stop: () => {
+      document.removeEventListener("click", handleClick, true);
+      document.removeEventListener("change", handleChange, true);
+      window.removeEventListener("popstate", handleNavigation);
+      window.removeEventListener("hashchange", handleNavigation);
+      if (window.history.pushState === patchedPushState) {
+        window.history.pushState = originalPushState;
+      }
+      if (window.history.replaceState === patchedReplaceState) {
+        window.history.replaceState = originalReplaceState;
+      }
+    }
+  };
+};
+
+// src/internal/core-types.ts
+var USER_STORY_TYPE_NAME = "User Stories (Test Cases)";
+
 // src/DevNotesProvider.tsx
 var import_jsx_runtime = require("react/jsx-runtime");
 var DevNotesContext = (0, import_react2.createContext)(null);
@@ -163,8 +577,13 @@ function DevNotesProvider({ adapter, user, config, children }) {
   const aiProvider = config?.disableAi ? void 0 : config?.aiProvider;
   const requireAi = Boolean(config?.requireAi && aiProvider);
   const role = config?.role ?? "admin";
+  const onCreateUserStory = config?.onCreateUserStory;
+  const fetchUserStories = config?.fetchUserStories;
+  const canRecordUserStory = Boolean(onCreateUserStory);
   const SHOW_BUGS_ALWAYS_KEY = `${storagePrefix}_show_bugs_always`;
   const HIDE_RESOLVED_CLOSED_KEY = `${storagePrefix}_hide_resolved_closed`;
+  const SHOW_STEP_DOTS_KEY = `${storagePrefix}_show_step_dots`;
+  const STORY_DOTS_KEY = `${storagePrefix}_user_story_dots`;
   const [isEnabled, setIsEnabled] = (0, import_react2.useState)(false);
   const [showTasksAlways, setShowBugsAlwaysState] = (0, import_react2.useState)(() => {
     try {
@@ -181,6 +600,21 @@ function DevNotesProvider({ adapter, user, config, children }) {
       return true;
     }
   });
+  const [showStepDots, setShowStepDotsState] = (0, import_react2.useState)(() => {
+    try {
+      const stored = localStorage.getItem(SHOW_STEP_DOTS_KEY);
+      return stored === null ? true : stored === "true";
+    } catch {
+      return true;
+    }
+  });
+  const [isRecordingStory, setIsRecordingStory] = (0, import_react2.useState)(false);
+  const [recordedSteps, setRecordedSteps] = (0, import_react2.useState)([]);
+  const [savingStory, setSavingStory] = (0, import_react2.useState)(false);
+  const [storyError, setStoryError] = (0, import_react2.useState)(null);
+  const [userStoryStepDots, setUserStoryStepDots] = (0, import_react2.useState)([]);
+  const recorderRef = (0, import_react2.useRef)(null);
+  const ensuredStoryTypeRef = (0, import_react2.useRef)(false);
   const [tasks, setBugReports] = (0, import_react2.useState)([]);
   const [taskTypes, setBugReportTypes] = (0, import_react2.useState)([]);
   const [taskLists, setTaskLists] = (0, import_react2.useState)([]);
@@ -222,6 +656,132 @@ function DevNotesProvider({ adapter, user, config, children }) {
       }
     },
     [HIDE_RESOLVED_CLOSED_KEY]
+  );
+  const setShowStepDots = (0, import_react2.useCallback)(
+    (show) => {
+      setShowStepDotsState(show);
+      try {
+        localStorage.setItem(SHOW_STEP_DOTS_KEY, String(show));
+      } catch {
+      }
+    },
+    [SHOW_STEP_DOTS_KEY]
+  );
+  const persistStepDots = (0, import_react2.useCallback)(
+    (dots) => {
+      try {
+        localStorage.setItem(STORY_DOTS_KEY, JSON.stringify(dots));
+      } catch {
+      }
+    },
+    [STORY_DOTS_KEY]
+  );
+  const startUserStoryRecording = (0, import_react2.useCallback)(() => {
+    if (!canRecordUserStory) return;
+    setStoryError(null);
+    setRecordedSteps([]);
+    recorderRef.current?.stop();
+    recorderRef.current = startStoryRecording((step) => {
+      setRecordedSteps((prev) => [...prev, step]);
+    });
+    setIsRecordingStory(true);
+  }, [canRecordUserStory]);
+  const stopUserStoryRecording = (0, import_react2.useCallback)(() => {
+    recorderRef.current?.stop();
+    recorderRef.current = null;
+    setIsRecordingStory(false);
+  }, []);
+  const cancelUserStoryRecording = (0, import_react2.useCallback)(() => {
+    recorderRef.current?.stop();
+    recorderRef.current = null;
+    setIsRecordingStory(false);
+    setRecordedSteps([]);
+    setStoryError(null);
+  }, []);
+  const updateRecordedStep = (0, import_react2.useCallback)((id, body) => {
+    setRecordedSteps((prev) => prev.map((s) => s.id === id ? { ...s, body } : s));
+  }, []);
+  const deleteRecordedStep = (0, import_react2.useCallback)((id) => {
+    setRecordedSteps((prev) => prev.filter((s) => s.id !== id));
+  }, []);
+  const moveRecordedStep = (0, import_react2.useCallback)((id, direction) => {
+    setRecordedSteps((prev) => {
+      const index = prev.findIndex((s) => s.id === id);
+      if (index === -1) return prev;
+      const target = direction === "up" ? index - 1 : index + 1;
+      if (target < 0 || target >= prev.length) return prev;
+      const next = [...prev];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  }, []);
+  const saveUserStory = (0, import_react2.useCallback)(
+    async (input) => {
+      if (!onCreateUserStory) {
+        setStoryError("Saving user stories is not configured for this app.");
+        return false;
+      }
+      const title = input.title.trim();
+      if (!title) {
+        setStoryError("Add a title before saving.");
+        return false;
+      }
+      if (recordedSteps.length === 0) {
+        setStoryError("Record at least one step before saving.");
+        return false;
+      }
+      setSavingStory(true);
+      setStoryError(null);
+      const draft = {
+        title,
+        description_md: input.description_md?.trim() || null,
+        test_url: input.test_url?.trim() || null,
+        steps: recordedSteps.map((s) => ({
+          body: s.body,
+          url: s.page_url || null,
+          page_url: s.page_url || null,
+          x_position: s.x,
+          y_position: s.y,
+          target_selector: s.selector
+        }))
+      };
+      let result;
+      try {
+        result = await onCreateUserStory(draft);
+      } catch (err) {
+        setSavingStory(false);
+        setStoryError(err?.message || "Failed to save the user story.");
+        return false;
+      }
+      setSavingStory(false);
+      if (result?.error) {
+        setStoryError(result.error);
+        return false;
+      }
+      const slug = result?.slug || title;
+      const newDots = recordedSteps.map((s, i) => ({
+        id: `${slug}:${s.id}`,
+        storySlug: slug,
+        storyTitle: title,
+        index: i + 1,
+        body: s.body,
+        page_url: s.page_url || null,
+        x_position: s.x,
+        y_position: s.y,
+        target_selector: s.selector
+      }));
+      setUserStoryStepDots((prev) => {
+        const merged = [...prev.filter((d) => d.storySlug !== slug), ...newDots];
+        persistStepDots(merged);
+        return merged;
+      });
+      setRecordedSteps([]);
+      setIsRecordingStory(false);
+      recorderRef.current?.stop();
+      recorderRef.current = null;
+      return true;
+    },
+    [onCreateUserStory, recordedSteps, persistStepDots]
   );
   (0, import_react2.useEffect)(() => {
     if (typeof window === "undefined") return void 0;
@@ -265,6 +825,72 @@ function DevNotesProvider({ adapter, user, config, children }) {
     const currentPath = toPath(currentRoutePath);
     return visibleTasks.filter((report) => toPath(report.page_url) === currentPath);
   }, [visibleTasks, currentRoutePath]);
+  const currentPageStepDots = (0, import_react2.useMemo)(() => {
+    const toPath = (url) => (url || "").split("#")[0].split("?")[0].replace(/\/+$/, "") || "/";
+    const currentPath = toPath(currentRoutePath);
+    return userStoryStepDots.filter(
+      (dot) => dot.x_position != null && dot.y_position != null && toPath(dot.page_url) === currentPath
+    );
+  }, [userStoryStepDots, currentRoutePath]);
+  (0, import_react2.useEffect)(() => {
+    let cancelled = false;
+    try {
+      const stored = localStorage.getItem(STORY_DOTS_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) setUserStoryStepDots(parsed);
+      }
+    } catch {
+    }
+    if (fetchUserStories) {
+      fetchUserStories().then((stories) => {
+        if (cancelled || !Array.isArray(stories)) return;
+        const dots = [];
+        stories.forEach((story) => {
+          (story.steps || []).forEach((step, i) => {
+            dots.push({
+              id: `${story.slug}:${step.id ?? i}`,
+              storySlug: story.slug,
+              storyTitle: story.title,
+              index: i + 1,
+              body: step.body,
+              page_url: step.page_url ?? null,
+              x_position: step.x_position ?? null,
+              y_position: step.y_position ?? null,
+              target_selector: step.target_selector ?? null
+            });
+          });
+        });
+        setUserStoryStepDots(dots);
+        try {
+          localStorage.setItem(STORY_DOTS_KEY, JSON.stringify(dots));
+        } catch {
+        }
+      }).catch((err) => console.error("[DevNotes] Error loading user stories:", err));
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  (0, import_react2.useEffect)(() => {
+    return () => {
+      recorderRef.current?.stop();
+      recorderRef.current = null;
+    };
+  }, []);
+  (0, import_react2.useEffect)(() => {
+    if (!canRecordUserStory || ensuredStoryTypeRef.current) return;
+    if (taskTypes.length === 0) return;
+    const exists = taskTypes.some(
+      (t) => t.name.trim().toLowerCase() === USER_STORY_TYPE_NAME.toLowerCase()
+    );
+    ensuredStoryTypeRef.current = true;
+    if (!exists) {
+      adapter.createTaskType(USER_STORY_TYPE_NAME).then((created) => setBugReportTypes((prev) => [...prev, created])).catch(
+        (err) => console.error("[DevNotes] Failed to ensure user story type:", err)
+      );
+    }
+  }, [canRecordUserStory, taskTypes, adapter]);
   (0, import_react2.useEffect)(() => {
     userProfilesRef.current = userProfiles;
   }, [userProfiles]);
@@ -536,6 +1162,22 @@ Dev Notes`,
       setShowTasksAlways,
       hideResolvedClosed,
       setHideResolvedClosed,
+      showStepDots,
+      setShowStepDots,
+      canRecordUserStory,
+      isRecordingStory,
+      recordedSteps,
+      savingStory,
+      storyError,
+      startUserStoryRecording,
+      stopUserStoryRecording,
+      cancelUserStoryRecording,
+      updateRecordedStep,
+      deleteRecordedStep,
+      moveRecordedStep,
+      saveUserStory,
+      userStoryStepDots,
+      currentPageStepDots,
       tasks: visibleTasks,
       bugReports: visibleTasks,
       taskTypes,
@@ -588,6 +1230,22 @@ Dev Notes`,
       setShowTasksAlways,
       hideResolvedClosed,
       setHideResolvedClosed,
+      showStepDots,
+      setShowStepDots,
+      canRecordUserStory,
+      isRecordingStory,
+      recordedSteps,
+      savingStory,
+      storyError,
+      startUserStoryRecording,
+      stopUserStoryRecording,
+      cancelUserStoryRecording,
+      updateRecordedStep,
+      deleteRecordedStep,
+      moveRecordedStep,
+      saveUserStory,
+      userStoryStepDots,
+      currentPageStepDots,
       visibleTasks,
       taskTypes,
       taskLists,
@@ -637,6 +1295,29 @@ var defaultContextValue = {
   hideResolvedClosed: true,
   setHideResolvedClosed: () => {
   },
+  showStepDots: true,
+  setShowStepDots: () => {
+  },
+  canRecordUserStory: false,
+  isRecordingStory: false,
+  recordedSteps: [],
+  savingStory: false,
+  storyError: null,
+  startUserStoryRecording: () => {
+  },
+  stopUserStoryRecording: () => {
+  },
+  cancelUserStoryRecording: () => {
+  },
+  updateRecordedStep: () => {
+  },
+  deleteRecordedStep: () => {
+  },
+  moveRecordedStep: () => {
+  },
+  saveUserStory: async () => false,
+  userStoryStepDots: [],
+  currentPageStepDots: [],
   tasks: [],
   bugReports: [],
   taskTypes: [],
@@ -694,7 +1375,7 @@ function useDevNotes() {
 }
 
 // src/DevNotesButton.tsx
-var import_react12 = require("react");
+var import_react14 = require("react");
 var import_react_dom2 = require("react-dom");
 
 // src/DevNotesMenu.tsx
@@ -1613,194 +2294,6 @@ function AiDescriptionChat({
   ] });
 }
 
-// src/internal/bugAnchors.ts
-var normalizePageUrl = (value) => {
-  const trimmed = value.trim();
-  if (!trimmed) return "";
-  const [pathAndQuery] = trimmed.split("#");
-  const [rawPath, queryString] = pathAndQuery.split("?");
-  const withoutTrailing = rawPath.replace(/\/+$/, "") || "/";
-  if (queryString) {
-    const params = new URLSearchParams(queryString);
-    const normalizedQuery = params.toString();
-    if (normalizedQuery) {
-      return `${withoutTrailing}?${normalizedQuery}`;
-    }
-  }
-  return withoutTrailing;
-};
-var ELEMENT_SELECTOR_MAX_DEPTH = 8;
-var PREFERRED_ATTRIBUTES = ["data-bug-anchor", "data-testid", "data-id", "data-role", "aria-label"];
-var cssEscape = typeof CSS !== "undefined" && typeof CSS.escape === "function" ? CSS.escape : (value) => value.replace(/([ #.;?+<>~*:()[\]\\])/g, "\\$1");
-var clamp = (value, min = 0, max = 1) => Math.min(Math.max(value, min), max);
-var isNumber = (value) => typeof value === "number" && !Number.isNaN(value);
-var parseNumberish = (value) => {
-  if (isNumber(value)) return value;
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-  const parsed = Number(trimmed);
-  return Number.isFinite(parsed) ? parsed : null;
-};
-var shouldIgnoreClass = (className) => {
-  return !className || className.startsWith("css-");
-};
-var buildSelectorSegment = (element) => {
-  if (element.id) {
-    return `#${cssEscape(element.id)}`;
-  }
-  for (const attr of PREFERRED_ATTRIBUTES) {
-    const attrValue = element.getAttribute(attr);
-    if (attrValue) {
-      return `${element.tagName.toLowerCase()}[${attr}="${cssEscape(attrValue)}"]`;
-    }
-  }
-  const stableClass = Array.from(element.classList).find(
-    (className) => !shouldIgnoreClass(className)
-  );
-  const base = stableClass ? `${element.tagName.toLowerCase()}.${cssEscape(stableClass)}` : element.tagName.toLowerCase();
-  if (!element.parentElement) {
-    return base;
-  }
-  let index = 1;
-  let sibling = element.previousElementSibling;
-  while (sibling) {
-    if (sibling.tagName === element.tagName) {
-      index += 1;
-    }
-    sibling = sibling.previousElementSibling;
-  }
-  return `${base}:nth-of-type(${index})`;
-};
-var buildElementSelector = (element) => {
-  if (!element || typeof document === "undefined") {
-    return null;
-  }
-  const segments = [];
-  let current = element;
-  let depth = 0;
-  while (current && depth < ELEMENT_SELECTOR_MAX_DEPTH) {
-    const segment = buildSelectorSegment(current);
-    segments.unshift(segment);
-    if (segment.startsWith("#") || segment.includes("[")) {
-      break;
-    }
-    current = current.parentElement;
-    depth += 1;
-  }
-  if (!segments.length) {
-    return null;
-  }
-  return segments.join(" > ");
-};
-var disablePointerEvents = (elements) => {
-  const restored = [];
-  elements.forEach((element) => {
-    if (!element) return;
-    restored.push({ element, pointerEvents: element.style.pointerEvents });
-    element.style.pointerEvents = "none";
-  });
-  return () => {
-    restored.forEach(({ element, pointerEvents }) => {
-      element.style.pointerEvents = pointerEvents;
-    });
-  };
-};
-var calculateBugPositionFromPoint = ({
-  clientX,
-  clientY,
-  elementsToIgnore = []
-}) => {
-  if (typeof window === "undefined" || typeof document === "undefined") {
-    return {
-      x: clientX,
-      y: clientY,
-      targetSelector: null,
-      targetRelativeX: null,
-      targetRelativeY: null
-    };
-  }
-  const restorePointerEvents = disablePointerEvents(elementsToIgnore);
-  let target = document.elementFromPoint(clientX, clientY);
-  restorePointerEvents();
-  if (target && (target.hasAttribute("data-bug-dot") || target.closest("[data-bug-dot]"))) {
-    target = target.closest("[data-bug-dot]");
-  }
-  let targetSelector = null;
-  let targetRelativeX = null;
-  let targetRelativeY = null;
-  if (target && target !== document.documentElement && target !== document.body) {
-    targetSelector = buildElementSelector(target);
-    const rect = target.getBoundingClientRect();
-    if (rect.width > 0 && rect.height > 0) {
-      targetRelativeX = clamp((clientX - rect.left) / rect.width);
-      targetRelativeY = clamp((clientY - rect.top) / rect.height);
-    }
-  }
-  return {
-    x: clientX + window.scrollX,
-    y: clientY + window.scrollY,
-    targetSelector,
-    targetRelativeX,
-    targetRelativeY
-  };
-};
-var resolveStoredCoordinates = (x, y) => {
-  if (typeof window === "undefined") {
-    return { x, y };
-  }
-  if (x <= 100 && y <= 100) {
-    return {
-      x: x / 100 * window.innerWidth,
-      y: y / 100 * window.innerHeight
-    };
-  }
-  return {
-    x: x - window.scrollX,
-    y: y - window.scrollY
-  };
-};
-var isElementVisible = (element) => {
-  if (element === document.body || element === document.documentElement) {
-    return true;
-  }
-  const style = window.getComputedStyle(element);
-  if (style.display === "none" || style.visibility === "hidden") {
-    return false;
-  }
-  if (element.offsetParent === null && style.position !== "fixed") {
-    return false;
-  }
-  const rect = element.getBoundingClientRect();
-  if (rect.width === 0 && rect.height === 0) {
-    return false;
-  }
-  return true;
-};
-var resolveBugReportCoordinates = (report) => {
-  if (typeof document !== "undefined") {
-    const relativeX = parseNumberish(report.target_relative_x);
-    const relativeY = parseNumberish(report.target_relative_y);
-    if (report.target_selector && relativeX !== null && relativeY !== null) {
-      let element = null;
-      try {
-        element = document.querySelector(report.target_selector);
-      } catch {
-      }
-      if (element) {
-        if (!isElementVisible(element)) {
-          return null;
-        }
-        const rect = element.getBoundingClientRect();
-        const x = rect.left + rect.width * relativeX;
-        const y = rect.top + rect.height * relativeY;
-        return { x, y };
-      }
-    }
-  }
-  return resolveStoredCoordinates(report.x_position, report.y_position);
-};
-
 // src/internal/captureContext.ts
 function deriveRouteLabelFromUrl(rawUrl) {
   const fallback = "Current Page";
@@ -1963,7 +2456,7 @@ function formatAiFixPayloadForCopy(payload) {
 }
 
 // src/version.ts
-var DEVNOTES_VERSION = "0.5.22";
+var DEVNOTES_VERSION = "0.5.23";
 
 // src/internal/formState.ts
 function getInitialTaskStatus(existingStatus) {
@@ -3941,6 +4434,12 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
     setShowTasksAlways,
     hideResolvedClosed,
     setHideResolvedClosed,
+    showStepDots,
+    setShowStepDots,
+    canRecordUserStory,
+    isRecordingStory,
+    startUserStoryRecording,
+    stopUserStoryRecording,
     tasks,
     role
   } = useDevNotes();
@@ -4106,6 +4605,58 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                   ]
                 }
               ),
+              /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(
+                "button",
+                {
+                  type: "button",
+                  "data-menu-item": true,
+                  onClick: () => setShowStepDots(!showStepDots),
+                  className: "flex w-full items-center justify-between gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50",
+                  children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
+                      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(import_fi5.FiMapPin, { className: showStepDots ? "text-blue-600" : "text-gray-500" }),
+                      "Show Step Dots"
+                    ] }),
+                    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+                      "span",
+                      {
+                        role: "switch",
+                        "aria-checked": showStepDots,
+                        className: `relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ${showStepDots ? "bg-blue-500" : "bg-gray-300"}`,
+                        children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+                          "span",
+                          {
+                            className: `inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${showStepDots ? "translate-x-4" : "translate-x-0.5"} mt-0.5`
+                          }
+                        )
+                      }
+                    )
+                  ]
+                }
+              ),
+              canRecordUserStory && /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(import_jsx_runtime6.Fragment, { children: [
+                /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "my-1 border-t border-gray-200" }),
+                /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+                  "button",
+                  {
+                    type: "button",
+                    "data-menu-item": true,
+                    onClick: () => {
+                      setOpen(false);
+                      if (isRecordingStory) {
+                        stopUserStoryRecording();
+                      } else {
+                        startUserStoryRecording();
+                      }
+                    },
+                    className: "flex w-full items-center gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50",
+                    children: /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
+                      isRecordingStory ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(import_fi5.FiSquare, { className: "text-red-600" }) : /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(import_fi5.FiVideo, { className: "text-blue-600" }),
+                      isRecordingStory ? "Stop Recording Test Case" : "Record User Story (Test Case)"
+                    ] })
+                  }
+                )
+              ] }),
               /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "my-1 border-t border-gray-200" }),
               /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(
                 "button",
@@ -4198,9 +4749,9 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
 }
 
 // src/DevNotesOverlay.tsx
-var import_react11 = require("react");
+var import_react13 = require("react");
 var import_react_dom = require("react-dom");
-var import_fi7 = require("react-icons/fi");
+var import_fi8 = require("react-icons/fi");
 
 // src/DevNotesDot.tsx
 var import_react10 = require("react");
@@ -4563,8 +5114,360 @@ function DevNotesDot({ report }) {
   ] });
 }
 
-// src/DevNotesOverlay.tsx
+// src/DevNotesStepDot.tsx
+var import_react11 = require("react");
 var import_jsx_runtime8 = require("react/jsx-runtime");
+function stepColor(index) {
+  const lightness = Math.min(42 + (index - 1) * 7, 74);
+  return `hsl(214, 84%, ${lightness}%)`;
+}
+function resolvePosition(dot) {
+  if (dot.x_position == null || dot.y_position == null) return null;
+  if (typeof document !== "undefined" && dot.target_selector) {
+    let element = null;
+    try {
+      element = document.querySelector(dot.target_selector);
+    } catch {
+      element = null;
+    }
+    if (element && isElementVisible(element)) {
+      const rect = element.getBoundingClientRect();
+      return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+    }
+  }
+  return resolveStoredCoordinates(dot.x_position, dot.y_position);
+}
+function DevNotesStepDot({ dot }) {
+  const { compensate } = useDevNotes();
+  const [showTooltip, setShowTooltip] = (0, import_react11.useState)(false);
+  const position = resolvePosition(dot);
+  if (!position) return null;
+  const compensated = compensate(position.x, position.y);
+  const color = stepColor(dot.index);
+  return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
+    "div",
+    {
+      "data-devnotes-step-dot": true,
+      style: {
+        position: "absolute",
+        left: `${compensated.x}px`,
+        top: `${compensated.y}px`,
+        transform: "translate(-50%, -50%)",
+        zIndex: 9993,
+        pointerEvents: "auto"
+      },
+      onMouseEnter: () => setShowTooltip(true),
+      onMouseLeave: () => setShowTooltip(false),
+      children: [
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+          "div",
+          {
+            className: "flex items-center justify-center rounded-full border-2 border-white font-semibold text-white",
+            style: {
+              width: 22,
+              height: 22,
+              backgroundColor: color,
+              fontSize: 11,
+              boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+              cursor: "default"
+            },
+            children: dot.index
+          }
+        ),
+        showTooltip && /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-[240px] rounded-lg bg-gray-800 p-2.5 text-white shadow-xl pointer-events-none z-[2147483647]", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "text-[10px] font-semibold uppercase tracking-wide text-blue-300", children: [
+            dot.storyTitle,
+            " \xB7 Step ",
+            dot.index
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "mt-1 text-xs text-gray-100", children: dot.body }),
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800" })
+        ] })
+      ]
+    }
+  );
+}
+
+// src/DevNotesStoryRecorder.tsx
+var import_react12 = require("react");
+var import_fi7 = require("react-icons/fi");
+var import_jsx_runtime9 = require("react/jsx-runtime");
+function DevNotesStoryRecorder() {
+  const {
+    canRecordUserStory,
+    isRecordingStory,
+    recordedSteps,
+    savingStory,
+    storyError,
+    stopUserStoryRecording,
+    cancelUserStoryRecording,
+    updateRecordedStep,
+    deleteRecordedStep,
+    moveRecordedStep,
+    saveUserStory
+  } = useDevNotes();
+  const [title, setTitle] = (0, import_react12.useState)("");
+  const [testUrl, setTestUrl] = (0, import_react12.useState)("");
+  const [description, setDescription] = (0, import_react12.useState)("");
+  if (!canRecordUserStory) return null;
+  const reviewing = !isRecordingStory && recordedSteps.length > 0;
+  const handleSave = async () => {
+    const ok = await saveUserStory({
+      title,
+      description_md: description,
+      test_url: testUrl
+    });
+    if (ok) {
+      setTitle("");
+      setTestUrl("");
+      setDescription("");
+    }
+  };
+  const handleCancel = () => {
+    cancelUserStoryRecording();
+    setTitle("");
+    setTestUrl("");
+    setDescription("");
+  };
+  return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { "data-devnotes-recorder": true, children: [
+    isRecordingStory && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+      "div",
+      {
+        style: {
+          position: "fixed",
+          bottom: 24,
+          left: "50%",
+          transform: "translateX(-50%)",
+          zIndex: 2147483646,
+          pointerEvents: "auto"
+        },
+        className: "flex items-center gap-3 rounded-full bg-blue-600 px-5 py-2.5 text-white shadow-xl",
+        children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("span", { className: "relative flex h-3 w-3", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "relative inline-flex h-3 w-3 rounded-full bg-white" })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("span", { className: "text-sm font-medium", children: [
+            "Recording test case \xB7 ",
+            recordedSteps.length,
+            " ",
+            recordedSteps.length === 1 ? "step" : "steps"
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+            "button",
+            {
+              type: "button",
+              onClick: stopUserStoryRecording,
+              className: "inline-flex items-center gap-1 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold transition hover:bg-white/30",
+              children: [
+                /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(import_fi7.FiSquare, { size: 12 }),
+                " Stop & Review"
+              ]
+            }
+          ),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+            "button",
+            {
+              type: "button",
+              onClick: handleCancel,
+              "aria-label": "Cancel recording",
+              className: "inline-flex h-6 w-6 items-center justify-center rounded-full transition hover:bg-white/20",
+              children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(import_fi7.FiX, { size: 14 })
+            }
+          )
+        ]
+      }
+    ),
+    reviewing && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(import_jsx_runtime9.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+        "div",
+        {
+          style: {
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.4)",
+            zIndex: 2147483646
+          },
+          onClick: handleCancel
+        }
+      ),
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+        "div",
+        {
+          style: {
+            position: "fixed",
+            inset: 0,
+            zIndex: 2147483647,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+            pointerEvents: "none"
+          },
+          children: /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+            "div",
+            {
+              className: "pointer-events-auto flex max-h-[calc(100vh-32px)] w-full max-w-[560px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl",
+              children: [
+                /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "flex items-center justify-between border-b border-slate-200 px-5 py-4", children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "flex items-center gap-2", children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(import_fi7.FiVideo, { className: "text-blue-600" }),
+                    /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "text-base font-semibold text-slate-900", children: "New User Story (Test Case)" })
+                  ] }),
+                  /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: handleCancel,
+                      "aria-label": "Close",
+                      className: "inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100",
+                      children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(import_fi7.FiX, { size: 16 })
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "flex-1 overflow-y-auto px-5 py-4", children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("label", { className: "mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500", children: [
+                    "Title ",
+                    /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "text-rose-500", children: "*" })
+                  ] }),
+                  /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+                    "input",
+                    {
+                      type: "text",
+                      value: title,
+                      onChange: (e) => setTitle(e.target.value),
+                      placeholder: "e.g. User can create a survey",
+                      className: "mb-4 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+                    }
+                  ),
+                  /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("label", { className: "mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500", children: "Test URL" }),
+                  /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+                    "input",
+                    {
+                      type: "text",
+                      value: testUrl,
+                      onChange: (e) => setTestUrl(e.target.value),
+                      placeholder: "Starting URL for the test (optional)",
+                      className: "mb-4 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+                    }
+                  ),
+                  /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("label", { className: "mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500", children: "Description" }),
+                  /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+                    "textarea",
+                    {
+                      value: description,
+                      onChange: (e) => setDescription(e.target.value),
+                      placeholder: "What does this test case verify? (optional)",
+                      rows: 2,
+                      className: "mb-4 w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+                    }
+                  ),
+                  /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "mb-2 flex items-center justify-between", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("span", { className: "text-[11px] font-semibold uppercase tracking-wide text-slate-500", children: [
+                    "Steps (",
+                    recordedSteps.length,
+                    ")"
+                  ] }) }),
+                  /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("ol", { className: "space-y-2", children: recordedSteps.map((step, i) => /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+                    "li",
+                    {
+                      className: "flex items-start gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2",
+                      children: [
+                        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+                          "span",
+                          {
+                            className: "mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white",
+                            style: {
+                              backgroundColor: `hsl(214, 84%, ${Math.min(42 + i * 7, 74)}%)`
+                            },
+                            children: i + 1
+                          }
+                        ),
+                        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+                          "textarea",
+                          {
+                            value: step.body,
+                            onChange: (e) => updateRecordedStep(step.id, e.target.value),
+                            rows: 1,
+                            className: "min-h-[28px] flex-1 resize-y rounded border border-transparent bg-transparent px-1 py-0.5 text-sm text-slate-800 outline-none focus:border-slate-300 focus:bg-white"
+                          }
+                        ),
+                        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "flex shrink-0 flex-col", children: [
+                          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+                            "button",
+                            {
+                              type: "button",
+                              onClick: () => moveRecordedStep(step.id, "up"),
+                              disabled: i === 0,
+                              "aria-label": "Move step up",
+                              className: "text-slate-400 transition hover:text-slate-700 disabled:opacity-30",
+                              children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(import_fi7.FiChevronUp, { size: 14 })
+                            }
+                          ),
+                          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+                            "button",
+                            {
+                              type: "button",
+                              onClick: () => moveRecordedStep(step.id, "down"),
+                              disabled: i === recordedSteps.length - 1,
+                              "aria-label": "Move step down",
+                              className: "text-slate-400 transition hover:text-slate-700 disabled:opacity-30",
+                              children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(import_fi7.FiChevronDown, { size: 14 })
+                            }
+                          )
+                        ] }),
+                        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+                          "button",
+                          {
+                            type: "button",
+                            onClick: () => deleteRecordedStep(step.id),
+                            "aria-label": "Delete step",
+                            className: "mt-0.5 shrink-0 text-rose-400 transition hover:text-rose-600",
+                            children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(import_fi7.FiTrash2, { size: 13 })
+                          }
+                        )
+                      ]
+                    },
+                    step.id
+                  )) })
+                ] }),
+                /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "border-t border-slate-200 px-5 py-3", children: [
+                  storyError && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { className: "mb-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700", children: storyError }),
+                  /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "flex items-center justify-end gap-2", children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+                      "button",
+                      {
+                        type: "button",
+                        onClick: handleCancel,
+                        className: "rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50",
+                        children: "Discard"
+                      }
+                    ),
+                    /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+                      "button",
+                      {
+                        type: "button",
+                        onClick: handleSave,
+                        disabled: savingStory || !title.trim() || recordedSteps.length === 0,
+                        className: "inline-flex items-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300",
+                        children: [
+                          savingStory ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" }) : /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(import_fi7.FiSave, { size: 14 }),
+                          "Save to Specs"
+                        ]
+                      }
+                    )
+                  ] })
+                ] })
+              ]
+            }
+          )
+        }
+      )
+    ] })
+  ] });
+}
+
+// src/DevNotesOverlay.tsx
+var import_jsx_runtime10 = require("react/jsx-runtime");
 function DevNotesOverlay({
   openReportId,
   onOpenReportClose
@@ -4581,17 +5484,19 @@ function DevNotesOverlay({
     dotContainer,
     compensate,
     role,
-    user
+    user,
+    showStepDots,
+    currentPageStepDots
   } = useDevNotes();
-  const [pendingDot, setPendingDot] = (0, import_react11.useState)(null);
-  const [showPendingForm, setShowPendingForm] = (0, import_react11.useState)(false);
-  const [openedReport, setOpenedReport] = (0, import_react11.useState)(null);
-  const pendingDotRef = (0, import_react11.useRef)(null);
-  const [isDragging, setIsDragging] = (0, import_react11.useState)(false);
-  const dragStartRef = (0, import_react11.useRef)(null);
-  const didDragRef = (0, import_react11.useRef)(false);
-  const justEnabledRef = (0, import_react11.useRef)(false);
-  (0, import_react11.useEffect)(() => {
+  const [pendingDot, setPendingDot] = (0, import_react13.useState)(null);
+  const [showPendingForm, setShowPendingForm] = (0, import_react13.useState)(false);
+  const [openedReport, setOpenedReport] = (0, import_react13.useState)(null);
+  const pendingDotRef = (0, import_react13.useRef)(null);
+  const [isDragging, setIsDragging] = (0, import_react13.useState)(false);
+  const dragStartRef = (0, import_react13.useRef)(null);
+  const didDragRef = (0, import_react13.useRef)(false);
+  const justEnabledRef = (0, import_react13.useRef)(false);
+  (0, import_react13.useEffect)(() => {
     if (isEnabled) {
       justEnabledRef.current = true;
       const timer = setTimeout(() => {
@@ -4602,7 +5507,7 @@ function DevNotesOverlay({
     justEnabledRef.current = false;
     return void 0;
   }, [isEnabled]);
-  (0, import_react11.useEffect)(() => {
+  (0, import_react13.useEffect)(() => {
     if (openReportId) {
       const report = tasks.find((r) => r.id === openReportId);
       if (report) {
@@ -4610,7 +5515,7 @@ function DevNotesOverlay({
       }
     }
   }, [openReportId, tasks]);
-  (0, import_react11.useEffect)(() => {
+  (0, import_react13.useEffect)(() => {
     const handleKeyDown = (e) => {
       if (e.key === "Escape") {
         if (showPendingForm) {
@@ -4625,7 +5530,7 @@ function DevNotesOverlay({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isEnabled, setIsEnabled, pendingDot, showPendingForm]);
-  (0, import_react11.useEffect)(() => {
+  (0, import_react13.useEffect)(() => {
     if (isEnabled && !showPendingForm) {
       document.body.style.cursor = "crosshair";
       return () => {
@@ -4634,18 +5539,18 @@ function DevNotesOverlay({
     }
     return void 0;
   }, [isEnabled, showPendingForm]);
-  const handleCloseOpenedReport = (0, import_react11.useCallback)(() => {
+  const handleCloseOpenedReport = (0, import_react13.useCallback)(() => {
     setOpenedReport(null);
     onOpenReportClose?.();
   }, [onOpenReportClose]);
-  const handleDeleteOpenedReport = (0, import_react11.useCallback)(async () => {
+  const handleDeleteOpenedReport = (0, import_react13.useCallback)(async () => {
     if (openedReport) {
       await deleteTask(openedReport.id);
       setOpenedReport(null);
       onOpenReportClose?.();
     }
   }, [openedReport, deleteTask, onOpenReportClose]);
-  const handleArchiveOpenedReport = (0, import_react11.useCallback)(async () => {
+  const handleArchiveOpenedReport = (0, import_react13.useCallback)(async () => {
     if (!openedReport) return;
     const archived = await updateTask(openedReport.id, {
       status: "Closed",
@@ -4656,7 +5561,7 @@ function DevNotesOverlay({
       onOpenReportClose?.();
     }
   }, [openedReport, updateTask, onOpenReportClose, user.id]);
-  (0, import_react11.useEffect)(() => {
+  (0, import_react13.useEffect)(() => {
     if (!isEnabled || showPendingForm) return void 0;
     const handleDocumentClick = (e) => {
       if (justEnabledRef.current) return;
@@ -4673,15 +5578,15 @@ function DevNotesOverlay({
     document.addEventListener("click", handleDocumentClick);
     return () => document.removeEventListener("click", handleDocumentClick);
   }, [isEnabled, showPendingForm]);
-  const handleSave = (0, import_react11.useCallback)((_report) => {
+  const handleSave = (0, import_react13.useCallback)((_report) => {
     setPendingDot(null);
     setShowPendingForm(false);
   }, []);
-  const handleCancel = (0, import_react11.useCallback)(() => {
+  const handleCancel = (0, import_react13.useCallback)(() => {
     setPendingDot(null);
     setShowPendingForm(false);
   }, []);
-  const handlePendingDotClick = (0, import_react11.useCallback)((e) => {
+  const handlePendingDotClick = (0, import_react13.useCallback)((e) => {
     e.stopPropagation();
     if (didDragRef.current) {
       didDragRef.current = false;
@@ -4690,7 +5595,7 @@ function DevNotesOverlay({
     setIsDragging(false);
     setShowPendingForm(true);
   }, []);
-  const handleDragStart = (0, import_react11.useCallback)(
+  const handleDragStart = (0, import_react13.useCallback)(
     (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -4706,7 +5611,7 @@ function DevNotesOverlay({
     },
     [pendingDot]
   );
-  const handleDragMove = (0, import_react11.useCallback)(
+  const handleDragMove = (0, import_react13.useCallback)(
     (e) => {
       if (!isDragging || !dragStartRef.current || !pendingDot) return;
       const deltaX = e.clientX - dragStartRef.current.x;
@@ -4724,7 +5629,7 @@ function DevNotesOverlay({
     },
     [isDragging, pendingDot]
   );
-  const handleDragEnd = (0, import_react11.useCallback)((event) => {
+  const handleDragEnd = (0, import_react13.useCallback)((event) => {
     setIsDragging(false);
     dragStartRef.current = null;
     if (event && didDragRef.current) {
@@ -4736,7 +5641,7 @@ function DevNotesOverlay({
       setPendingDot(position);
     }
   }, []);
-  (0, import_react11.useEffect)(() => {
+  (0, import_react13.useEffect)(() => {
     if (isDragging) {
       window.addEventListener("mousemove", handleDragMove);
       window.addEventListener("mouseup", handleDragEnd);
@@ -4747,7 +5652,7 @@ function DevNotesOverlay({
     }
     return void 0;
   }, [isDragging, handleDragMove, handleDragEnd]);
-  const visiblePageReports = (0, import_react11.useMemo)(
+  const visiblePageReports = (0, import_react13.useMemo)(
     () => currentPageTasks.filter((report) => {
       if (hideResolvedClosed) {
         return report.status !== "Closed" && report.status !== "Resolved";
@@ -4758,20 +5663,20 @@ function DevNotesOverlay({
   );
   const renderOpenedReportModal = () => {
     if (!openedReport) return null;
-    return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(import_jsx_runtime10.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
         "div",
         {
           style: { position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)", zIndex: 9997, pointerEvents: "auto" },
           onClick: handleCloseOpenedReport
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { style: { position: "absolute", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", padding: 16 }, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { style: { position: "absolute", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", padding: 16 }, children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
         "div",
         {
           className: "pointer-events-auto max-h-[calc(100vh-32px)] overflow-y-auto rounded-lg shadow-xl",
           "data-bug-form": true,
-          children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+          children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
             DevNotesForm,
             {
               pageUrl: openedReport.page_url,
@@ -4792,14 +5697,19 @@ function DevNotesOverlay({
     ] });
   };
   if (role === "none") return null;
+  const sharedLayer = /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(import_jsx_runtime10.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(DevNotesStoryRecorder, {}),
+    showStepDots && dotContainer && (0, import_react_dom.createPortal)(
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(import_jsx_runtime10.Fragment, { children: currentPageStepDots.map((dot) => /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(DevNotesStepDot, { dot }, dot.id)) }),
+      dotContainer
+    )
+  ] });
   if (!isEnabled) {
-    if (!showTasksAlways && !openedReport) {
-      return null;
-    }
-    return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
+    return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(import_jsx_runtime10.Fragment, { children: [
+      sharedLayer,
       showTasksAlways && dotContainer && (0, import_react_dom.createPortal)(
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
-          visiblePageReports.map((report) => /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { "data-bug-dot": true, style: { pointerEvents: "auto" }, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(DevNotesDot, { report }) }, report.id)),
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(import_jsx_runtime10.Fragment, { children: [
+          visiblePageReports.map((report) => /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { "data-bug-dot": true, style: { pointerEvents: "auto" }, children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(DevNotesDot, { report }) }, report.id)),
           renderOpenedReportModal()
         ] }),
         dotContainer
@@ -4807,81 +5717,84 @@ function DevNotesOverlay({
       !dotContainer && renderOpenedReportModal()
     ] });
   }
-  if (!dotContainer) return null;
+  if (!dotContainer) return sharedLayer;
   const pendingViewport = pendingDot ? compensate(
     pendingDot.x - (typeof window !== "undefined" ? window.scrollX : 0),
     pendingDot.y - (typeof window !== "undefined" ? window.scrollY : 0)
   ) : null;
-  return (0, import_react_dom.createPortal)(
-    /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
-        "div",
-        {
-          style: { position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)", zIndex: 9991, pointerEvents: "auto" },
-          className: "bg-red-500 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2",
-          children: [
-            pendingDot && !showPendingForm ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(import_fi7.FiMove, {}) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(import_fi7.FiCrosshair, {}),
-            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "text-sm font-medium", children: pendingDot && !showPendingForm ? "Click pin to add details, or click elsewhere to reposition" : "Click anywhere to create a task" })
-          ]
-        }
-      ),
-      visiblePageReports.map((report) => /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { "data-bug-dot": true, style: { pointerEvents: "auto" }, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(DevNotesDot, { report }) }, report.id)),
-      pendingDot && pendingViewport && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
-        "div",
-        {
-          "data-pending-dot": true,
-          ref: pendingDotRef,
-          className: `w-8 h-8 rounded-full border-[3px] border-white z-[9998] flex items-center justify-center transition-all duration-150 ${isDragging ? "bg-red-600 shadow-[0_4px_16px_rgba(0,0,0,0.4)] cursor-grabbing" : "bg-red-500 shadow-[0_2px_8px_rgba(0,0,0,0.3)] cursor-grab animate-devnotes-pulse hover:scale-110"}`,
-          style: {
-            position: "absolute",
-            left: `${pendingViewport.x}px`,
-            top: `${pendingViewport.y}px`,
-            transform: "translate(-50%, -50%)",
-            pointerEvents: "auto"
-          },
-          onMouseDown: handleDragStart,
-          onClick: handlePendingDotClick,
-          title: "Drag to reposition, click to add details",
-          children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(import_fi7.FiMove, { color: "white", size: 14 })
-        }
-      ),
-      pendingDot && /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
-        showPendingForm && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(import_jsx_runtime10.Fragment, { children: [
+    sharedLayer,
+    (0, import_react_dom.createPortal)(
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(import_jsx_runtime10.Fragment, { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(
           "div",
           {
-            style: { position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)", zIndex: 9997, pointerEvents: "auto" },
-            onClick: handleCancel
+            style: { position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)", zIndex: 9991, pointerEvents: "auto" },
+            className: "bg-red-500 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2",
+            children: [
+              pendingDot && !showPendingForm ? /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(import_fi8.FiMove, {}) : /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(import_fi8.FiCrosshair, {}),
+              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: "text-sm font-medium", children: pendingDot && !showPendingForm ? "Click pin to add details, or click elsewhere to reposition" : "Click anywhere to create a task" })
+            ]
           }
         ),
-        showPendingForm && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { style: { position: "absolute", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", padding: 16 }, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+        visiblePageReports.map((report) => /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { "data-bug-dot": true, style: { pointerEvents: "auto" }, children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(DevNotesDot, { report }) }, report.id)),
+        pendingDot && pendingViewport && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
           "div",
           {
-            className: "pointer-events-auto max-h-[calc(100vh-32px)] overflow-y-auto rounded-lg shadow-xl",
-            "data-bug-form": true,
-            children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
-              DevNotesForm,
-              {
-                pageUrl: `${window.location.pathname}${window.location.search}`,
-                xPosition: pendingDot.x,
-                yPosition: pendingDot.y,
-                targetSelector: pendingDot.targetSelector,
-                targetRelativeX: pendingDot.targetRelativeX,
-                targetRelativeY: pendingDot.targetRelativeY,
-                onSave: handleSave,
-                onCancel: handleCancel
-              }
-            )
+            "data-pending-dot": true,
+            ref: pendingDotRef,
+            className: `w-8 h-8 rounded-full border-[3px] border-white z-[9998] flex items-center justify-center transition-all duration-150 ${isDragging ? "bg-red-600 shadow-[0_4px_16px_rgba(0,0,0,0.4)] cursor-grabbing" : "bg-red-500 shadow-[0_2px_8px_rgba(0,0,0,0.3)] cursor-grab animate-devnotes-pulse hover:scale-110"}`,
+            style: {
+              position: "absolute",
+              left: `${pendingViewport.x}px`,
+              top: `${pendingViewport.y}px`,
+              transform: "translate(-50%, -50%)",
+              pointerEvents: "auto"
+            },
+            onMouseDown: handleDragStart,
+            onClick: handlePendingDotClick,
+            title: "Drag to reposition, click to add details",
+            children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(import_fi8.FiMove, { color: "white", size: 14 })
           }
-        ) })
+        ),
+        pendingDot && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(import_jsx_runtime10.Fragment, { children: [
+          showPendingForm && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+            "div",
+            {
+              style: { position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)", zIndex: 9997, pointerEvents: "auto" },
+              onClick: handleCancel
+            }
+          ),
+          showPendingForm && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { style: { position: "absolute", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", padding: 16 }, children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+            "div",
+            {
+              className: "pointer-events-auto max-h-[calc(100vh-32px)] overflow-y-auto rounded-lg shadow-xl",
+              "data-bug-form": true,
+              children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+                DevNotesForm,
+                {
+                  pageUrl: `${window.location.pathname}${window.location.search}`,
+                  xPosition: pendingDot.x,
+                  yPosition: pendingDot.y,
+                  targetSelector: pendingDot.targetSelector,
+                  targetRelativeX: pendingDot.targetRelativeX,
+                  targetRelativeY: pendingDot.targetRelativeY,
+                  onSave: handleSave,
+                  onCancel: handleCancel
+                }
+              )
+            }
+          ) })
+        ] }),
+        openedReport && !pendingDot && renderOpenedReportModal()
       ] }),
-      openedReport && !pendingDot && renderOpenedReportModal()
-    ] }),
-    dotContainer
-  );
+      dotContainer
+    )
+  ] });
 }
 
 // src/DevNotesButton.tsx
-var import_jsx_runtime9 = require("react/jsx-runtime");
+var import_jsx_runtime11 = require("react/jsx-runtime");
 var positionStyles = {
   "bottom-right": { position: "absolute", bottom: 16, right: 16 },
   "bottom-left": { position: "absolute", bottom: 16, left: 16 },
@@ -4897,8 +5810,8 @@ function DevNotesButton({
   onNavigateToPage
 }) {
   const { dotContainer, role } = useDevNotes();
-  const [showTaskPanel, setShowTaskPanel] = (0, import_react12.useState)(false);
-  const [taskPanelTitle, setTaskPanelTitle] = (0, import_react12.useState)("All Tasks");
+  const [showTaskPanel, setShowTaskPanel] = (0, import_react14.useState)(false);
+  const [taskPanelTitle, setTaskPanelTitle] = (0, import_react14.useState)("All Tasks");
   if (role === "none") return null;
   const openBuiltInTaskPanel = (title) => {
     setTaskPanelTitle(title);
@@ -4906,13 +5819,13 @@ function DevNotesButton({
   };
   const handleViewTasks = () => openBuiltInTaskPanel("All Tasks");
   const handleSettings = onSettings || (() => openBuiltInTaskPanel("Task Settings"));
-  const buttonContent = /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(import_jsx_runtime9.Fragment, { children: [
-    /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+  const buttonContent = /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(import_jsx_runtime11.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
       "div",
       {
         style: { ...positionStyles[position] || positionStyles["bottom-right"], zIndex: 9990, pointerEvents: "auto" },
         "data-bug-menu": true,
-        children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+        children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
           DevNotesMenu,
           {
             onViewTasks: handleViewTasks,
@@ -4924,7 +5837,7 @@ function DevNotesButton({
         )
       }
     ),
-    /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
       DevNotesTaskListModal,
       {
         open: showTaskPanel,
@@ -4934,9 +5847,9 @@ function DevNotesButton({
       }
     )
   ] });
-  return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(import_jsx_runtime9.Fragment, { children: [
+  return /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(import_jsx_runtime11.Fragment, { children: [
     dotContainer ? (0, import_react_dom2.createPortal)(buttonContent, dotContainer) : buttonContent,
-    /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
       DevNotesOverlay,
       {
         openReportId,
@@ -4947,8 +5860,8 @@ function DevNotesButton({
 }
 
 // src/DevNotesTaskList.tsx
-var import_fi8 = require("react-icons/fi");
-var import_jsx_runtime10 = require("react/jsx-runtime");
+var import_fi9 = require("react-icons/fi");
+var import_jsx_runtime12 = require("react/jsx-runtime");
 var STATUS_COLORS = {
   Open: "bg-red-100 text-red-700",
   "In Progress": "bg-blue-100 text-blue-700",
@@ -4998,10 +5911,10 @@ function DevNotesTaskList({
   } = useTaskListData();
   const SortIcon = ({ field }) => {
     if (sortField !== field) return null;
-    return sortDir === "desc" ? /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(import_fi8.FiChevronDown, { size: 12 }) : /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(import_fi8.FiChevronUp, { size: 12 });
+    return sortDir === "desc" ? /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(import_fi9.FiChevronDown, { size: 12 }) : /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(import_fi9.FiChevronUp, { size: 12 });
   };
   if (selectedReport) {
-    return /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "flex flex-col h-full", children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "flex flex-col h-full", children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
       DevNotesForm,
       {
         pageUrl: selectedReport.page_url,
@@ -5028,36 +5941,36 @@ function DevNotesTaskList({
     ) });
   }
   if (loading && tasks.length === 0 || visibleReportIds === null) {
-    return /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "flex items-center justify-center py-12", children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" }) });
+    return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "flex items-center justify-center py-12", children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" }) });
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "flex flex-col gap-4", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "flex items-center justify-between", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("h2", { className: "text-lg font-semibold text-gray-900", children: title }),
-      onClose && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "flex flex-col gap-4", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "flex items-center justify-between", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("h2", { className: "text-lg font-semibold text-gray-900", children: title }),
+      onClose && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
         "button",
         {
           type: "button",
           onClick: onClose,
           className: "p-1 rounded hover:bg-gray-100 text-gray-500",
-          children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(import_fi8.FiX, { size: 18 })
+          children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(import_fi9.FiX, { size: 18 })
         }
       )
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "grid grid-cols-3 sm:grid-cols-6 gap-2", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "grid grid-cols-3 sm:grid-cols-6 gap-2", children: [
       ["Open", stats.open, "text-red-600"],
       ["In Progress", stats.inProgress, "text-blue-600"],
       ["Review", stats.needsReview, "text-purple-600"],
       ["Resolved", stats.resolved, "text-green-600"],
       ["Closed", stats.closed, "text-gray-500"],
       ["Total", stats.total, "text-gray-700"]
-    ].map(([label, count, color]) => /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "text-center rounded-lg border border-gray-100 py-2", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: `text-xl font-bold ${color}`, children: count }),
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "text-[0.65rem] text-gray-500", children: label })
+    ].map(([label, count, color]) => /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "text-center rounded-lg border border-gray-100 py-2", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: `text-xl font-bold ${color}`, children: count }),
+      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "text-[0.65rem] text-gray-500", children: label })
     ] }, label)) }),
-    /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "flex flex-wrap gap-2", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "relative flex-1 min-w-[180px]", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(import_fi8.FiSearch, { className: "absolute left-2.5 top-2.5 text-gray-400", size: 14 }),
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "flex flex-wrap gap-2", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "relative flex-1 min-w-[180px]", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(import_fi9.FiSearch, { className: "absolute left-2.5 top-2.5 text-gray-400", size: 14 }),
+        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
           "input",
           {
             type: "text",
@@ -5068,37 +5981,37 @@ function DevNotesTaskList({
           }
         )
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(
+      /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(
         "select",
         {
           value: filterStatus,
           onChange: (e) => setFilterStatus(e.target.value),
           className: "px-2 py-2 text-sm border border-gray-200 rounded-md bg-white",
           children: [
-            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("option", { value: "all", children: "All Statuses" }),
-            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("option", { value: "Open", children: "Open" }),
-            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("option", { value: "In Progress", children: "In Progress" }),
-            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("option", { value: "Needs Review", children: "Needs Review" }),
-            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("option", { value: "Resolved", children: "Resolved" })
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("option", { value: "all", children: "All Statuses" }),
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("option", { value: "Open", children: "Open" }),
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("option", { value: "In Progress", children: "In Progress" }),
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("option", { value: "Needs Review", children: "Needs Review" }),
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("option", { value: "Resolved", children: "Resolved" })
           ]
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(
+      /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(
         "select",
         {
           value: filterSeverity,
           onChange: (e) => setFilterSeverity(e.target.value),
           className: "px-2 py-2 text-sm border border-gray-200 rounded-md bg-white",
           children: [
-            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("option", { value: "all", children: "All Severities" }),
-            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("option", { value: "Critical", children: "Critical" }),
-            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("option", { value: "High", children: "High" }),
-            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("option", { value: "Medium", children: "Medium" }),
-            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("option", { value: "Low", children: "Low" })
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("option", { value: "all", children: "All Severities" }),
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("option", { value: "Critical", children: "Critical" }),
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("option", { value: "High", children: "High" }),
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("option", { value: "Medium", children: "Medium" }),
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("option", { value: "Low", children: "Low" })
           ]
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
         "button",
         {
           type: "button",
@@ -5108,7 +6021,7 @@ function DevNotesTaskList({
         }
       )
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "text-xs text-gray-500", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "text-xs text-gray-500", children: [
       filteredReports.length,
       " of ",
       showClosed ? stats.closed : stats.total - stats.closed,
@@ -5116,80 +6029,80 @@ function DevNotesTaskList({
       showClosed ? "closed" : "active",
       " tasks"
     ] }),
-    filteredReports.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "flex flex-col items-center py-12 text-gray-400", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(import_fi8.FiAlertTriangle, { size: 32, className: "mb-3" }),
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("p", { className: "text-sm", children: accessibleReports.length === 0 ? "No visible tasks yet. You will only see tasks you own, are assigned to, commented on, or were mentioned in." : "No tasks match your filters." })
-    ] }) : /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "border border-gray-200 rounded-lg overflow-hidden", children: /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("table", { className: "w-full text-sm", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("tr", { className: "bg-gray-50 text-left text-xs text-gray-500 uppercase tracking-wide", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("th", { className: "px-3 py-2 font-medium", children: "Title" }),
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+    filteredReports.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "flex flex-col items-center py-12 text-gray-400", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(import_fi9.FiAlertTriangle, { size: 32, className: "mb-3" }),
+      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { className: "text-sm", children: accessibleReports.length === 0 ? "No visible tasks yet. You will only see tasks you own, are assigned to, commented on, or were mentioned in." : "No tasks match your filters." })
+    ] }) : /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "border border-gray-200 rounded-lg overflow-hidden", children: /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("table", { className: "w-full text-sm", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("tr", { className: "bg-gray-50 text-left text-xs text-gray-500 uppercase tracking-wide", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("th", { className: "px-3 py-2 font-medium", children: "Title" }),
+        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
           "th",
           {
             className: "px-3 py-2 font-medium cursor-pointer select-none",
             onClick: () => handleSort("status"),
-            children: /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("span", { className: "inline-flex items-center gap-1", children: [
+            children: /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("span", { className: "inline-flex items-center gap-1", children: [
               "Status ",
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(SortIcon, { field: "status" })
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(SortIcon, { field: "status" })
             ] })
           }
         ),
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
           "th",
           {
             className: "px-3 py-2 font-medium cursor-pointer select-none",
             onClick: () => handleSort("severity"),
-            children: /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("span", { className: "inline-flex items-center gap-1", children: [
+            children: /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("span", { className: "inline-flex items-center gap-1", children: [
               "Severity ",
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(SortIcon, { field: "severity" })
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(SortIcon, { field: "severity" })
             ] })
           }
         ),
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("th", { className: "px-3 py-2 font-medium hidden md:table-cell", children: "Page" }),
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("th", { className: "px-3 py-2 font-medium hidden lg:table-cell", children: "Assigned" }),
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("th", { className: "px-3 py-2 font-medium hidden md:table-cell", children: "Page" }),
+        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("th", { className: "px-3 py-2 font-medium hidden lg:table-cell", children: "Assigned" }),
+        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
           "th",
           {
             className: "px-3 py-2 font-medium cursor-pointer select-none hidden md:table-cell",
             onClick: () => handleSort("stale"),
-            children: /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("span", { className: "inline-flex items-center gap-1", children: [
+            children: /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("span", { className: "inline-flex items-center gap-1", children: [
               "Freshness ",
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(SortIcon, { field: "stale" })
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(SortIcon, { field: "stale" })
             ] })
           }
         ),
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
           "th",
           {
             className: "px-3 py-2 font-medium cursor-pointer select-none",
             onClick: () => handleSort("created_at"),
-            children: /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("span", { className: "inline-flex items-center gap-1", children: [
+            children: /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("span", { className: "inline-flex items-center gap-1", children: [
               "Date ",
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(SortIcon, { field: "created_at" })
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(SortIcon, { field: "created_at" })
             ] })
           }
         )
       ] }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("tbody", { className: "divide-y divide-gray-100", children: filteredReports.map((report) => {
+      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("tbody", { className: "divide-y divide-gray-100", children: filteredReports.map((report) => {
         const unread = unreadCounts[report.id] || 0;
         const stale = getStaleMeta(report);
-        return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(
+        return /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(
           "tr",
           {
             className: "hover:bg-gray-50 cursor-pointer transition",
             onClick: () => setSelectedReport(report),
             children: [
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("td", { className: "px-3 py-2.5 max-w-[280px]", children: [
-                /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "flex items-center gap-2", children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: "font-medium text-gray-900 truncate", children: report.title }),
-                  unread > 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: "inline-flex min-w-[18px] items-center justify-center rounded-full bg-purple-100 px-1.5 text-[10px] font-bold text-purple-700", children: unread }),
-                  stale.isStale && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("span", { className: "inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800", children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(import_fi8.FiClock, { size: 10 }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("td", { className: "px-3 py-2.5 max-w-[280px]", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "flex items-center gap-2", children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "font-medium text-gray-900 truncate", children: report.title }),
+                  unread > 0 && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "inline-flex min-w-[18px] items-center justify-center rounded-full bg-purple-100 px-1.5 text-[10px] font-bold text-purple-700", children: unread }),
+                  stale.isStale && /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("span", { className: "inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800", children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(import_fi9.FiClock, { size: 10 }),
                     "Stale ",
                     stale.ageDays,
                     "d"
                   ] })
                 ] }),
-                report.types.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "flex gap-1 mt-0.5", children: report.types.slice(0, 2).map((t) => /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+                report.types.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "flex gap-1 mt-0.5", children: report.types.slice(0, 2).map((t) => /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
                   "span",
                   {
                     className: "text-[0.6rem] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500",
@@ -5198,23 +6111,23 @@ function DevNotesTaskList({
                   t
                 )) })
               ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("td", { className: "px-3 py-2.5", children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("td", { className: "px-3 py-2.5", children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
                 "span",
                 {
                   className: `inline-block px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[report.status] || "bg-gray-100 text-gray-600"}`,
                   children: report.status
                 }
               ) }),
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("td", { className: "px-3 py-2.5", children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("td", { className: "px-3 py-2.5", children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
                 "span",
                 {
                   className: `inline-block px-2 py-0.5 rounded-full text-xs font-medium ${SEVERITY_COLORS[report.severity] || "bg-gray-100 text-gray-600"}`,
                   children: report.severity
                 }
               ) }),
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("td", { className: "px-3 py-2.5 hidden md:table-cell", children: /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "flex items-center gap-1 text-xs text-gray-500", children: [
-                /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: "truncate max-w-[140px]", children: getPageLabel(report.page_url) }),
-                onNavigateToPage && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("td", { className: "px-3 py-2.5 hidden md:table-cell", children: /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "flex items-center gap-1 text-xs text-gray-500", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "truncate max-w-[140px]", children: getPageLabel(report.page_url) }),
+                onNavigateToPage && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
                   "button",
                   {
                     type: "button",
@@ -5224,17 +6137,17 @@ function DevNotesTaskList({
                       onNavigateToPage(report.page_url, report.id);
                     },
                     title: "Go to page",
-                    children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(import_fi8.FiExternalLink, { size: 12 })
+                    children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(import_fi9.FiExternalLink, { size: 12 })
                   }
                 )
               ] }) }),
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("td", { className: "px-3 py-2.5 hidden lg:table-cell text-xs text-gray-500", children: getProfileName(report.assigned_to) || "\u2014" }),
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("td", { className: "px-3 py-2.5 hidden md:table-cell", children: stale.isStale ? /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("span", { className: "inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800", children: [
-                /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(import_fi8.FiClock, { size: 11 }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("td", { className: "px-3 py-2.5 hidden lg:table-cell text-xs text-gray-500", children: getProfileName(report.assigned_to) || "\u2014" }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("td", { className: "px-3 py-2.5 hidden md:table-cell", children: stale.isStale ? /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("span", { className: "inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(import_fi9.FiClock, { size: 11 }),
                 stale.ageDays,
                 "d stale"
-              ] }) : /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: "inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700", children: "Fresh" }) }),
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("td", { className: "px-3 py-2.5 text-xs text-gray-500 whitespace-nowrap", children: formatDate(report.created_at) })
+              ] }) : /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700", children: "Fresh" }) }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("td", { className: "px-3 py-2.5 text-xs text-gray-500 whitespace-nowrap", children: formatDate(report.created_at) })
             ]
           },
           report.id
@@ -5388,8 +6301,11 @@ function createDevNotesClient(options) {
   DevNotesMenu,
   DevNotesOverlay,
   DevNotesProvider,
+  DevNotesStepDot,
+  DevNotesStoryRecorder,
   DevNotesTaskList,
   DevNotesTaskListModal,
+  USER_STORY_TYPE_NAME,
   buildAiFixPayload,
   buildCaptureContext,
   calculateBugPositionFromPoint,

@@ -8,6 +8,9 @@ import {
   FiSettings,
   FiToggleLeft,
   FiToggleRight,
+  FiVideo,
+  FiSquare,
+  FiMapPin,
 } from 'react-icons/fi';
 import { useDevNotes } from './DevNotesProvider';
 import DevNotesTaskListModal from './DevNotesTaskListModal';
@@ -39,6 +42,12 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
     setShowTasksAlways,
     hideResolvedClosed,
     setHideResolvedClosed,
+    showStepDots,
+    setShowStepDots,
+    canRecordUserStory,
+    isRecordingStory,
+    startUserStoryRecording,
+    stopUserStoryRecording,
     tasks,
     role,
   } = useDevNotes();
@@ -211,6 +220,61 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
               />
             </span>
           </button>
+
+          <button
+            type="button"
+            data-menu-item
+            onClick={() => setShowStepDots(!showStepDots)}
+            className="flex w-full items-center justify-between gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50"
+          >
+            <span className="inline-flex items-center gap-2 whitespace-nowrap">
+              <FiMapPin className={showStepDots ? 'text-blue-600' : 'text-gray-500'} />
+              Show Step Dots
+            </span>
+            <span
+              role="switch"
+              aria-checked={showStepDots}
+              className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ${
+                showStepDots ? 'bg-blue-500' : 'bg-gray-300'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${
+                  showStepDots ? 'translate-x-4' : 'translate-x-0.5'
+                } mt-0.5`}
+              />
+            </span>
+          </button>
+
+          {canRecordUserStory && (
+            <>
+              <div className="my-1 border-t border-gray-200" />
+              <button
+                type="button"
+                data-menu-item
+                onClick={() => {
+                  setOpen(false);
+                  if (isRecordingStory) {
+                    stopUserStoryRecording();
+                  } else {
+                    startUserStoryRecording();
+                  }
+                }}
+                className="flex w-full items-center gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50"
+              >
+                <span className="inline-flex items-center gap-2 whitespace-nowrap">
+                  {isRecordingStory ? (
+                    <FiSquare className="text-red-600" />
+                  ) : (
+                    <FiVideo className="text-blue-600" />
+                  )}
+                  {isRecordingStory
+                    ? 'Stop Recording Test Case'
+                    : 'Record User Story (Test Case)'}
+                </span>
+              </button>
+            </>
+          )}
 
           <div className="my-1 border-t border-gray-200" />
 
