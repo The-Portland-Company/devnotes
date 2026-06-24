@@ -1955,7 +1955,7 @@ function formatAiFixPayloadForCopy(payload) {
 }
 
 // src/version.ts
-var DEVNOTES_VERSION = "0.5.20";
+var DEVNOTES_VERSION = "0.5.21";
 
 // src/internal/formState.ts
 function getInitialTaskStatus(existingStatus) {
@@ -2034,7 +2034,7 @@ function SearchableSingleSelect({
           "input",
           {
             type: "text",
-            className: `flex-1 ${minInputWidthClassName} border-none bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400`,
+            className: `flex-1 ${minInputWidthClassName} !border-0 !bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400`,
             placeholder: selectedOption ? "Type to refine" : placeholder,
             value: searchTerm,
             onChange: (e) => {
@@ -2757,7 +2757,7 @@ function DevNotesForm({
       ] })
     ] }),
     /* @__PURE__ */ jsxs3("div", { className: "space-y-5", children: [
-      /* @__PURE__ */ jsx4("section", { className: SECTION_CARD_CLASS, children: /* @__PURE__ */ jsxs3("div", { className: isSuperscriptLabels ? "relative" : "", children: [
+      /* @__PURE__ */ jsx4("div", { children: /* @__PURE__ */ jsxs3("div", { className: isSuperscriptLabels ? "relative" : "", children: [
         /* @__PURE__ */ jsxs3("label", { className: floatingLabelClass(isSuperscriptLabels), children: [
           "Title ",
           /* @__PURE__ */ jsx4("span", { className: "text-rose-500", children: "*" })
@@ -2773,7 +2773,7 @@ function DevNotesForm({
           }
         )
       ] }) }),
-      /* @__PURE__ */ jsxs3("section", { className: SECTION_CARD_CLASS, children: [
+      /* @__PURE__ */ jsxs3("div", { children: [
         /* @__PURE__ */ jsx4("div", { className: "mb-4", children: /* @__PURE__ */ jsx4("div", { className: "inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white p-1 shadow-sm shadow-slate-900/5", children: narrativeTabs.map((tab) => {
           const isActive = activeNarrativeTab === tab.id;
           return /* @__PURE__ */ jsx4(
@@ -2954,7 +2954,7 @@ function DevNotesForm({
                 {
                   ref: typeInputRef,
                   type: "text",
-                  className: "flex-1 min-w-[120px] border-none bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400",
+                  className: "flex-1 min-w-[120px] !border-0 !bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400",
                   placeholder: "Type to search or add...",
                   value: newTypeName,
                   onChange: (e) => {
@@ -3051,33 +3051,30 @@ function DevNotesForm({
             isSuperscript: isSuperscriptLabels
           }
         ),
-        isAdmin && /* @__PURE__ */ jsxs3("div", { className: isSuperscriptLabels ? "relative" : "", children: [
-          /* @__PURE__ */ jsx4("label", { className: floatingLabelClass(isSuperscriptLabels), children: "Assignment & Workflow" }),
-          /* @__PURE__ */ jsxs3("div", { className: "space-y-3", children: [
-            /* @__PURE__ */ jsx4(
-              SearchableSingleSelect,
-              {
-                label: "Assignee",
-                options: [{ id: "", label: "Unassigned" }, ...collaboratorOptions],
-                value: assignedTo ?? "",
-                onChange: (value) => setAssignedTo(value || null),
-                placeholder: "Search assignee...",
-                isSuperscript: isSuperscriptLabels
-              }
-            ),
-            existingReport && (statusValue === "Closed" || statusValue === "Resolved") && /* @__PURE__ */ jsx4(
-              SearchableSingleSelect,
-              {
-                label: "Resolved By",
-                options: [{ id: "", label: "Not Set" }, ...collaboratorOptions],
-                value: resolvedBy ?? "",
-                onChange: (value) => setResolvedBy(value || null),
-                placeholder: "Search resolver...",
-                isSuperscript: isSuperscriptLabels
-              }
-            )
-          ] })
-        ] }),
+        isAdmin && /* @__PURE__ */ jsx4("div", { className: isSuperscriptLabels ? "relative" : "", children: /* @__PURE__ */ jsxs3("div", { className: "space-y-3", children: [
+          /* @__PURE__ */ jsx4(
+            SearchableSingleSelect,
+            {
+              label: "Assignee",
+              options: [{ id: "", label: "Unassigned" }, ...collaboratorOptions],
+              value: assignedTo ?? "",
+              onChange: (value) => setAssignedTo(value || null),
+              placeholder: "Search assignee...",
+              isSuperscript: isSuperscriptLabels
+            }
+          ),
+          existingReport && (statusValue === "Closed" || statusValue === "Resolved") && /* @__PURE__ */ jsx4(
+            SearchableSingleSelect,
+            {
+              label: "Resolved By",
+              options: [{ id: "", label: "Not Set" }, ...collaboratorOptions],
+              value: resolvedBy ?? "",
+              onChange: (value) => setResolvedBy(value || null),
+              placeholder: "Search resolver...",
+              isSuperscript: isSuperscriptLabels
+            }
+          )
+        ] }) }),
         /* @__PURE__ */ jsxs3("div", { className: isSuperscriptLabels ? "relative" : "", children: [
           /* @__PURE__ */ jsx4("label", { className: floatingLabelClass(isSuperscriptLabels), children: "Task List" }),
           /* @__PURE__ */ jsxs3("div", { className: "relative", children: [
@@ -3100,7 +3097,7 @@ function DevNotesForm({
                 {
                   ref: taskListInputRef,
                   type: "text",
-                  className: "flex-1 min-w-[120px] border-none bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400",
+                  className: "flex-1 min-w-[120px] !border-0 !bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400",
                   placeholder: "Type to search or add...",
                   value: taskListSearchTerm,
                   onChange: (e) => {
@@ -3971,7 +3968,7 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
       ref: menuRef,
       "data-bug-menu": true,
       className: "relative",
-      style: { zIndex: isEnabled ? 9995 : "auto" },
+      style: { zIndex: open ? 9995 : "auto" },
       children: [
         /* @__PURE__ */ jsx6(
           "button",

@@ -79,7 +79,7 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
       ref={menuRef}
       data-bug-menu
       className="relative"
-      style={{ zIndex: isEnabled ? 9995 : 'auto' }}
+      style={{ zIndex: open ? 9995 : 'auto' }}
     >
       <button
         type="button"

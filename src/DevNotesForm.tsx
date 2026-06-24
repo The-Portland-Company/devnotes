@@ -143,7 +143,7 @@ function SearchableSingleSelect({
           )}
           <input
             type="text"
-            className={`flex-1 ${minInputWidthClassName} border-none bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400`}
+            className={`flex-1 ${minInputWidthClassName} !border-0 !bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400`}
             placeholder={selectedOption ? 'Type to refine' : placeholder}
             value={searchTerm}
             onChange={(e) => {
@@ -991,7 +991,7 @@ export default function DevNotesForm({
       )}
 
       <div className="space-y-5">
-        <section className={SECTION_CARD_CLASS}>
+        <div>
           <div className={isSuperscriptLabels ? 'relative' : ''}>
             <label className={floatingLabelClass(isSuperscriptLabels)}>
               Title <span className="text-rose-500">*</span>
@@ -1004,9 +1004,9 @@ export default function DevNotesForm({
               onChange={(e) => setTitle(e.target.value)}
             />
           </div>
-        </section>
+        </div>
 
-        <section className={SECTION_CARD_CLASS}>
+        <div>
           <div className="mb-4">
             <div className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white p-1 shadow-sm shadow-slate-900/5">
               {narrativeTabs.map((tab) => {
@@ -1101,7 +1101,7 @@ export default function DevNotesForm({
               Add a description, expected behavior, or actual behavior.
             </p>
           )}
-        </section>
+        </div>
 
         {showAiChat && aiProvider && (
           <AiDescriptionChat
@@ -1209,7 +1209,7 @@ export default function DevNotesForm({
                   <input
                     ref={typeInputRef}
                     type="text"
-                    className="flex-1 min-w-[120px] border-none bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                    className="flex-1 min-w-[120px] !border-0 !bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
                     placeholder="Type to search or add..."
                     value={newTypeName}
                     onChange={(e) => {
@@ -1309,9 +1309,6 @@ export default function DevNotesForm({
 
             {isAdmin && (
               <div className={isSuperscriptLabels ? 'relative' : ''}>
-                <label className={floatingLabelClass(isSuperscriptLabels)}>
-                  Assignment & Workflow
-                </label>
                 <div className="space-y-3">
                   <SearchableSingleSelect
                     label="Assignee"
@@ -1355,7 +1352,7 @@ export default function DevNotesForm({
                   <input
                     ref={taskListInputRef}
                     type="text"
-                    className="flex-1 min-w-[120px] border-none bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                    className="flex-1 min-w-[120px] !border-0 !bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
                     placeholder="Type to search or add..."
                     value={taskListSearchTerm}
                     onChange={(e) => {
