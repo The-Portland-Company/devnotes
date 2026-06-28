@@ -8,6 +8,8 @@ import type {
   DevNotesClientOptions,
   DevNotesLinkAppInput,
   TaskList,
+  ForgeStatus,
+  ForgeError,
 } from './types';
 import type { TaskCreateData, DevNotesClientAdapter } from './adapters/types';
 
@@ -40,21 +42,41 @@ const defaultCapabilities: DevNotesCapabilities = {
   appLink: true,
 };
 
-async function parseResponse<T>(response: Response): Promise<T> {
-  const text = await response.text();
-  const payload = text ? JSON.parse(text) : null;
-
-  if (!response.ok) {
-    const message =
-      payload?.error?.message ||
-      payload?.error ||
-      payload?.message ||
-      `Request failed with status ${response.status}`;
-    throw new Error(message);
+/** Error thrown by the client that also carries the structured Forge status. */
+export class DevNotesRequestError extends Error {
+  forge: ForgeStatus | null;
+  status: number;
+  constructor(message: string, status: number, forge: ForgeStatus | null) {
+    super(message);
+    this.name = 'DevNotesRequestError';
+    this.forge = forge;
+    this.status = status;
   }
-
-  return payload as T;
 }
+
+/** Coerce an arbitrary `forge` payload field into a typed ForgeStatus, or null. */
+const normalizeForge = (raw: any): ForgeStatus | null => {
+  if (!raw || typeof raw !== 'object') return null;
+  const connected = Boolean(raw.connected);
+  let error: ForgeError | null = null;
+  if (raw.error && typeof raw.error === 'object') {
+    error = {
+      path: typeof raw.error.path === 'string' ? raw.error.path : '',
+      status:
+        typeof raw.error.status === 'number'
+          ? raw.error.status
+          : raw.error.status == null
+          ? null
+          : Number(raw.error.status) || null,
+      code: typeof raw.error.code === 'string' ? raw.error.code : 'UNKNOWN',
+      message:
+        typeof raw.error.message === 'string'
+          ? raw.error.message
+          : 'Forge connection failed.',
+    };
+  }
+  return { connected, error };
+};
 
 export function createDevNotesClient(options: DevNotesClientOptions): DevNotesClientAdapter {
   const basePath = normalizeBasePath(options.basePath);
@@ -63,6 +85,10 @@ export function createDevNotesClient(options: DevNotesClientOptions): DevNotesCl
   if (typeof fetchImpl !== 'function') {
     throw new Error('createDevNotesClient requires a fetch implementation.');
   }
+
+  // Latest Forge connectivity status seen on ANY response (success or error).
+  // The provider reads this via getForgeStatus() to drive the disconnected banner.
+  let latestForgeStatus: ForgeStatus | null = null;
 
   const request = async <T>(path: string, init: RequestOptions = {}): Promise<T> => {
     const token = await options.getAuthToken();
@@ -77,20 +103,70 @@ export function createDevNotesClient(options: DevNotesClientOptions): DevNotesCl
       headers,
     });
 
-    return await parseResponse<T>(response);
+    const text = await response.text();
+    let payload: any = null;
+    try {
+      payload = text ? JSON.parse(text) : null;
+    } catch {
+      payload = null;
+    }
+
+    // Surface the `forge` connectivity field even on error responses.
+    if (payload && typeof payload === 'object' && 'forge' in payload) {
+      latestForgeStatus = normalizeForge(payload.forge);
+    }
+
+    if (!response.ok) {
+      const message =
+        payload?.error?.message ||
+        payload?.error ||
+        payload?.message ||
+        `Request failed with status ${response.status}`;
+      throw new DevNotesRequestError(
+        typeof message === 'string' ? message : `Request failed with status ${response.status}`,
+        response.status,
+        latestForgeStatus
+      );
+    }
+
+    return payload as T;
   };
 
-  const fetchTasks = async () => await request<Task[]>('/tasks');
+  // The tasks/reports GET success body may be either a bare array (legacy) or an
+  // object envelope `{ reports: [...], forge: {...} }` (current backend). The
+  // top-level `forge` is already captured inside request(); here we just unwrap
+  // the list regardless of shape.
+  const extractReports = (payload: any): Task[] => {
+    if (Array.isArray(payload)) return payload as Task[];
+    if (payload && Array.isArray(payload.reports)) return payload.reports as Task[];
+    if (payload && Array.isArray(payload.tasks)) return payload.tasks as Task[];
+    return [];
+  };
+  // A create/update response may be a bare task object or an envelope that wraps
+  // it as `{ report | task: {...}, forge: {...} }`.
+  const extractTask = (payload: any): Task => {
+    if (payload && typeof payload === 'object') {
+      if (payload.report && typeof payload.report === 'object') return payload.report as Task;
+      if (payload.task && typeof payload.task === 'object') return payload.task as Task;
+    }
+    return payload as Task;
+  };
+
+  const fetchTasks = async () => extractReports(await request<any>('/tasks'));
   const createTask = async (data: TaskCreateData) =>
-      await request<Task>('/tasks', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      });
+      extractTask(
+        await request<any>('/tasks', {
+          method: 'POST',
+          body: JSON.stringify(data),
+        })
+      );
   const updateTask = async (id: string, data: Partial<Task>) =>
-      await request<Task>(`/tasks/${encodeURIComponent(id)}`, {
-        method: 'PATCH',
-        body: JSON.stringify(data),
-      });
+      extractTask(
+        await request<any>(`/tasks/${encodeURIComponent(id)}`, {
+          method: 'PATCH',
+          body: JSON.stringify(data),
+        })
+      );
   const deleteTask = async (id: string) => {
       await request<void>(`/tasks/${encodeURIComponent(id)}`, { method: 'DELETE' });
     };
@@ -118,6 +194,7 @@ export function createDevNotesClient(options: DevNotesClientOptions): DevNotesCl
       });
 
   return {
+    getForgeStatus: () => latestForgeStatus,
     fetchTasks,
     createTask,
     updateTask,

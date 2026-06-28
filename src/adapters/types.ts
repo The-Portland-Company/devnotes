@@ -7,6 +7,7 @@ import type {
   DevNotesAppLinkStatus,
   DevNotesLinkAppInput,
   DevNotesCapabilities,
+  ForgeStatus,
 } from '../types';
 
 export type TaskCreateData = Omit<
@@ -15,6 +16,8 @@ export type TaskCreateData = Omit<
 >;
 
 export interface DevNotesClientAdapter {
+  /** Latest Forge connectivity status observed on any response (null until first request). */
+  getForgeStatus(): ForgeStatus | null;
   fetchTasks(): Promise<Task[]>;
   createTask(data: TaskCreateData): Promise<Task>;
   updateTask(id: string, data: Partial<Task>): Promise<Task>;

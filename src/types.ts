@@ -31,6 +31,20 @@ export type DevNotesCapabilities = {
   appLink: boolean;
 };
 
+/** Structured Forge connection error surfaced by every `/api/devnotes/*` response. */
+export type ForgeError = {
+  path: string;
+  status: number | null;
+  code: string;
+  message: string;
+};
+
+/** Top-level connectivity status the backend attaches to every response. */
+export type ForgeStatus = {
+  connected: boolean;
+  error: null | ForgeError;
+};
+
 export type DevNotesAppLinkStatus = {
   linked: boolean;
   projectName: string | null;

@@ -1,9 +1,9 @@
 import * as react_jsx_runtime from 'react/jsx-runtime';
-import { ReactNode } from 'react';
-import { D as DevNotesClientAdapter, a as DevNotesUser, b as DevNotesConfig, U as UserStoryStepDot, B as BugReport, c as BugReportType, T as TaskList, d as BugReportCreator, N as NotifyEvent, A as AiProvider, e as DevNotesRole, f as Task, g as TaskCaptureContext } from './types-D2LJ7W05.mjs';
-export { h as AiAssistResult, i as AiConversationMessage, j as AiProviderOption, k as BugCaptureContext, l as BugReportCreateData, m as BugReportMessage, n as TaskCreateData, o as TaskCreator, p as TaskMessage, q as TaskType, r as USER_STORY_TYPE_NAME, s as UserStoryCreateResult, t as UserStoryDraft, u as UserStoryStepInput, v as UserStoryWithSteps } from './types-D2LJ7W05.mjs';
-import { D as DevNotesCapabilities, a as DevNotesAppLinkStatus, b as DevNotesClientOptions } from './types-DPJ2ViSN.mjs';
-export { c as DevNotesLinkAppInput } from './types-DPJ2ViSN.mjs';
+import { ReactNode, CSSProperties } from 'react';
+import { D as DevNotesClientAdapter, a as DevNotesUser, b as DevNotesConfig, U as UserStoryStepDot, B as BugReport, c as BugReportType, T as TaskList, d as BugReportCreator, N as NotifyEvent, A as AiProvider, e as DevNotesRole, f as Task, g as TaskCaptureContext } from './types-BjxWLsto.mjs';
+export { h as AiAssistResult, i as AiConversationMessage, j as AiProviderOption, k as BugCaptureContext, l as BugReportCreateData, m as BugReportMessage, n as TaskCreateData, o as TaskCreator, p as TaskMessage, q as TaskType, r as USER_STORY_TYPE_NAME, s as UserStoryCreateResult, t as UserStoryDraft, u as UserStoryStepInput, v as UserStoryWithSteps } from './types-BjxWLsto.mjs';
+import { D as DevNotesCapabilities, a as DevNotesAppLinkStatus, F as ForgeStatus, b as ForgeError, c as DevNotesClientOptions } from './types-CN69T2nf.mjs';
+export { d as DevNotesLinkAppInput } from './types-CN69T2nf.mjs';
 
 type StoryStepAction = 'click' | 'input' | 'select' | 'navigate' | 'note';
 type RecordedStep = {
@@ -80,6 +80,10 @@ type DevNotesContextValue = {
     role: DevNotesRole;
     loading: boolean;
     error: string | null;
+    /** Latest Forge connectivity status from the backend (null until first probe). */
+    forgeStatus: ForgeStatus | null;
+    /** Convenience accessor: the structured Forge error when disconnected, else null. */
+    forgeError: ForgeError | null;
     dotContainer: HTMLDivElement | null;
     compensate: (viewportX: number, viewportY: number) => {
         x: number;
@@ -220,6 +224,25 @@ type DevNotesTaskListModalProps = {
 };
 declare function DevNotesTaskListModal({ open, onClose, onNavigateToPage, title, }: DevNotesTaskListModalProps): react_jsx_runtime.JSX.Element | null;
 
+/**
+ * Builds the ready-to-paste AI debugging prompt embedding the exact Forge error.
+ */
+declare function buildForgeDebugPrompt(err: ForgeError): string;
+/**
+ * Red/warning banner shown at the top of the DevNotes panel and All-Tasks modal
+ * whenever the backend reports it cannot reach Focus Forge. Renders nothing when
+ * Forge is connected (or status is still unknown).
+ */
+declare function DevNotesForgeBanner({ style }: {
+    style?: CSSProperties;
+}): react_jsx_runtime.JSX.Element | null;
+
+/** Error thrown by the client that also carries the structured Forge status. */
+declare class DevNotesRequestError extends Error {
+    forge: ForgeStatus | null;
+    status: number;
+    constructor(message: string, status: number, forge: ForgeStatus | null);
+}
 declare function createDevNotesClient(options: DevNotesClientOptions): DevNotesClientAdapter;
 
 type BugAnchorMetadata = {
@@ -348,4 +371,4 @@ declare const useBugReportPosition: (report: Task | null) => {
     y: number;
 } | null;
 
-export { type AiFixPayload, AiProvider, BugReport, BugReportCreator, BugReportType, type BuildAiFixPayloadParams, DevNotesAppLinkStatus, DevNotesButton, DevNotesCapabilities, DevNotesClientOptions, DevNotesConfig, DevNotesDiscussion, DevNotesDot, DevNotesForm, DevNotesMenu, DevNotesOverlay, DevNotesProvider, DevNotesRole, DevNotesStepDot, DevNotesStoryRecorder, DevNotesTaskList, DevNotesTaskListModal, DevNotesUser, type NarrativeTab, NotifyEvent, type RecordedStep, type StoryStepAction, Task, TaskCaptureContext, TaskList, UserStoryStepDot, buildAiFixPayload, buildCaptureContext, calculateBugPositionFromPoint, createDevNotesClient, deriveRouteLabelFromUrl, detectBrowserName, formatAiFixPayloadForCopy, getInitialNarrativeTab, getInitialTaskStatus, normalizePageUrl, resolveBugReportCoordinates, shouldRequireExplicitStatusSelection, useBugReportPosition, useDevNotes };
+export { type AiFixPayload, AiProvider, BugReport, BugReportCreator, BugReportType, type BuildAiFixPayloadParams, DevNotesAppLinkStatus, DevNotesButton, DevNotesCapabilities, DevNotesClientOptions, DevNotesConfig, DevNotesDiscussion, DevNotesDot, DevNotesForgeBanner, DevNotesForm, DevNotesMenu, DevNotesOverlay, DevNotesProvider, DevNotesRequestError, DevNotesRole, DevNotesStepDot, DevNotesStoryRecorder, DevNotesTaskList, DevNotesTaskListModal, DevNotesUser, ForgeError, ForgeStatus, type NarrativeTab, NotifyEvent, type RecordedStep, type StoryStepAction, Task, TaskCaptureContext, TaskList, UserStoryStepDot, buildAiFixPayload, buildCaptureContext, buildForgeDebugPrompt, calculateBugPositionFromPoint, createDevNotesClient, deriveRouteLabelFromUrl, detectBrowserName, formatAiFixPayloadForCopy, getInitialNarrativeTab, getInitialTaskStatus, normalizePageUrl, resolveBugReportCoordinates, shouldRequireExplicitStatusSelection, useBugReportPosition, useDevNotes };

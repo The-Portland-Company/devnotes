@@ -14,6 +14,7 @@ import {
 } from 'react-icons/fi';
 import { useDevNotes } from './DevNotesProvider';
 import DevNotesTaskListModal from './DevNotesTaskListModal';
+import DevNotesForgeBanner from './DevNotesForgeBanner';
 
 type DevNotesMenuProps = {
   /**
@@ -50,7 +51,9 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
     stopUserStoryRecording,
     tasks,
     role,
+    forgeStatus,
   } = useDevNotes();
+  const forgeDisconnected = forgeStatus?.connected === false;
   const [open, setOpen] = useState(false);
   const [showTaskModal, setShowTaskModal] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -103,10 +106,20 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
           ) : (
             <FiAlertTriangle size={20} color={isEnabled ? '#E53E3E' : undefined} />
           )}
-          {openBugCount > 0 && (
-            <span className="absolute -right-2 -top-1 inline-flex min-w-[16px] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
-              {openBugCount}
+          {forgeDisconnected ? (
+            <span
+              title="Forge is disconnected"
+              className="absolute -right-2 -top-1 inline-flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white"
+              style={{ boxShadow: '0 0 0 2px #ffffff' }}
+            >
+              !
             </span>
+          ) : (
+            openBugCount > 0 && (
+              <span className="absolute -right-2 -top-1 inline-flex min-w-[16px] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
+                {openBugCount}
+              </span>
+            )
           )}
         </span>
       </button>
@@ -130,6 +143,12 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
           <div className="px-3 py-2">
             <p className="text-xs font-semibold text-gray-500">DEV NOTES</p>
           </div>
+
+          {forgeDisconnected && (
+            <div style={{ padding: '0 12px 8px' }}>
+              <DevNotesForgeBanner />
+            </div>
+          )}
 
           <div className="my-1 border-t border-gray-200" />
 

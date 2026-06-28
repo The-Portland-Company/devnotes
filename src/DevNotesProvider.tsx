@@ -21,6 +21,8 @@ import type {
   AiProvider,
   DevNotesCapabilities,
   DevNotesAppLinkStatus,
+  ForgeStatus,
+  ForgeError,
   UserStoryDraft,
   UserStoryCreateResult,
   UserStoryStepDot,
@@ -96,6 +98,10 @@ type DevNotesContextValue = {
   role: DevNotesRole;
   loading: boolean;
   error: string | null;
+  /** Latest Forge connectivity status from the backend (null until first probe). */
+  forgeStatus: ForgeStatus | null;
+  /** Convenience accessor: the structured Forge error when disconnected, else null. */
+  forgeError: ForgeError | null;
   dotContainer: HTMLDivElement | null;
   compensate: (viewportX: number, viewportY: number) => { x: number; y: number };
   bugReports: BugReport[];
@@ -181,6 +187,8 @@ export function DevNotesProvider({ adapter, user, config, children }: DevNotesPr
   const [collaborators, setCollaborators] = useState<BugReportCreator[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [forgeStatus, setForgeStatus] = useState<ForgeStatus | null>(null);
+  const loadingRef = useRef(false);
   const [capabilities, setCapabilities] = useState<DevNotesCapabilities>({
     ai: Boolean(aiProvider),
     appLink: true,
@@ -567,17 +575,26 @@ export function DevNotesProvider({ adapter, user, config, children }: DevNotesPr
   );
 
   const loadTasks = useCallback(async () => {
+    // Guard against overlapping loads (focus + interval + manual can race).
+    if (loadingRef.current) return;
+    loadingRef.current = true;
     setLoading(true);
     setError(null);
 
     try {
       const data = await adapter.fetchTasks();
       setBugReports(data);
+      // Reflect the connectivity reported on this successful response.
+      setForgeStatus(adapter.getForgeStatus());
       await Promise.all([loadProfilesForReports(data), loadUnreadCounts()]);
     } catch (err: any) {
       console.error('[DevNotes] Error loading bug reports:', err);
       setError(err.message);
+      // A tasks failure carries the structured Forge status — surface it so the
+      // banner shows even if capabilities hasn't been probed yet.
+      setForgeStatus(err?.forge ?? adapter.getForgeStatus());
     } finally {
+      loadingRef.current = false;
       setLoading(false);
     }
   }, [adapter, loadProfilesForReports, loadUnreadCounts]);
@@ -615,6 +632,10 @@ export function DevNotesProvider({ adapter, user, config, children }: DevNotesPr
       setCapabilities(data);
     } catch (err: any) {
       console.error('[DevNotes] Error loading capabilities:', err);
+    } finally {
+      // The capabilities GET always returns 200 and carries `forge`; use it as
+      // the connectivity probe even when the task list hasn't been loaded.
+      setForgeStatus(adapter.getForgeStatus());
     }
   }, [adapter]);
 
@@ -647,18 +668,24 @@ export function DevNotesProvider({ adapter, user, config, children }: DevNotesPr
         if (!data || !data.id) {
           throw new Error('Task creation returned an invalid response.');
         }
+        // Backend now only returns 2xx on real Forge persistence. Add optimistically
+        // for instant feedback, then reconcile against Forge so the list/count can
+        // never silently diverge from the source of truth.
         setBugReports((prev) => [data, ...prev]);
+        setForgeStatus(adapter.getForgeStatus());
         await loadProfilesForReports([data]);
+        void loadTasks();
         return data;
       } catch (err: any) {
         console.error('[DevNotes] Error creating bug report:', err);
         setError(err.message);
+        setForgeStatus(err?.forge ?? adapter.getForgeStatus());
         return null;
       } finally {
         setLoading(false);
       }
     },
-    [adapter, loadProfilesForReports]
+    [adapter, loadProfilesForReports, loadTasks]
   );
 
   const updateTask = useCallback(
@@ -799,6 +826,34 @@ export function DevNotesProvider({ adapter, user, config, children }: DevNotesPr
     refreshAppLinkStatus,
   ]);
 
+  // Keep the task count and Forge connectivity fresh rather than a permanent
+  // mount-time snapshot: refetch on window focus and on a low-frequency poll.
+  // loadTasks() guards against overlapping loads; refreshCapabilities() is the
+  // lightweight connectivity probe that drives the disconnected banner.
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const refresh = () => {
+      loadTasks();
+      refreshCapabilities();
+    };
+
+    const onFocus = () => refresh();
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') refresh();
+    };
+
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibility);
+    const intervalId = window.setInterval(refresh, 60000);
+
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.clearInterval(intervalId);
+    };
+  }, [loadTasks, refreshCapabilities]);
+
   const value: DevNotesContextValue = useMemo(
     () => ({
       isEnabled,
@@ -863,6 +918,8 @@ export function DevNotesProvider({ adapter, user, config, children }: DevNotesPr
       role,
       loading,
       error,
+      forgeStatus,
+      forgeError: forgeStatus?.connected === false ? forgeStatus.error : null,
       dotContainer,
       compensate,
       showBugsAlways: showTasksAlways,
@@ -921,6 +978,7 @@ export function DevNotesProvider({ adapter, user, config, children }: DevNotesPr
       role,
       loading,
       error,
+      forgeStatus,
       dotContainer,
       compensate,
     ]
@@ -993,6 +1051,8 @@ const defaultContextValue: DevNotesContextValue = {
   role: 'none',
   loading: false,
   error: null,
+  forgeStatus: null,
+  forgeError: null,
   dotContainer: null,
   compensate: (vx: number, vy: number) => ({ x: vx, y: vy }),
 };

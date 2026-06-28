@@ -23,10 +23,12 @@ __export(index_exports, {
   DevNotesButton: () => DevNotesButton,
   DevNotesDiscussion: () => DevNotesDiscussion,
   DevNotesDot: () => DevNotesDot,
+  DevNotesForgeBanner: () => DevNotesForgeBanner,
   DevNotesForm: () => DevNotesForm,
   DevNotesMenu: () => DevNotesMenu,
   DevNotesOverlay: () => DevNotesOverlay,
   DevNotesProvider: () => DevNotesProvider,
+  DevNotesRequestError: () => DevNotesRequestError,
   DevNotesStepDot: () => DevNotesStepDot,
   DevNotesStoryRecorder: () => DevNotesStoryRecorder,
   DevNotesTaskList: () => DevNotesTaskList,
@@ -34,6 +36,7 @@ __export(index_exports, {
   USER_STORY_TYPE_NAME: () => USER_STORY_TYPE_NAME,
   buildAiFixPayload: () => buildAiFixPayload,
   buildCaptureContext: () => buildCaptureContext,
+  buildForgeDebugPrompt: () => buildForgeDebugPrompt,
   calculateBugPositionFromPoint: () => calculateBugPositionFromPoint,
   createDevNotesClient: () => createDevNotesClient,
   deriveRouteLabelFromUrl: () => deriveRouteLabelFromUrl,
@@ -624,6 +627,8 @@ function DevNotesProvider({ adapter, user, config, children }) {
   const [collaborators, setCollaborators] = (0, import_react2.useState)([]);
   const [loading, setLoading] = (0, import_react2.useState)(false);
   const [error, setError] = (0, import_react2.useState)(null);
+  const [forgeStatus, setForgeStatus] = (0, import_react2.useState)(null);
+  const loadingRef = (0, import_react2.useRef)(false);
   const [capabilities, setCapabilities] = (0, import_react2.useState)({
     ai: Boolean(aiProvider),
     appLink: true
@@ -952,16 +957,21 @@ function DevNotesProvider({ adapter, user, config, children }) {
     [adapter]
   );
   const loadTasks = (0, import_react2.useCallback)(async () => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
     setLoading(true);
     setError(null);
     try {
       const data = await adapter.fetchTasks();
       setBugReports(data);
+      setForgeStatus(adapter.getForgeStatus());
       await Promise.all([loadProfilesForReports(data), loadUnreadCounts()]);
     } catch (err) {
       console.error("[DevNotes] Error loading bug reports:", err);
       setError(err.message);
+      setForgeStatus(err?.forge ?? adapter.getForgeStatus());
     } finally {
+      loadingRef.current = false;
       setLoading(false);
     }
   }, [adapter, loadProfilesForReports, loadUnreadCounts]);
@@ -995,6 +1005,8 @@ function DevNotesProvider({ adapter, user, config, children }) {
       setCapabilities(data);
     } catch (err) {
       console.error("[DevNotes] Error loading capabilities:", err);
+    } finally {
+      setForgeStatus(adapter.getForgeStatus());
     }
   }, [adapter]);
   const refreshAppLinkStatus = (0, import_react2.useCallback)(async () => {
@@ -1016,17 +1028,20 @@ function DevNotesProvider({ adapter, user, config, children }) {
           throw new Error("Task creation returned an invalid response.");
         }
         setBugReports((prev) => [data, ...prev]);
+        setForgeStatus(adapter.getForgeStatus());
         await loadProfilesForReports([data]);
+        void loadTasks();
         return data;
       } catch (err) {
         console.error("[DevNotes] Error creating bug report:", err);
         setError(err.message);
+        setForgeStatus(err?.forge ?? adapter.getForgeStatus());
         return null;
       } finally {
         setLoading(false);
       }
     },
-    [adapter, loadProfilesForReports]
+    [adapter, loadProfilesForReports, loadTasks]
   );
   const updateTask = (0, import_react2.useCallback)(
     async (id, updates) => {
@@ -1154,6 +1169,25 @@ Dev Notes`,
     refreshCapabilities,
     refreshAppLinkStatus
   ]);
+  (0, import_react2.useEffect)(() => {
+    if (typeof window === "undefined") return void 0;
+    const refresh = () => {
+      loadTasks();
+      refreshCapabilities();
+    };
+    const onFocus = () => refresh();
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+    const intervalId = window.setInterval(refresh, 6e4);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.clearInterval(intervalId);
+    };
+  }, [loadTasks, refreshCapabilities]);
   const value = (0, import_react2.useMemo)(
     () => ({
       isEnabled,
@@ -1218,6 +1252,8 @@ Dev Notes`,
       role,
       loading,
       error,
+      forgeStatus,
+      forgeError: forgeStatus?.connected === false ? forgeStatus.error : null,
       dotContainer,
       compensate,
       showBugsAlways: showTasksAlways,
@@ -1276,6 +1312,7 @@ Dev Notes`,
       role,
       loading,
       error,
+      forgeStatus,
       dotContainer,
       compensate
     ]
@@ -1366,6 +1403,8 @@ var defaultContextValue = {
   role: "none",
   loading: false,
   error: null,
+  forgeStatus: null,
+  forgeError: null,
   dotContainer: null,
   compensate: (vx, vy) => ({ x: vx, y: vy })
 };
@@ -1375,16 +1414,16 @@ function useDevNotes() {
 }
 
 // src/DevNotesButton.tsx
-var import_react14 = require("react");
+var import_react15 = require("react");
 var import_react_dom2 = require("react-dom");
 
 // src/DevNotesMenu.tsx
-var import_react8 = require("react");
-var import_fi5 = require("react-icons/fi");
+var import_react9 = require("react");
+var import_fi6 = require("react-icons/fi");
 
 // src/DevNotesTaskListModal.tsx
-var import_react7 = require("react");
-var import_fi4 = require("react-icons/fi");
+var import_react8 = require("react");
+var import_fi5 = require("react-icons/fi");
 
 // src/DevNotesForm.tsx
 var import_react5 = require("react");
@@ -2456,7 +2495,7 @@ function formatAiFixPayloadForCopy(payload) {
 }
 
 // src/version.ts
-var DEVNOTES_VERSION = "0.5.23";
+var DEVNOTES_VERSION = "0.6.0";
 
 // src/internal/formState.ts
 function getInitialTaskStatus(existingStatus) {
@@ -3775,8 +3814,86 @@ function DevNotesForm({
   ] });
 }
 
-// src/hooks/useTaskListData.ts
+// src/DevNotesForgeBanner.tsx
 var import_react6 = require("react");
+var import_fi4 = require("react-icons/fi");
+var import_jsx_runtime5 = require("react/jsx-runtime");
+function buildForgeDebugPrompt(err) {
+  return `The Politogy VRM DevNotes panel cannot reach Focus Forge. Debug and fix the backend Forge connection.
+Error: ${err.message}
+Forge path: ${err.path}  HTTP status: ${err.status ?? "n/a"}  Code: ${err.code}
+Backend: core/react/backend/main.ts (handleDevNotesApiForgeOnly, fetchFocusForge). Forge base: FOCUS_FORGE_BASE_URL. Check FOCUS_FORGE_PAT, Forge reachability/timeout, and pagination of /api/sync/comments and /api/mobile/tasks.`;
+}
+var wrapStyle = {
+  display: "flex",
+  flexDirection: "column",
+  gap: 8,
+  padding: "10px 12px",
+  borderRadius: 8,
+  border: "1px solid #fecaca",
+  background: "#fef2f2",
+  color: "#991b1b",
+  fontSize: 13,
+  lineHeight: 1.4,
+  boxSizing: "border-box"
+};
+function DevNotesForgeBanner({ style }) {
+  const { forgeStatus } = useDevNotes();
+  const [copied, setCopied] = (0, import_react6.useState)(false);
+  const disconnected = forgeStatus?.connected === false;
+  if (!disconnected) return null;
+  const err = forgeStatus?.error || {
+    path: "",
+    status: null,
+    code: "UNKNOWN",
+    message: "Focus Forge is unreachable."
+  };
+  const handleCopy = async () => {
+    const prompt = buildForgeDebugPrompt(err);
+    try {
+      await navigator.clipboard.writeText(prompt);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2e3);
+    } catch {
+    }
+  };
+  return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { role: "alert", style: { ...wrapStyle, ...style }, children: [
+    /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { style: { display: "flex", alignItems: "flex-start", gap: 8 }, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_fi4.FiAlertTriangle, { size: 16, style: { flexShrink: 0, marginTop: 1, color: "#dc2626" } }),
+      /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("span", { style: { fontWeight: 500 }, children: [
+        "Forge is disconnected. ",
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { style: { fontWeight: 400 }, children: err.message })
+      ] })
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { children: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
+      "button",
+      {
+        type: "button",
+        onClick: handleCopy,
+        style: {
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+          padding: "4px 10px",
+          fontSize: 12,
+          fontWeight: 500,
+          borderRadius: 6,
+          border: "1px solid #fca5a5",
+          background: copied ? "#dcfce7" : "#ffffff",
+          color: copied ? "#15803d" : "#991b1b",
+          cursor: "pointer"
+        },
+        children: [
+          copied ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_fi4.FiCheck, { size: 12 }) : /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_fi4.FiCopy, { size: 12 }),
+          copied ? "Copied!" : "Copy debug prompt"
+        ]
+      }
+    ) })
+  ] });
+}
+
+// src/hooks/useTaskListData.ts
+var import_react7 = require("react");
 var STALE_DAYS = 7;
 var MS_PER_DAY = 24 * 60 * 60 * 1e3;
 function useTaskListData() {
@@ -3789,15 +3906,15 @@ function useTaskListData() {
     updateTask,
     user
   } = useDevNotes();
-  const [searchQuery, setSearchQuery] = (0, import_react6.useState)("");
-  const [filterStatus, setFilterStatus] = (0, import_react6.useState)("all");
-  const [filterSeverity, setFilterSeverity] = (0, import_react6.useState)("all");
-  const [showClosed, setShowClosed] = (0, import_react6.useState)(false);
-  const [selectedReport, setSelectedReport] = (0, import_react6.useState)(null);
-  const [sortField, setSortField] = (0, import_react6.useState)("stale");
-  const [sortDir, setSortDir] = (0, import_react6.useState)("desc");
-  const [visibleReportIds, setVisibleReportIds] = (0, import_react6.useState)(null);
-  (0, import_react6.useEffect)(() => {
+  const [searchQuery, setSearchQuery] = (0, import_react7.useState)("");
+  const [filterStatus, setFilterStatus] = (0, import_react7.useState)("all");
+  const [filterSeverity, setFilterSeverity] = (0, import_react7.useState)("all");
+  const [showClosed, setShowClosed] = (0, import_react7.useState)(false);
+  const [selectedReport, setSelectedReport] = (0, import_react7.useState)(null);
+  const [sortField, setSortField] = (0, import_react7.useState)("stale");
+  const [sortDir, setSortDir] = (0, import_react7.useState)("desc");
+  const [visibleReportIds, setVisibleReportIds] = (0, import_react7.useState)(null);
+  (0, import_react7.useEffect)(() => {
     setVisibleReportIds(new Set(tasks.map((report) => report.id)));
   }, [tasks]);
   const getStaleMeta = (report) => {
@@ -3812,7 +3929,7 @@ function useTaskListData() {
       ageDays
     };
   };
-  const stats = (0, import_react6.useMemo)(() => ({
+  const stats = (0, import_react7.useMemo)(() => ({
     total: (visibleReportIds ? tasks.filter((r) => visibleReportIds.has(r.id)) : []).length,
     open: (visibleReportIds ? tasks.filter((r) => visibleReportIds.has(r.id) && r.status === "Open") : []).length,
     inProgress: (visibleReportIds ? tasks.filter((r) => visibleReportIds.has(r.id) && r.status === "In Progress") : []).length,
@@ -3820,11 +3937,11 @@ function useTaskListData() {
     resolved: (visibleReportIds ? tasks.filter((r) => visibleReportIds.has(r.id) && r.status === "Resolved") : []).length,
     closed: (visibleReportIds ? tasks.filter((r) => visibleReportIds.has(r.id) && r.status === "Closed") : []).length
   }), [tasks, visibleReportIds]);
-  const accessibleReports = (0, import_react6.useMemo)(
+  const accessibleReports = (0, import_react7.useMemo)(
     () => visibleReportIds ? tasks.filter((report) => visibleReportIds.has(report.id)) : [],
     [tasks, visibleReportIds]
   );
-  const filteredReports = (0, import_react6.useMemo)(() => {
+  const filteredReports = (0, import_react7.useMemo)(() => {
     const severityOrder = { Critical: 0, High: 1, Medium: 2, Low: 3 };
     const statusOrder = { Open: 0, "In Progress": 1, "Needs Review": 2, Resolved: 3, Closed: 4 };
     return accessibleReports.filter((r) => {
@@ -3923,7 +4040,7 @@ function useTaskListData() {
 }
 
 // src/DevNotesTaskListModal.tsx
-var import_jsx_runtime5 = require("react/jsx-runtime");
+var import_jsx_runtime6 = require("react/jsx-runtime");
 var STATUS_STYLES = {
   Open: { background: "#fee2e2", color: "#b91c1c" },
   "In Progress": { background: "#dbeafe", color: "#1d4ed8" },
@@ -4005,7 +4122,7 @@ function DevNotesTaskListModal({
     formatDate,
     tasks
   } = useTaskListData();
-  (0, import_react7.useEffect)(() => {
+  (0, import_react8.useEffect)(() => {
     if (!open) return void 0;
     const onKeyDown = (e) => {
       if (e.key === "Escape") {
@@ -4022,23 +4139,23 @@ function DevNotesTaskListModal({
   if (!open) return null;
   const SortIcon = ({ field }) => {
     if (sortField !== field) return null;
-    return sortDir === "desc" ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_fi4.FiChevronDown, { size: 12 }) : /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_fi4.FiChevronUp, { size: 12 });
+    return sortDir === "desc" ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(import_fi5.FiChevronDown, { size: 12 }) : /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(import_fi5.FiChevronUp, { size: 12 });
   };
-  const sortableHeader = (label, field, extra) => /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+  const sortableHeader = (label, field, extra) => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
     "th",
     {
       style: { ...thStyle, cursor: "pointer", userSelect: "none", ...extra },
       onClick: () => handleSort(field),
-      children: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("span", { style: { display: "inline-flex", alignItems: "center", gap: 4 }, children: [
+      children: /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("span", { style: { display: "inline-flex", alignItems: "center", gap: 4 }, children: [
         label,
         " ",
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(SortIcon, { field })
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(SortIcon, { field })
       ] })
     }
   );
   const renderBody = () => {
     if (selectedReport) {
-      return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+      return /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
         DevNotesForm,
         {
           pageUrl: selectedReport.page_url,
@@ -4065,7 +4182,7 @@ function DevNotesTaskListModal({
       );
     }
     if (loading && tasks.length === 0 || visibleReportIds === null) {
-      return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: { display: "flex", justifyContent: "center", padding: "48px 0" }, children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+      return /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { style: { display: "flex", justifyContent: "center", padding: "48px 0" }, children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
         "div",
         {
           style: {
@@ -4079,10 +4196,10 @@ function DevNotesTaskListModal({
         }
       ) });
     }
-    return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { style: { display: "flex", flexDirection: "column", gap: 16 }, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between" }, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("h2", { style: { fontSize: 18, fontWeight: 600, color: "#111827", margin: 0 }, children: title }),
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { style: { display: "flex", flexDirection: "column", gap: 16 }, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between" }, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("h2", { style: { fontSize: 18, fontWeight: 600, color: "#111827", margin: 0 }, children: title }),
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
           "button",
           {
             type: "button",
@@ -4097,11 +4214,11 @@ function DevNotesTaskListModal({
               cursor: "pointer",
               display: "inline-flex"
             },
-            children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_fi4.FiX, { size: 18 })
+            children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(import_fi5.FiX, { size: 18 })
           }
         )
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
         "div",
         {
           style: {
@@ -4116,7 +4233,7 @@ function DevNotesTaskListModal({
             ["Resolved", stats.resolved, "#16a34a"],
             ["Closed", stats.closed, "#6b7280"],
             ["Total", stats.total, "#374151"]
-          ].map(([label, count, color]) => /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
+          ].map(([label, count, color]) => /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(
             "div",
             {
               style: {
@@ -4126,24 +4243,24 @@ function DevNotesTaskListModal({
                 padding: "8px 0"
               },
               children: [
-                /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: { fontSize: 20, fontWeight: 700, color }, children: count }),
-                /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: { fontSize: 10.5, color: "#6b7280" }, children: label })
+                /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { style: { fontSize: 20, fontWeight: 700, color }, children: count }),
+                /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { style: { fontSize: 10.5, color: "#6b7280" }, children: label })
               ]
             },
             label
           ))
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { style: { display: "flex", flexWrap: "wrap", gap: 8 }, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { style: { position: "relative", flex: 1, minWidth: 180 }, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
-            import_fi4.FiSearch,
+      /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { style: { display: "flex", flexWrap: "wrap", gap: 8 }, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { style: { position: "relative", flex: 1, minWidth: 180 }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+            import_fi5.FiSearch,
             {
               size: 14,
               style: { position: "absolute", left: 10, top: 10, color: "#9ca3af" }
             }
           ),
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
             "input",
             {
               type: "text",
@@ -4154,37 +4271,37 @@ function DevNotesTaskListModal({
             }
           )
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(
           "select",
           {
             value: filterStatus,
             onChange: (e) => setFilterStatus(e.target.value),
             style: controlStyle,
             children: [
-              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("option", { value: "all", children: "All Statuses" }),
-              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("option", { value: "Open", children: "Open" }),
-              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("option", { value: "In Progress", children: "In Progress" }),
-              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("option", { value: "Needs Review", children: "Needs Review" }),
-              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("option", { value: "Resolved", children: "Resolved" })
+              /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("option", { value: "all", children: "All Statuses" }),
+              /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("option", { value: "Open", children: "Open" }),
+              /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("option", { value: "In Progress", children: "In Progress" }),
+              /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("option", { value: "Needs Review", children: "Needs Review" }),
+              /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("option", { value: "Resolved", children: "Resolved" })
             ]
           }
         ),
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(
           "select",
           {
             value: filterSeverity,
             onChange: (e) => setFilterSeverity(e.target.value),
             style: controlStyle,
             children: [
-              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("option", { value: "all", children: "All Severities" }),
-              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("option", { value: "Critical", children: "Critical" }),
-              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("option", { value: "High", children: "High" }),
-              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("option", { value: "Medium", children: "Medium" }),
-              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("option", { value: "Low", children: "Low" })
+              /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("option", { value: "all", children: "All Severities" }),
+              /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("option", { value: "Critical", children: "Critical" }),
+              /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("option", { value: "High", children: "High" }),
+              /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("option", { value: "Medium", children: "Medium" }),
+              /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("option", { value: "Low", children: "Low" })
             ]
           }
         ),
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
           "button",
           {
             type: "button",
@@ -4202,7 +4319,7 @@ function DevNotesTaskListModal({
           }
         )
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { style: { fontSize: 12, color: "#6b7280" }, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { style: { fontSize: 12, color: "#6b7280" }, children: [
         filteredReports.length,
         " of ",
         showClosed ? stats.closed : stats.total - stats.closed,
@@ -4210,7 +4327,7 @@ function DevNotesTaskListModal({
         showClosed ? "closed" : "active",
         " tasks"
       ] }),
-      filteredReports.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
+      filteredReports.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(
         "div",
         {
           style: {
@@ -4221,24 +4338,24 @@ function DevNotesTaskListModal({
             color: "#9ca3af"
           },
           children: [
-            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_fi4.FiAlertTriangle, { size: 32, style: { marginBottom: 12 } }),
-            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("p", { style: { fontSize: 14, margin: 0, textAlign: "center", maxWidth: 420 }, children: accessibleReports.length === 0 ? "No visible tasks yet. You will only see tasks you own, are assigned to, commented on, or were mentioned in." : "No tasks match your filters." })
+            /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(import_fi5.FiAlertTriangle, { size: 32, style: { marginBottom: 12 } }),
+            /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("p", { style: { fontSize: 14, margin: 0, textAlign: "center", maxWidth: 420 }, children: accessibleReports.length === 0 ? "No visible tasks yet. You will only see tasks you own, are assigned to, commented on, or were mentioned in." : "No tasks match your filters." })
           ]
         }
-      ) : /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: { border: "1px solid #e5e7eb", borderRadius: 8, overflow: "hidden" }, children: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("table", { style: { width: "100%", fontSize: 14, borderCollapse: "collapse" }, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("tr", { style: { background: "#f9fafb" }, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("th", { style: thStyle, children: "Title" }),
+      ) : /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { style: { border: "1px solid #e5e7eb", borderRadius: 8, overflow: "hidden" }, children: /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("table", { style: { width: "100%", fontSize: 14, borderCollapse: "collapse" }, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("tr", { style: { background: "#f9fafb" }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("th", { style: thStyle, children: "Title" }),
           sortableHeader("Status", "status"),
           sortableHeader("Severity", "severity"),
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("th", { style: thStyle, children: "Page" }),
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("th", { style: thStyle, children: "Assigned" }),
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("th", { style: thStyle, children: "Page" }),
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("th", { style: thStyle, children: "Assigned" }),
           sortableHeader("Freshness", "stale"),
           sortableHeader("Date", "created_at")
         ] }) }),
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("tbody", { children: filteredReports.map((report) => {
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("tbody", { children: filteredReports.map((report) => {
           const unread = unreadCounts[report.id] || 0;
           const stale = getStaleMeta(report);
-          return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
+          return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(
             "tr",
             {
               style: { cursor: "pointer" },
@@ -4250,9 +4367,9 @@ function DevNotesTaskListModal({
                 e.currentTarget.style.background = "";
               },
               children: [
-                /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("td", { style: { ...tdStyle, maxWidth: 280 }, children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { style: { display: "flex", alignItems: "center", gap: 8 }, children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+                /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("td", { style: { ...tdStyle, maxWidth: 280 }, children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { style: { display: "flex", alignItems: "center", gap: 8 }, children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
                       "span",
                       {
                         style: {
@@ -4265,7 +4382,7 @@ function DevNotesTaskListModal({
                         children: report.title
                       }
                     ),
-                    unread > 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+                    unread > 0 && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
                       "span",
                       {
                         style: pill({
@@ -4280,7 +4397,7 @@ function DevNotesTaskListModal({
                         children: unread
                       }
                     ),
-                    stale.isStale && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
+                    stale.isStale && /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(
                       "span",
                       {
                         style: {
@@ -4290,7 +4407,7 @@ function DevNotesTaskListModal({
                           gap: 4
                         },
                         children: [
-                          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_fi4.FiClock, { size: 10 }),
+                          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(import_fi5.FiClock, { size: 10 }),
                           "Stale ",
                           stale.ageDays,
                           "d"
@@ -4298,7 +4415,7 @@ function DevNotesTaskListModal({
                       }
                     )
                   ] }),
-                  report.types.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: { display: "flex", gap: 4, marginTop: 2 }, children: report.types.slice(0, 2).map((t) => /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+                  report.types.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { style: { display: "flex", gap: 4, marginTop: 2 }, children: report.types.slice(0, 2).map((t) => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
                     "span",
                     {
                       style: {
@@ -4313,10 +4430,10 @@ function DevNotesTaskListModal({
                     t
                   )) })
                 ] }),
-                /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("td", { style: tdStyle, children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { style: pill(STATUS_STYLES[report.status] || { background: "#f3f4f6", color: "#4b5563" }), children: report.status }) }),
-                /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("td", { style: tdStyle, children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { style: pill(SEVERITY_STYLES[report.severity] || { background: "#f3f4f6", color: "#4b5563" }), children: report.severity }) }),
-                /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("td", { style: tdStyle, children: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { style: { display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#6b7280" }, children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+                /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("td", { style: tdStyle, children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { style: pill(STATUS_STYLES[report.status] || { background: "#f3f4f6", color: "#4b5563" }), children: report.status }) }),
+                /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("td", { style: tdStyle, children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { style: pill(SEVERITY_STYLES[report.severity] || { background: "#f3f4f6", color: "#4b5563" }), children: report.severity }) }),
+                /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("td", { style: tdStyle, children: /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { style: { display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#6b7280" }, children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
                     "span",
                     {
                       style: {
@@ -4328,7 +4445,7 @@ function DevNotesTaskListModal({
                       children: getPageLabel(report.page_url)
                     }
                   ),
-                  onNavigateToPage && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+                  onNavigateToPage && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
                     "button",
                     {
                       type: "button",
@@ -4347,12 +4464,12 @@ function DevNotesTaskListModal({
                         cursor: "pointer",
                         display: "inline-flex"
                       },
-                      children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_fi4.FiExternalLink, { size: 12 })
+                      children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(import_fi5.FiExternalLink, { size: 12 })
                     }
                   )
                 ] }) }),
-                /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("td", { style: { ...tdStyle, fontSize: 12, color: "#6b7280" }, children: getProfileName(report.assigned_to) || "\u2014" }),
-                /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("td", { style: tdStyle, children: stale.isStale ? /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
+                /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("td", { style: { ...tdStyle, fontSize: 12, color: "#6b7280" }, children: getProfileName(report.assigned_to) || "\u2014" }),
+                /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("td", { style: tdStyle, children: stale.isStale ? /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(
                   "span",
                   {
                     style: {
@@ -4362,13 +4479,13 @@ function DevNotesTaskListModal({
                       gap: 4
                     },
                     children: [
-                      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_fi4.FiClock, { size: 11 }),
+                      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(import_fi5.FiClock, { size: 11 }),
                       stale.ageDays,
                       "d stale"
                     ]
                   }
-                ) : /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { style: pill({ background: "#ecfdf5", color: "#047857" }), children: "Fresh" }) }),
-                /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("td", { style: { ...tdStyle, fontSize: 12, color: "#6b7280", whiteSpace: "nowrap" }, children: formatDate(report.created_at) })
+                ) : /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { style: pill({ background: "#ecfdf5", color: "#047857" }), children: "Fresh" }) }),
+                /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("td", { style: { ...tdStyle, fontSize: 12, color: "#6b7280", whiteSpace: "nowrap" }, children: formatDate(report.created_at) })
               ]
             },
             report.id
@@ -4377,7 +4494,7 @@ function DevNotesTaskListModal({
       ] }) })
     ] });
   };
-  return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(
     "div",
     {
       style: {
@@ -4391,15 +4508,15 @@ function DevNotesTaskListModal({
         padding: 16
       },
       children: [
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("style", { children: "@keyframes devnotes-spin{to{transform:rotate(360deg)}}" }),
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("style", { children: "@keyframes devnotes-spin{to{transform:rotate(360deg)}}" }),
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
           "div",
           {
             style: { position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)" },
             onClick: () => selectedReport ? setSelectedReport(null) : onClose()
           }
         ),
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(
           "div",
           {
             role: "dialog",
@@ -4416,7 +4533,10 @@ function DevNotesTaskListModal({
               boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
               boxSizing: "border-box"
             },
-            children: renderBody()
+            children: [
+              /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(DevNotesForgeBanner, { style: { marginBottom: 16 } }),
+              renderBody()
+            ]
           }
         )
       ]
@@ -4425,7 +4545,7 @@ function DevNotesTaskListModal({
 }
 
 // src/DevNotesMenu.tsx
-var import_jsx_runtime6 = require("react/jsx-runtime");
+var import_jsx_runtime7 = require("react/jsx-runtime");
 function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position = "bottom-right", dropdownDirection = "down", onNavigateToPage }) {
   const {
     isEnabled,
@@ -4441,12 +4561,14 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
     startUserStoryRecording,
     stopUserStoryRecording,
     tasks,
-    role
+    role,
+    forgeStatus
   } = useDevNotes();
-  const [open, setOpen] = (0, import_react8.useState)(false);
-  const [showTaskModal, setShowTaskModal] = (0, import_react8.useState)(false);
-  const menuRef = (0, import_react8.useRef)(null);
-  (0, import_react8.useEffect)(() => {
+  const forgeDisconnected = forgeStatus?.connected === false;
+  const [open, setOpen] = (0, import_react9.useState)(false);
+  const [showTaskModal, setShowTaskModal] = (0, import_react9.useState)(false);
+  const menuRef = (0, import_react9.useRef)(null);
+  (0, import_react9.useEffect)(() => {
     if (!open) return void 0;
     const handleClickOutside = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
@@ -4469,7 +4591,7 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
     }
     setOpen((prev) => !prev);
   };
-  return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
     "div",
     {
       ref: menuRef,
@@ -4477,7 +4599,7 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
       className: "relative",
       style: { zIndex: open ? 9995 : "auto" },
       children: [
-        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
           "button",
           {
             type: "button",
@@ -4485,13 +4607,21 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
             onClick: handleIconClick,
             className: "inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-700 transition hover:text-emerald-600",
             title: "Tasks",
-            children: /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("span", { className: "relative", children: [
-              IconComponent ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(IconComponent, { size: 20, color: isEnabled ? "#E53E3E" : void 0 }) : /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(import_fi5.FiAlertTriangle, { size: 20, color: isEnabled ? "#E53E3E" : void 0 }),
-              openBugCount > 0 && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: "absolute -right-2 -top-1 inline-flex min-w-[16px] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white", children: openBugCount })
+            children: /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("span", { className: "relative", children: [
+              IconComponent ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(IconComponent, { size: 20, color: isEnabled ? "#E53E3E" : void 0 }) : /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_fi6.FiAlertTriangle, { size: 20, color: isEnabled ? "#E53E3E" : void 0 }),
+              forgeDisconnected ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+                "span",
+                {
+                  title: "Forge is disconnected",
+                  className: "absolute -right-2 -top-1 inline-flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white",
+                  style: { boxShadow: "0 0 0 2px #ffffff" },
+                  children: "!"
+                }
+              ) : openBugCount > 0 && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "absolute -right-2 -top-1 inline-flex min-w-[16px] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white", children: openBugCount })
             ] })
           }
         ),
-        open && /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(
+        open && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
           "div",
           {
             style: {
@@ -4508,9 +4638,10 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
               boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)"
             },
             children: [
-              /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "px-3 py-2", children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("p", { className: "text-xs font-semibold text-gray-500", children: "DEV NOTES" }) }),
-              /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "my-1 border-t border-gray-200" }),
-              /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "px-3 py-2", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("p", { className: "text-xs font-semibold text-gray-500", children: "DEV NOTES" }) }),
+              forgeDisconnected && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { style: { padding: "0 12px 8px" }, children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(DevNotesForgeBanner, {}) }),
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "my-1 border-t border-gray-200" }),
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
                 "button",
                 {
                   type: "button",
@@ -4521,17 +4652,17 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                   },
                   className: "flex w-full items-center justify-between gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50",
                   children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
-                      isEnabled ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(import_fi5.FiToggleRight, { className: "text-green-600" }) : /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(import_fi5.FiToggleLeft, {}),
+                    /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
+                      isEnabled ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_fi6.FiToggleRight, { className: "text-green-600" }) : /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_fi6.FiToggleLeft, {}),
                       isEnabled ? "Stop Creating Tasks" : "Create Task"
                     ] }),
-                    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+                    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
                       "span",
                       {
                         role: "switch",
                         "aria-checked": isEnabled,
                         className: `relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ${isEnabled ? "bg-green-500" : "bg-gray-300"}`,
-                        children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+                        children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
                           "span",
                           {
                             className: `inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${isEnabled ? "translate-x-4" : "translate-x-0.5"} mt-0.5`
@@ -4542,7 +4673,7 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                   ]
                 }
               ),
-              /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
                 "button",
                 {
                   type: "button",
@@ -4550,17 +4681,17 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                   onClick: () => setShowTasksAlways(!showTasksAlways),
                   className: "flex w-full items-center justify-between gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50",
                   children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
-                      showTasksAlways ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(import_fi5.FiEye, { className: "text-blue-600" }) : /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(import_fi5.FiEyeOff, {}),
+                    /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
+                      showTasksAlways ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_fi6.FiEye, { className: "text-blue-600" }) : /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_fi6.FiEyeOff, {}),
                       "Show Tasks Always"
                     ] }),
-                    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+                    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
                       "span",
                       {
                         role: "switch",
                         "aria-checked": showTasksAlways,
                         className: `relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ${showTasksAlways ? "bg-green-500" : "bg-gray-300"}`,
-                        children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+                        children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
                           "span",
                           {
                             className: `inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${showTasksAlways ? "translate-x-4" : "translate-x-0.5"} mt-0.5`
@@ -4571,7 +4702,7 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                   ]
                 }
               ),
-              /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
                 "button",
                 {
                   type: "button",
@@ -4579,22 +4710,22 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                   onClick: () => setHideResolvedClosed(!hideResolvedClosed),
                   className: "flex w-full items-center justify-between gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50",
                   children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
-                      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
-                        import_fi5.FiFilter,
+                    /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
+                      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+                        import_fi6.FiFilter,
                         {
                           className: hideResolvedClosed ? "text-green-600" : "text-gray-500"
                         }
                       ),
                       "Hide Resolved/Closed"
                     ] }),
-                    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+                    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
                       "span",
                       {
                         role: "switch",
                         "aria-checked": hideResolvedClosed,
                         className: `relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ${hideResolvedClosed ? "bg-green-500" : "bg-gray-300"}`,
-                        children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+                        children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
                           "span",
                           {
                             className: `inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${hideResolvedClosed ? "translate-x-4" : "translate-x-0.5"} mt-0.5`
@@ -4605,7 +4736,7 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                   ]
                 }
               ),
-              /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
                 "button",
                 {
                   type: "button",
@@ -4613,17 +4744,17 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                   onClick: () => setShowStepDots(!showStepDots),
                   className: "flex w-full items-center justify-between gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50",
                   children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
-                      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(import_fi5.FiMapPin, { className: showStepDots ? "text-blue-600" : "text-gray-500" }),
+                    /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
+                      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_fi6.FiMapPin, { className: showStepDots ? "text-blue-600" : "text-gray-500" }),
                       "Show Step Dots"
                     ] }),
-                    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+                    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
                       "span",
                       {
                         role: "switch",
                         "aria-checked": showStepDots,
                         className: `relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ${showStepDots ? "bg-blue-500" : "bg-gray-300"}`,
-                        children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+                        children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
                           "span",
                           {
                             className: `inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${showStepDots ? "translate-x-4" : "translate-x-0.5"} mt-0.5`
@@ -4634,9 +4765,9 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                   ]
                 }
               ),
-              canRecordUserStory && /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(import_jsx_runtime6.Fragment, { children: [
-                /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "my-1 border-t border-gray-200" }),
-                /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+              canRecordUserStory && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(import_jsx_runtime7.Fragment, { children: [
+                /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "my-1 border-t border-gray-200" }),
+                /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
                   "button",
                   {
                     type: "button",
@@ -4650,15 +4781,15 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                       }
                     },
                     className: "flex w-full items-center gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50",
-                    children: /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
-                      isRecordingStory ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(import_fi5.FiSquare, { className: "text-red-600" }) : /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(import_fi5.FiVideo, { className: "text-blue-600" }),
+                    children: /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
+                      isRecordingStory ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_fi6.FiSquare, { className: "text-red-600" }) : /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_fi6.FiVideo, { className: "text-blue-600" }),
                       isRecordingStory ? "Stop Recording Test Case" : "Record User Story (Test Case)"
                     ] })
                   }
                 )
               ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "my-1 border-t border-gray-200" }),
-              /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "my-1 border-t border-gray-200" }),
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
                 "button",
                 {
                   type: "button",
@@ -4691,11 +4822,11 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                     e.currentTarget.style.background = "transparent";
                   },
                   children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("span", { style: { display: "inline-flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" }, children: [
-                      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(import_fi5.FiList, { style: { flexShrink: 0 } }),
+                    /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("span", { style: { display: "inline-flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" }, children: [
+                      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_fi6.FiList, { style: { flexShrink: 0 } }),
                       "View All Tasks"
                     ] }),
-                    openBugCount > 0 && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+                    openBugCount > 0 && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
                       "span",
                       {
                         style: {
@@ -4716,7 +4847,7 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                   ]
                 }
               ),
-              onSettings && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+              onSettings && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
                 "button",
                 {
                   type: "button",
@@ -4726,8 +4857,8 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                     onSettings();
                   },
                   className: "flex w-full items-center gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50",
-                  children: /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(import_fi5.FiSettings, { className: "flex-shrink-0" }),
+                  children: /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_fi6.FiSettings, { className: "flex-shrink-0" }),
                     "Settings"
                   ] })
                 }
@@ -4735,7 +4866,7 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
             ]
           }
         ),
-        !onViewTasks && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+        !onViewTasks && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
           DevNotesTaskListModal,
           {
             open: showTaskModal,
@@ -4749,16 +4880,16 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
 }
 
 // src/DevNotesOverlay.tsx
-var import_react13 = require("react");
+var import_react14 = require("react");
 var import_react_dom = require("react-dom");
-var import_fi8 = require("react-icons/fi");
+var import_fi9 = require("react-icons/fi");
 
 // src/DevNotesDot.tsx
-var import_react10 = require("react");
-var import_fi6 = require("react-icons/fi");
+var import_react11 = require("react");
+var import_fi7 = require("react-icons/fi");
 
 // src/hooks/useBugReportPosition.ts
-var import_react9 = require("react");
+var import_react10 = require("react");
 var subscribers = /* @__PURE__ */ new Set();
 var cleanupGlobalListeners = null;
 var rafId = null;
@@ -4813,15 +4944,15 @@ var subscribeToPositionUpdates = (subscriber) => {
   };
 };
 var useBugReportPosition = (report) => {
-  const calculate = (0, import_react9.useCallback)(() => {
+  const calculate = (0, import_react10.useCallback)(() => {
     if (!report) return null;
     return resolveBugReportCoordinates(report);
   }, [report]);
-  const [position, setPosition] = (0, import_react9.useState)(() => calculate());
-  (0, import_react9.useEffect)(() => {
+  const [position, setPosition] = (0, import_react10.useState)(() => calculate());
+  (0, import_react10.useEffect)(() => {
     setPosition(calculate());
   }, [calculate]);
-  (0, import_react9.useEffect)(() => {
+  (0, import_react10.useEffect)(() => {
     if (!report) return void 0;
     return subscribeToPositionUpdates(() => {
       setPosition(calculate());
@@ -4831,13 +4962,13 @@ var useBugReportPosition = (report) => {
 };
 
 // src/DevNotesDot.tsx
-var import_jsx_runtime7 = require("react/jsx-runtime");
+var import_jsx_runtime8 = require("react/jsx-runtime");
 var statusConfig = {
-  Open: { color: "red", bgClass: "bg-red-500", bgHoverClass: "bg-red-600", icon: import_fi6.FiAlertCircle },
-  "In Progress": { color: "blue", bgClass: "bg-blue-500", bgHoverClass: "bg-blue-600", icon: import_fi6.FiLoader },
-  "Needs Review": { color: "purple", bgClass: "bg-purple-500", bgHoverClass: "bg-purple-600", icon: import_fi6.FiEye },
-  Resolved: { color: "green", bgClass: "bg-green-500", bgHoverClass: "bg-green-600", icon: import_fi6.FiCheckCircle },
-  Closed: { color: "gray", bgClass: "bg-gray-500", bgHoverClass: "bg-gray-600", icon: import_fi6.FiArchive }
+  Open: { color: "red", bgClass: "bg-red-500", bgHoverClass: "bg-red-600", icon: import_fi7.FiAlertCircle },
+  "In Progress": { color: "blue", bgClass: "bg-blue-500", bgHoverClass: "bg-blue-600", icon: import_fi7.FiLoader },
+  "Needs Review": { color: "purple", bgClass: "bg-purple-500", bgHoverClass: "bg-purple-600", icon: import_fi7.FiEye },
+  Resolved: { color: "green", bgClass: "bg-green-500", bgHoverClass: "bg-green-600", icon: import_fi7.FiCheckCircle },
+  Closed: { color: "gray", bgClass: "bg-gray-500", bgHoverClass: "bg-gray-600", icon: import_fi7.FiArchive }
 };
 var severityBadgeColors = {
   Critical: "bg-red-100 text-red-800",
@@ -4866,27 +4997,27 @@ var resolveAttachedElementZIndex = (selector) => {
 };
 function DevNotesDot({ report }) {
   const { deleteTask, taskTypes, updateTask, compensate } = useDevNotes();
-  const [isFormOpen, setIsFormOpen] = (0, import_react10.useState)(false);
-  const [isDragging, setIsDragging] = (0, import_react10.useState)(false);
-  const [dragPosition, setDragPosition] = (0, import_react10.useState)(null);
-  const [pendingMove, setPendingMove] = (0, import_react10.useState)(null);
-  const [showTooltip, setShowTooltip] = (0, import_react10.useState)(false);
-  const dragStartRef = (0, import_react10.useRef)(null);
-  const didDragRef = (0, import_react10.useRef)(false);
-  const dotRef = (0, import_react10.useRef)(null);
+  const [isFormOpen, setIsFormOpen] = (0, import_react11.useState)(false);
+  const [isDragging, setIsDragging] = (0, import_react11.useState)(false);
+  const [dragPosition, setDragPosition] = (0, import_react11.useState)(null);
+  const [pendingMove, setPendingMove] = (0, import_react11.useState)(null);
+  const [showTooltip, setShowTooltip] = (0, import_react11.useState)(false);
+  const dragStartRef = (0, import_react11.useRef)(null);
+  const didDragRef = (0, import_react11.useRef)(false);
+  const dotRef = (0, import_react11.useRef)(null);
   const handleDelete = async () => {
     const success = await deleteTask(report.id);
     if (success) {
       setIsFormOpen(false);
     }
   };
-  const getTypeNames = (0, import_react10.useCallback)(() => {
+  const getTypeNames = (0, import_react11.useCallback)(() => {
     return report.types.map((typeId) => {
       const type = taskTypes.find((t) => t.id === typeId);
       return type?.name || "Unknown";
     }).join(", ");
   }, [report.types, taskTypes]);
-  const persistPosition = (0, import_react10.useCallback)(
+  const persistPosition = (0, import_react11.useCallback)(
     async (clientX, clientY) => {
       const payload = calculateBugPositionFromPoint({
         clientX,
@@ -4906,7 +5037,7 @@ function DevNotesDot({ report }) {
   );
   const anchoredPosition = useBugReportPosition(report);
   const resolvedPosition = anchoredPosition ?? resolveBugReportCoordinates(report);
-  const handleDragStart = (0, import_react10.useCallback)(
+  const handleDragStart = (0, import_react11.useCallback)(
     (event) => {
       event.preventDefault();
       event.stopPropagation();
@@ -4925,7 +5056,7 @@ function DevNotesDot({ report }) {
     },
     [dragPosition, resolvedPosition]
   );
-  const handleDragMove = (0, import_react10.useCallback)(
+  const handleDragMove = (0, import_react11.useCallback)(
     (event) => {
       if (!isDragging || !dragStartRef.current) return;
       const deltaX = event.clientX - dragStartRef.current.x;
@@ -4940,7 +5071,7 @@ function DevNotesDot({ report }) {
     },
     [isDragging]
   );
-  const handleDragEnd = (0, import_react10.useCallback)(
+  const handleDragEnd = (0, import_react11.useCallback)(
     (event) => {
       if (!isDragging || !dragStartRef.current) return;
       const hasMoved = dragStartRef.current.hasMoved;
@@ -4958,17 +5089,17 @@ function DevNotesDot({ report }) {
     },
     [isDragging, pendingMove]
   );
-  const confirmMove = (0, import_react10.useCallback)(async () => {
+  const confirmMove = (0, import_react11.useCallback)(async () => {
     if (!pendingMove) return;
     await persistPosition(pendingMove.clientX, pendingMove.clientY);
     setPendingMove(null);
     setDragPosition(null);
   }, [pendingMove, persistPosition]);
-  const cancelMove = (0, import_react10.useCallback)(() => {
+  const cancelMove = (0, import_react11.useCallback)(() => {
     setPendingMove(null);
     setDragPosition(null);
   }, []);
-  (0, import_react10.useEffect)(() => {
+  (0, import_react11.useEffect)(() => {
     if (!isDragging) return void 0;
     window.addEventListener("mousemove", handleDragMove);
     window.addEventListener("mouseup", handleDragEnd);
@@ -4996,8 +5127,8 @@ function DevNotesDot({ report }) {
   const createdLabel = new Date(report.created_at).toLocaleString();
   const needsApproval = !report.approved && !report.ai_ready;
   const compensated = compensate(displayPosition.x, displayPosition.y);
-  return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(import_jsx_runtime7.Fragment, { children: [
-    /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
       "div",
       {
         className: "group",
@@ -5011,7 +5142,7 @@ function DevNotesDot({ report }) {
         onMouseEnter: () => !isFormOpen && !isDragging && setShowTooltip(true),
         onMouseLeave: () => setShowTooltip(false),
         children: [
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
             "div",
             {
               ref: dotRef,
@@ -5031,35 +5162,35 @@ function DevNotesDot({ report }) {
               tabIndex: 0,
               role: "button",
               children: [
-                isDragging ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_fi6.FiMove, { color: "white", size: 14 }) : /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(StatusIcon, { color: "white", size: 12 }),
-                needsApproval && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "absolute -top-2 -right-2 text-base font-bold text-orange-500 pointer-events-none leading-none", children: "*" })
+                isDragging ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(import_fi7.FiMove, { color: "white", size: 14 }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(StatusIcon, { color: "white", size: 12 }),
+                needsApproval && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "absolute -top-2 -right-2 text-base font-bold text-orange-500 pointer-events-none leading-none", children: "*" })
               ]
             }
           ),
-          showTooltip && !pendingMove && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-[280px] bg-gray-800 text-white rounded-lg p-3 shadow-xl z-[2147483647] pointer-events-none", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "font-bold text-sm mb-1", children: report.title }),
-            /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "flex items-center gap-2 mb-1 flex-wrap", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: `text-xs px-1.5 py-0.5 rounded ${severityBadgeColors[report.severity] || "bg-gray-100 text-gray-800"}`, children: report.severity }),
-              /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("span", { className: `text-xs px-1.5 py-0.5 rounded flex items-center gap-1 ${config.color === "red" ? "bg-red-100 text-red-800" : config.color === "blue" ? "bg-blue-100 text-blue-800" : config.color === "purple" ? "bg-purple-100 text-purple-800" : config.color === "green" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`, children: [
-                /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(StatusIcon, { size: 10 }),
+          showTooltip && !pendingMove && /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-[280px] bg-gray-800 text-white rounded-lg p-3 shadow-xl z-[2147483647] pointer-events-none", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "font-bold text-sm mb-1", children: report.title }),
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "flex items-center gap-2 mb-1 flex-wrap", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: `text-xs px-1.5 py-0.5 rounded ${severityBadgeColors[report.severity] || "bg-gray-100 text-gray-800"}`, children: report.severity }),
+              /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { className: `text-xs px-1.5 py-0.5 rounded flex items-center gap-1 ${config.color === "red" ? "bg-red-100 text-red-800" : config.color === "blue" ? "bg-blue-100 text-blue-800" : config.color === "purple" ? "bg-purple-100 text-purple-800" : config.color === "green" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(StatusIcon, { size: 10 }),
                 report.status
               ] }),
-              report.approved && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-800", children: "Approved" }),
-              report.ai_ready && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "text-xs px-1.5 py-0.5 rounded bg-purple-100 text-purple-800", children: "AI Ready" })
+              report.approved && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-800", children: "Approved" }),
+              report.ai_ready && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "text-xs px-1.5 py-0.5 rounded bg-purple-100 text-purple-800", children: "AI Ready" })
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "text-xs text-gray-300", children: getTypeNames() }),
-            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "text-xs text-gray-200 mt-2", children: descriptionPreview }),
-            /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "text-xs text-gray-300 mt-2", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "text-xs text-gray-300", children: getTypeNames() }),
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "text-xs text-gray-200 mt-2", children: descriptionPreview }),
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "text-xs text-gray-300 mt-2", children: [
               "Created by ",
               creatorName,
               " on ",
               createdLabel
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "text-xs text-gray-400 mt-1", children: "Click to view/edit or drag to reposition" }),
-            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800" })
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "text-xs text-gray-400 mt-1", children: "Click to view/edit or drag to reposition" }),
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800" })
           ] }),
-          pendingMove && !isDragging && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "absolute top-full left-1/2 -translate-x-1/2 mt-2 flex gap-1.5", style: { pointerEvents: "auto" }, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+          pendingMove && !isDragging && /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "absolute top-full left-1/2 -translate-x-1/2 mt-2 flex gap-1.5", style: { pointerEvents: "auto" }, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
               "button",
               {
                 className: "w-8 h-8 rounded-full bg-green-500 hover:bg-green-600 flex items-center justify-center shadow-lg border-2 border-white cursor-pointer transition-colors",
@@ -5068,10 +5199,10 @@ function DevNotesDot({ report }) {
                   confirmMove();
                 },
                 title: "Confirm new position",
-                children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_fi6.FiCheck, { color: "white", size: 14 })
+                children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(import_fi7.FiCheck, { color: "white", size: 14 })
               }
             ),
-            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
               "button",
               {
                 className: "w-8 h-8 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center shadow-lg border-2 border-white cursor-pointer transition-colors",
@@ -5080,22 +5211,22 @@ function DevNotesDot({ report }) {
                   cancelMove();
                 },
                 title: "Cancel move",
-                children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_fi6.FiX, { color: "white", size: 14 })
+                children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(import_fi7.FiX, { color: "white", size: 14 })
               }
             )
           ] })
         ]
       }
     ),
-    isFormOpen && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(import_jsx_runtime7.Fragment, { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+    isFormOpen && /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
         "div",
         {
           style: { position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)", zIndex: 9998, pointerEvents: "auto" },
           onClick: () => setIsFormOpen(false)
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { style: { position: "absolute", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", padding: 16 }, children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "pointer-events-auto max-h-[calc(100vh-32px)] overflow-y-auto rounded-lg shadow-xl", "data-bug-form": true, children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { style: { position: "absolute", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", padding: 16 }, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "pointer-events-auto max-h-[calc(100vh-32px)] overflow-y-auto rounded-lg shadow-xl", "data-bug-form": true, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
         DevNotesForm,
         {
           pageUrl: report.page_url,
@@ -5115,8 +5246,8 @@ function DevNotesDot({ report }) {
 }
 
 // src/DevNotesStepDot.tsx
-var import_react11 = require("react");
-var import_jsx_runtime8 = require("react/jsx-runtime");
+var import_react12 = require("react");
+var import_jsx_runtime9 = require("react/jsx-runtime");
 function stepColor(index) {
   const lightness = Math.min(42 + (index - 1) * 7, 74);
   return `hsl(214, 84%, ${lightness}%)`;
@@ -5139,12 +5270,12 @@ function resolvePosition(dot) {
 }
 function DevNotesStepDot({ dot }) {
   const { compensate } = useDevNotes();
-  const [showTooltip, setShowTooltip] = (0, import_react11.useState)(false);
+  const [showTooltip, setShowTooltip] = (0, import_react12.useState)(false);
   const position = resolvePosition(dot);
   if (!position) return null;
   const compensated = compensate(position.x, position.y);
   const color = stepColor(dot.index);
-  return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
     "div",
     {
       "data-devnotes-step-dot": true,
@@ -5159,7 +5290,7 @@ function DevNotesStepDot({ dot }) {
       onMouseEnter: () => setShowTooltip(true),
       onMouseLeave: () => setShowTooltip(false),
       children: [
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
           "div",
           {
             className: "flex items-center justify-center rounded-full border-2 border-white font-semibold text-white",
@@ -5174,14 +5305,14 @@ function DevNotesStepDot({ dot }) {
             children: dot.index
           }
         ),
-        showTooltip && /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-[240px] rounded-lg bg-gray-800 p-2.5 text-white shadow-xl pointer-events-none z-[2147483647]", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "text-[10px] font-semibold uppercase tracking-wide text-blue-300", children: [
+        showTooltip && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-[240px] rounded-lg bg-gray-800 p-2.5 text-white shadow-xl pointer-events-none z-[2147483647]", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "text-[10px] font-semibold uppercase tracking-wide text-blue-300", children: [
             dot.storyTitle,
             " \xB7 Step ",
             dot.index
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "mt-1 text-xs text-gray-100", children: dot.body }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800" })
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "mt-1 text-xs text-gray-100", children: dot.body }),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800" })
         ] })
       ]
     }
@@ -5189,9 +5320,9 @@ function DevNotesStepDot({ dot }) {
 }
 
 // src/DevNotesStoryRecorder.tsx
-var import_react12 = require("react");
-var import_fi7 = require("react-icons/fi");
-var import_jsx_runtime9 = require("react/jsx-runtime");
+var import_react13 = require("react");
+var import_fi8 = require("react-icons/fi");
+var import_jsx_runtime10 = require("react/jsx-runtime");
 function DevNotesStoryRecorder() {
   const {
     canRecordUserStory,
@@ -5206,9 +5337,9 @@ function DevNotesStoryRecorder() {
     moveRecordedStep,
     saveUserStory
   } = useDevNotes();
-  const [title, setTitle] = (0, import_react12.useState)("");
-  const [testUrl, setTestUrl] = (0, import_react12.useState)("");
-  const [description, setDescription] = (0, import_react12.useState)("");
+  const [title, setTitle] = (0, import_react13.useState)("");
+  const [testUrl, setTestUrl] = (0, import_react13.useState)("");
+  const [description, setDescription] = (0, import_react13.useState)("");
   if (!canRecordUserStory) return null;
   const reviewing = !isRecordingStory && recordedSteps.length > 0;
   const handleSave = async () => {
@@ -5229,8 +5360,8 @@ function DevNotesStoryRecorder() {
     setTestUrl("");
     setDescription("");
   };
-  return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { "data-devnotes-recorder": true, children: [
-    isRecordingStory && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { "data-devnotes-recorder": true, children: [
+    isRecordingStory && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(
       "div",
       {
         style: {
@@ -5243,43 +5374,43 @@ function DevNotesStoryRecorder() {
         },
         className: "flex items-center gap-3 rounded-full bg-blue-600 px-5 py-2.5 text-white shadow-xl",
         children: [
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("span", { className: "relative flex h-3 w-3", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" }),
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "relative inline-flex h-3 w-3 rounded-full bg-white" })
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("span", { className: "relative flex h-3 w-3", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: "absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" }),
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: "relative inline-flex h-3 w-3 rounded-full bg-white" })
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("span", { className: "text-sm font-medium", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("span", { className: "text-sm font-medium", children: [
             "Recording test case \xB7 ",
             recordedSteps.length,
             " ",
             recordedSteps.length === 1 ? "step" : "steps"
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(
             "button",
             {
               type: "button",
               onClick: stopUserStoryRecording,
               className: "inline-flex items-center gap-1 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold transition hover:bg-white/30",
               children: [
-                /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(import_fi7.FiSquare, { size: 12 }),
+                /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(import_fi8.FiSquare, { size: 12 }),
                 " Stop & Review"
               ]
             }
           ),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
             "button",
             {
               type: "button",
               onClick: handleCancel,
               "aria-label": "Cancel recording",
               className: "inline-flex h-6 w-6 items-center justify-center rounded-full transition hover:bg-white/20",
-              children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(import_fi7.FiX, { size: 14 })
+              children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(import_fi8.FiX, { size: 14 })
             }
           )
         ]
       }
     ),
-    reviewing && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(import_jsx_runtime9.Fragment, { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+    reviewing && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(import_jsx_runtime10.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
         "div",
         {
           style: {
@@ -5291,7 +5422,7 @@ function DevNotesStoryRecorder() {
           onClick: handleCancel
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
         "div",
         {
           style: {
@@ -5304,33 +5435,33 @@ function DevNotesStoryRecorder() {
             padding: 16,
             pointerEvents: "none"
           },
-          children: /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+          children: /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(
             "div",
             {
               className: "pointer-events-auto flex max-h-[calc(100vh-32px)] w-full max-w-[560px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl",
               children: [
-                /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "flex items-center justify-between border-b border-slate-200 px-5 py-4", children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "flex items-center gap-2", children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(import_fi7.FiVideo, { className: "text-blue-600" }),
-                    /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "text-base font-semibold text-slate-900", children: "New User Story (Test Case)" })
+                /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "flex items-center justify-between border-b border-slate-200 px-5 py-4", children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "flex items-center gap-2", children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(import_fi8.FiVideo, { className: "text-blue-600" }),
+                    /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: "text-base font-semibold text-slate-900", children: "New User Story (Test Case)" })
                   ] }),
-                  /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+                  /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
                     "button",
                     {
                       type: "button",
                       onClick: handleCancel,
                       "aria-label": "Close",
                       className: "inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100",
-                      children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(import_fi7.FiX, { size: 16 })
+                      children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(import_fi8.FiX, { size: 16 })
                     }
                   )
                 ] }),
-                /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "flex-1 overflow-y-auto px-5 py-4", children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("label", { className: "mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "flex-1 overflow-y-auto px-5 py-4", children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("label", { className: "mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500", children: [
                     "Title ",
-                    /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "text-rose-500", children: "*" })
+                    /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: "text-rose-500", children: "*" })
                   ] }),
-                  /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+                  /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
                     "input",
                     {
                       type: "text",
@@ -5340,8 +5471,8 @@ function DevNotesStoryRecorder() {
                       className: "mb-4 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
                     }
                   ),
-                  /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("label", { className: "mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500", children: "Test URL" }),
-                  /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+                  /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("label", { className: "mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500", children: "Test URL" }),
+                  /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
                     "input",
                     {
                       type: "text",
@@ -5351,8 +5482,8 @@ function DevNotesStoryRecorder() {
                       className: "mb-4 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
                     }
                   ),
-                  /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("label", { className: "mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500", children: "Description" }),
-                  /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+                  /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("label", { className: "mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500", children: "Description" }),
+                  /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
                     "textarea",
                     {
                       value: description,
@@ -5362,17 +5493,17 @@ function DevNotesStoryRecorder() {
                       className: "mb-4 w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
                     }
                   ),
-                  /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "mb-2 flex items-center justify-between", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("span", { className: "text-[11px] font-semibold uppercase tracking-wide text-slate-500", children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "mb-2 flex items-center justify-between", children: /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("span", { className: "text-[11px] font-semibold uppercase tracking-wide text-slate-500", children: [
                     "Steps (",
                     recordedSteps.length,
                     ")"
                   ] }) }),
-                  /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("ol", { className: "space-y-2", children: recordedSteps.map((step, i) => /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+                  /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("ol", { className: "space-y-2", children: recordedSteps.map((step, i) => /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(
                     "li",
                     {
                       className: "flex items-start gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2",
                       children: [
-                        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+                        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
                           "span",
                           {
                             className: "mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white",
@@ -5382,7 +5513,7 @@ function DevNotesStoryRecorder() {
                             children: i + 1
                           }
                         ),
-                        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+                        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
                           "textarea",
                           {
                             value: step.body,
@@ -5391,8 +5522,8 @@ function DevNotesStoryRecorder() {
                             className: "min-h-[28px] flex-1 resize-y rounded border border-transparent bg-transparent px-1 py-0.5 text-sm text-slate-800 outline-none focus:border-slate-300 focus:bg-white"
                           }
                         ),
-                        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "flex shrink-0 flex-col", children: [
-                          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+                        /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "flex shrink-0 flex-col", children: [
+                          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
                             "button",
                             {
                               type: "button",
@@ -5400,10 +5531,10 @@ function DevNotesStoryRecorder() {
                               disabled: i === 0,
                               "aria-label": "Move step up",
                               className: "text-slate-400 transition hover:text-slate-700 disabled:opacity-30",
-                              children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(import_fi7.FiChevronUp, { size: 14 })
+                              children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(import_fi8.FiChevronUp, { size: 14 })
                             }
                           ),
-                          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+                          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
                             "button",
                             {
                               type: "button",
@@ -5411,18 +5542,18 @@ function DevNotesStoryRecorder() {
                               disabled: i === recordedSteps.length - 1,
                               "aria-label": "Move step down",
                               className: "text-slate-400 transition hover:text-slate-700 disabled:opacity-30",
-                              children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(import_fi7.FiChevronDown, { size: 14 })
+                              children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(import_fi8.FiChevronDown, { size: 14 })
                             }
                           )
                         ] }),
-                        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+                        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
                           "button",
                           {
                             type: "button",
                             onClick: () => deleteRecordedStep(step.id),
                             "aria-label": "Delete step",
                             className: "mt-0.5 shrink-0 text-rose-400 transition hover:text-rose-600",
-                            children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(import_fi7.FiTrash2, { size: 13 })
+                            children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(import_fi8.FiTrash2, { size: 13 })
                           }
                         )
                       ]
@@ -5430,10 +5561,10 @@ function DevNotesStoryRecorder() {
                     step.id
                   )) })
                 ] }),
-                /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "border-t border-slate-200 px-5 py-3", children: [
-                  storyError && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { className: "mb-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700", children: storyError }),
-                  /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "flex items-center justify-end gap-2", children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+                /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "border-t border-slate-200 px-5 py-3", children: [
+                  storyError && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("p", { className: "mb-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700", children: storyError }),
+                  /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "flex items-center justify-end gap-2", children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
                       "button",
                       {
                         type: "button",
@@ -5442,7 +5573,7 @@ function DevNotesStoryRecorder() {
                         children: "Discard"
                       }
                     ),
-                    /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+                    /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(
                       "button",
                       {
                         type: "button",
@@ -5450,7 +5581,7 @@ function DevNotesStoryRecorder() {
                         disabled: savingStory || !title.trim() || recordedSteps.length === 0,
                         className: "inline-flex items-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300",
                         children: [
-                          savingStory ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" }) : /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(import_fi7.FiSave, { size: 14 }),
+                          savingStory ? /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" }) : /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(import_fi8.FiSave, { size: 14 }),
                           "Save to Specs"
                         ]
                       }
@@ -5467,7 +5598,7 @@ function DevNotesStoryRecorder() {
 }
 
 // src/DevNotesOverlay.tsx
-var import_jsx_runtime10 = require("react/jsx-runtime");
+var import_jsx_runtime11 = require("react/jsx-runtime");
 function DevNotesOverlay({
   openReportId,
   onOpenReportClose
@@ -5488,15 +5619,15 @@ function DevNotesOverlay({
     showStepDots,
     currentPageStepDots
   } = useDevNotes();
-  const [pendingDot, setPendingDot] = (0, import_react13.useState)(null);
-  const [showPendingForm, setShowPendingForm] = (0, import_react13.useState)(false);
-  const [openedReport, setOpenedReport] = (0, import_react13.useState)(null);
-  const pendingDotRef = (0, import_react13.useRef)(null);
-  const [isDragging, setIsDragging] = (0, import_react13.useState)(false);
-  const dragStartRef = (0, import_react13.useRef)(null);
-  const didDragRef = (0, import_react13.useRef)(false);
-  const justEnabledRef = (0, import_react13.useRef)(false);
-  (0, import_react13.useEffect)(() => {
+  const [pendingDot, setPendingDot] = (0, import_react14.useState)(null);
+  const [showPendingForm, setShowPendingForm] = (0, import_react14.useState)(false);
+  const [openedReport, setOpenedReport] = (0, import_react14.useState)(null);
+  const pendingDotRef = (0, import_react14.useRef)(null);
+  const [isDragging, setIsDragging] = (0, import_react14.useState)(false);
+  const dragStartRef = (0, import_react14.useRef)(null);
+  const didDragRef = (0, import_react14.useRef)(false);
+  const justEnabledRef = (0, import_react14.useRef)(false);
+  (0, import_react14.useEffect)(() => {
     if (isEnabled) {
       justEnabledRef.current = true;
       const timer = setTimeout(() => {
@@ -5507,7 +5638,7 @@ function DevNotesOverlay({
     justEnabledRef.current = false;
     return void 0;
   }, [isEnabled]);
-  (0, import_react13.useEffect)(() => {
+  (0, import_react14.useEffect)(() => {
     if (openReportId) {
       const report = tasks.find((r) => r.id === openReportId);
       if (report) {
@@ -5515,7 +5646,7 @@ function DevNotesOverlay({
       }
     }
   }, [openReportId, tasks]);
-  (0, import_react13.useEffect)(() => {
+  (0, import_react14.useEffect)(() => {
     const handleKeyDown = (e) => {
       if (e.key === "Escape") {
         if (showPendingForm) {
@@ -5530,7 +5661,7 @@ function DevNotesOverlay({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isEnabled, setIsEnabled, pendingDot, showPendingForm]);
-  (0, import_react13.useEffect)(() => {
+  (0, import_react14.useEffect)(() => {
     if (isEnabled && !showPendingForm) {
       document.body.style.cursor = "crosshair";
       return () => {
@@ -5539,18 +5670,18 @@ function DevNotesOverlay({
     }
     return void 0;
   }, [isEnabled, showPendingForm]);
-  const handleCloseOpenedReport = (0, import_react13.useCallback)(() => {
+  const handleCloseOpenedReport = (0, import_react14.useCallback)(() => {
     setOpenedReport(null);
     onOpenReportClose?.();
   }, [onOpenReportClose]);
-  const handleDeleteOpenedReport = (0, import_react13.useCallback)(async () => {
+  const handleDeleteOpenedReport = (0, import_react14.useCallback)(async () => {
     if (openedReport) {
       await deleteTask(openedReport.id);
       setOpenedReport(null);
       onOpenReportClose?.();
     }
   }, [openedReport, deleteTask, onOpenReportClose]);
-  const handleArchiveOpenedReport = (0, import_react13.useCallback)(async () => {
+  const handleArchiveOpenedReport = (0, import_react14.useCallback)(async () => {
     if (!openedReport) return;
     const archived = await updateTask(openedReport.id, {
       status: "Closed",
@@ -5561,7 +5692,7 @@ function DevNotesOverlay({
       onOpenReportClose?.();
     }
   }, [openedReport, updateTask, onOpenReportClose, user.id]);
-  (0, import_react13.useEffect)(() => {
+  (0, import_react14.useEffect)(() => {
     if (!isEnabled || showPendingForm) return void 0;
     const handleDocumentClick = (e) => {
       if (justEnabledRef.current) return;
@@ -5578,15 +5709,15 @@ function DevNotesOverlay({
     document.addEventListener("click", handleDocumentClick);
     return () => document.removeEventListener("click", handleDocumentClick);
   }, [isEnabled, showPendingForm]);
-  const handleSave = (0, import_react13.useCallback)((_report) => {
+  const handleSave = (0, import_react14.useCallback)((_report) => {
     setPendingDot(null);
     setShowPendingForm(false);
   }, []);
-  const handleCancel = (0, import_react13.useCallback)(() => {
+  const handleCancel = (0, import_react14.useCallback)(() => {
     setPendingDot(null);
     setShowPendingForm(false);
   }, []);
-  const handlePendingDotClick = (0, import_react13.useCallback)((e) => {
+  const handlePendingDotClick = (0, import_react14.useCallback)((e) => {
     e.stopPropagation();
     if (didDragRef.current) {
       didDragRef.current = false;
@@ -5595,7 +5726,7 @@ function DevNotesOverlay({
     setIsDragging(false);
     setShowPendingForm(true);
   }, []);
-  const handleDragStart = (0, import_react13.useCallback)(
+  const handleDragStart = (0, import_react14.useCallback)(
     (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -5611,7 +5742,7 @@ function DevNotesOverlay({
     },
     [pendingDot]
   );
-  const handleDragMove = (0, import_react13.useCallback)(
+  const handleDragMove = (0, import_react14.useCallback)(
     (e) => {
       if (!isDragging || !dragStartRef.current || !pendingDot) return;
       const deltaX = e.clientX - dragStartRef.current.x;
@@ -5629,7 +5760,7 @@ function DevNotesOverlay({
     },
     [isDragging, pendingDot]
   );
-  const handleDragEnd = (0, import_react13.useCallback)((event) => {
+  const handleDragEnd = (0, import_react14.useCallback)((event) => {
     setIsDragging(false);
     dragStartRef.current = null;
     if (event && didDragRef.current) {
@@ -5641,7 +5772,7 @@ function DevNotesOverlay({
       setPendingDot(position);
     }
   }, []);
-  (0, import_react13.useEffect)(() => {
+  (0, import_react14.useEffect)(() => {
     if (isDragging) {
       window.addEventListener("mousemove", handleDragMove);
       window.addEventListener("mouseup", handleDragEnd);
@@ -5652,7 +5783,7 @@ function DevNotesOverlay({
     }
     return void 0;
   }, [isDragging, handleDragMove, handleDragEnd]);
-  const visiblePageReports = (0, import_react13.useMemo)(
+  const visiblePageReports = (0, import_react14.useMemo)(
     () => currentPageTasks.filter((report) => {
       if (hideResolvedClosed) {
         return report.status !== "Closed" && report.status !== "Resolved";
@@ -5663,20 +5794,20 @@ function DevNotesOverlay({
   );
   const renderOpenedReportModal = () => {
     if (!openedReport) return null;
-    return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(import_jsx_runtime10.Fragment, { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(import_jsx_runtime11.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
         "div",
         {
           style: { position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)", zIndex: 9997, pointerEvents: "auto" },
           onClick: handleCloseOpenedReport
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { style: { position: "absolute", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", padding: 16 }, children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+      /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { style: { position: "absolute", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", padding: 16 }, children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
         "div",
         {
           className: "pointer-events-auto max-h-[calc(100vh-32px)] overflow-y-auto rounded-lg shadow-xl",
           "data-bug-form": true,
-          children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+          children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
             DevNotesForm,
             {
               pageUrl: openedReport.page_url,
@@ -5697,19 +5828,19 @@ function DevNotesOverlay({
     ] });
   };
   if (role === "none") return null;
-  const sharedLayer = /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(import_jsx_runtime10.Fragment, { children: [
-    /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(DevNotesStoryRecorder, {}),
+  const sharedLayer = /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(import_jsx_runtime11.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(DevNotesStoryRecorder, {}),
     showStepDots && dotContainer && (0, import_react_dom.createPortal)(
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(import_jsx_runtime10.Fragment, { children: currentPageStepDots.map((dot) => /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(DevNotesStepDot, { dot }, dot.id)) }),
+      /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(import_jsx_runtime11.Fragment, { children: currentPageStepDots.map((dot) => /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(DevNotesStepDot, { dot }, dot.id)) }),
       dotContainer
     )
   ] });
   if (!isEnabled) {
-    return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(import_jsx_runtime10.Fragment, { children: [
+    return /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(import_jsx_runtime11.Fragment, { children: [
       sharedLayer,
       showTasksAlways && dotContainer && (0, import_react_dom.createPortal)(
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(import_jsx_runtime10.Fragment, { children: [
-          visiblePageReports.map((report) => /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { "data-bug-dot": true, style: { pointerEvents: "auto" }, children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(DevNotesDot, { report }) }, report.id)),
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(import_jsx_runtime11.Fragment, { children: [
+          visiblePageReports.map((report) => /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { "data-bug-dot": true, style: { pointerEvents: "auto" }, children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(DevNotesDot, { report }) }, report.id)),
           renderOpenedReportModal()
         ] }),
         dotContainer
@@ -5722,23 +5853,23 @@ function DevNotesOverlay({
     pendingDot.x - (typeof window !== "undefined" ? window.scrollX : 0),
     pendingDot.y - (typeof window !== "undefined" ? window.scrollY : 0)
   ) : null;
-  return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(import_jsx_runtime10.Fragment, { children: [
+  return /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(import_jsx_runtime11.Fragment, { children: [
     sharedLayer,
     (0, import_react_dom.createPortal)(
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(import_jsx_runtime10.Fragment, { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(
+      /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(import_jsx_runtime11.Fragment, { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(
           "div",
           {
             style: { position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)", zIndex: 9991, pointerEvents: "auto" },
             className: "bg-red-500 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2",
             children: [
-              pendingDot && !showPendingForm ? /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(import_fi8.FiMove, {}) : /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(import_fi8.FiCrosshair, {}),
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: "text-sm font-medium", children: pendingDot && !showPendingForm ? "Click pin to add details, or click elsewhere to reposition" : "Click anywhere to create a task" })
+              pendingDot && !showPendingForm ? /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(import_fi9.FiMove, {}) : /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(import_fi9.FiCrosshair, {}),
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: "text-sm font-medium", children: pendingDot && !showPendingForm ? "Click pin to add details, or click elsewhere to reposition" : "Click anywhere to create a task" })
             ]
           }
         ),
-        visiblePageReports.map((report) => /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { "data-bug-dot": true, style: { pointerEvents: "auto" }, children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(DevNotesDot, { report }) }, report.id)),
-        pendingDot && pendingViewport && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+        visiblePageReports.map((report) => /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { "data-bug-dot": true, style: { pointerEvents: "auto" }, children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(DevNotesDot, { report }) }, report.id)),
+        pendingDot && pendingViewport && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
           "div",
           {
             "data-pending-dot": true,
@@ -5754,23 +5885,23 @@ function DevNotesOverlay({
             onMouseDown: handleDragStart,
             onClick: handlePendingDotClick,
             title: "Drag to reposition, click to add details",
-            children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(import_fi8.FiMove, { color: "white", size: 14 })
+            children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(import_fi9.FiMove, { color: "white", size: 14 })
           }
         ),
-        pendingDot && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(import_jsx_runtime10.Fragment, { children: [
-          showPendingForm && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+        pendingDot && /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(import_jsx_runtime11.Fragment, { children: [
+          showPendingForm && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
             "div",
             {
               style: { position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)", zIndex: 9997, pointerEvents: "auto" },
               onClick: handleCancel
             }
           ),
-          showPendingForm && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { style: { position: "absolute", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", padding: 16 }, children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+          showPendingForm && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { style: { position: "absolute", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", padding: 16 }, children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
             "div",
             {
               className: "pointer-events-auto max-h-[calc(100vh-32px)] overflow-y-auto rounded-lg shadow-xl",
               "data-bug-form": true,
-              children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+              children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
                 DevNotesForm,
                 {
                   pageUrl: `${window.location.pathname}${window.location.search}`,
@@ -5794,7 +5925,7 @@ function DevNotesOverlay({
 }
 
 // src/DevNotesButton.tsx
-var import_jsx_runtime11 = require("react/jsx-runtime");
+var import_jsx_runtime12 = require("react/jsx-runtime");
 var positionStyles = {
   "bottom-right": { position: "absolute", bottom: 16, right: 16 },
   "bottom-left": { position: "absolute", bottom: 16, left: 16 },
@@ -5810,8 +5941,8 @@ function DevNotesButton({
   onNavigateToPage
 }) {
   const { dotContainer, role } = useDevNotes();
-  const [showTaskPanel, setShowTaskPanel] = (0, import_react14.useState)(false);
-  const [taskPanelTitle, setTaskPanelTitle] = (0, import_react14.useState)("All Tasks");
+  const [showTaskPanel, setShowTaskPanel] = (0, import_react15.useState)(false);
+  const [taskPanelTitle, setTaskPanelTitle] = (0, import_react15.useState)("All Tasks");
   if (role === "none") return null;
   const openBuiltInTaskPanel = (title) => {
     setTaskPanelTitle(title);
@@ -5819,13 +5950,13 @@ function DevNotesButton({
   };
   const handleViewTasks = () => openBuiltInTaskPanel("All Tasks");
   const handleSettings = onSettings || (() => openBuiltInTaskPanel("Task Settings"));
-  const buttonContent = /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(import_jsx_runtime11.Fragment, { children: [
-    /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
+  const buttonContent = /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(import_jsx_runtime12.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
       "div",
       {
         style: { ...positionStyles[position] || positionStyles["bottom-right"], zIndex: 9990, pointerEvents: "auto" },
         "data-bug-menu": true,
-        children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
+        children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
           DevNotesMenu,
           {
             onViewTasks: handleViewTasks,
@@ -5837,7 +5968,7 @@ function DevNotesButton({
         )
       }
     ),
-    /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
       DevNotesTaskListModal,
       {
         open: showTaskPanel,
@@ -5847,9 +5978,9 @@ function DevNotesButton({
       }
     )
   ] });
-  return /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(import_jsx_runtime11.Fragment, { children: [
+  return /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(import_jsx_runtime12.Fragment, { children: [
     dotContainer ? (0, import_react_dom2.createPortal)(buttonContent, dotContainer) : buttonContent,
-    /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
       DevNotesOverlay,
       {
         openReportId,
@@ -5860,8 +5991,8 @@ function DevNotesButton({
 }
 
 // src/DevNotesTaskList.tsx
-var import_fi9 = require("react-icons/fi");
-var import_jsx_runtime12 = require("react/jsx-runtime");
+var import_fi10 = require("react-icons/fi");
+var import_jsx_runtime13 = require("react/jsx-runtime");
 var STATUS_COLORS = {
   Open: "bg-red-100 text-red-700",
   "In Progress": "bg-blue-100 text-blue-700",
@@ -5911,10 +6042,10 @@ function DevNotesTaskList({
   } = useTaskListData();
   const SortIcon = ({ field }) => {
     if (sortField !== field) return null;
-    return sortDir === "desc" ? /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(import_fi9.FiChevronDown, { size: 12 }) : /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(import_fi9.FiChevronUp, { size: 12 });
+    return sortDir === "desc" ? /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(import_fi10.FiChevronDown, { size: 12 }) : /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(import_fi10.FiChevronUp, { size: 12 });
   };
   if (selectedReport) {
-    return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "flex flex-col h-full", children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: "flex flex-col h-full", children: /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
       DevNotesForm,
       {
         pageUrl: selectedReport.page_url,
@@ -5941,36 +6072,36 @@ function DevNotesTaskList({
     ) });
   }
   if (loading && tasks.length === 0 || visibleReportIds === null) {
-    return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "flex items-center justify-center py-12", children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" }) });
+    return /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: "flex items-center justify-center py-12", children: /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: "w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" }) });
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "flex flex-col gap-4", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "flex items-center justify-between", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("h2", { className: "text-lg font-semibold text-gray-900", children: title }),
-      onClose && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "flex flex-col gap-4", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "flex items-center justify-between", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("h2", { className: "text-lg font-semibold text-gray-900", children: title }),
+      onClose && /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
         "button",
         {
           type: "button",
           onClick: onClose,
           className: "p-1 rounded hover:bg-gray-100 text-gray-500",
-          children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(import_fi9.FiX, { size: 18 })
+          children: /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(import_fi10.FiX, { size: 18 })
         }
       )
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "grid grid-cols-3 sm:grid-cols-6 gap-2", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: "grid grid-cols-3 sm:grid-cols-6 gap-2", children: [
       ["Open", stats.open, "text-red-600"],
       ["In Progress", stats.inProgress, "text-blue-600"],
       ["Review", stats.needsReview, "text-purple-600"],
       ["Resolved", stats.resolved, "text-green-600"],
       ["Closed", stats.closed, "text-gray-500"],
       ["Total", stats.total, "text-gray-700"]
-    ].map(([label, count, color]) => /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "text-center rounded-lg border border-gray-100 py-2", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: `text-xl font-bold ${color}`, children: count }),
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "text-[0.65rem] text-gray-500", children: label })
+    ].map(([label, count, color]) => /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "text-center rounded-lg border border-gray-100 py-2", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: `text-xl font-bold ${color}`, children: count }),
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: "text-[0.65rem] text-gray-500", children: label })
     ] }, label)) }),
-    /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "flex flex-wrap gap-2", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "relative flex-1 min-w-[180px]", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(import_fi9.FiSearch, { className: "absolute left-2.5 top-2.5 text-gray-400", size: 14 }),
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "flex flex-wrap gap-2", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "relative flex-1 min-w-[180px]", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(import_fi10.FiSearch, { className: "absolute left-2.5 top-2.5 text-gray-400", size: 14 }),
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
           "input",
           {
             type: "text",
@@ -5981,37 +6112,37 @@ function DevNotesTaskList({
           }
         )
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)(
         "select",
         {
           value: filterStatus,
           onChange: (e) => setFilterStatus(e.target.value),
           className: "px-2 py-2 text-sm border border-gray-200 rounded-md bg-white",
           children: [
-            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("option", { value: "all", children: "All Statuses" }),
-            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("option", { value: "Open", children: "Open" }),
-            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("option", { value: "In Progress", children: "In Progress" }),
-            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("option", { value: "Needs Review", children: "Needs Review" }),
-            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("option", { value: "Resolved", children: "Resolved" })
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("option", { value: "all", children: "All Statuses" }),
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("option", { value: "Open", children: "Open" }),
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("option", { value: "In Progress", children: "In Progress" }),
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("option", { value: "Needs Review", children: "Needs Review" }),
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("option", { value: "Resolved", children: "Resolved" })
           ]
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)(
         "select",
         {
           value: filterSeverity,
           onChange: (e) => setFilterSeverity(e.target.value),
           className: "px-2 py-2 text-sm border border-gray-200 rounded-md bg-white",
           children: [
-            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("option", { value: "all", children: "All Severities" }),
-            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("option", { value: "Critical", children: "Critical" }),
-            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("option", { value: "High", children: "High" }),
-            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("option", { value: "Medium", children: "Medium" }),
-            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("option", { value: "Low", children: "Low" })
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("option", { value: "all", children: "All Severities" }),
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("option", { value: "Critical", children: "Critical" }),
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("option", { value: "High", children: "High" }),
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("option", { value: "Medium", children: "Medium" }),
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("option", { value: "Low", children: "Low" })
           ]
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
         "button",
         {
           type: "button",
@@ -6021,7 +6152,7 @@ function DevNotesTaskList({
         }
       )
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "text-xs text-gray-500", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "text-xs text-gray-500", children: [
       filteredReports.length,
       " of ",
       showClosed ? stats.closed : stats.total - stats.closed,
@@ -6029,80 +6160,80 @@ function DevNotesTaskList({
       showClosed ? "closed" : "active",
       " tasks"
     ] }),
-    filteredReports.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "flex flex-col items-center py-12 text-gray-400", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(import_fi9.FiAlertTriangle, { size: 32, className: "mb-3" }),
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { className: "text-sm", children: accessibleReports.length === 0 ? "No visible tasks yet. You will only see tasks you own, are assigned to, commented on, or were mentioned in." : "No tasks match your filters." })
-    ] }) : /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "border border-gray-200 rounded-lg overflow-hidden", children: /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("table", { className: "w-full text-sm", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("tr", { className: "bg-gray-50 text-left text-xs text-gray-500 uppercase tracking-wide", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("th", { className: "px-3 py-2 font-medium", children: "Title" }),
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
+    filteredReports.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "flex flex-col items-center py-12 text-gray-400", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(import_fi10.FiAlertTriangle, { size: 32, className: "mb-3" }),
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { className: "text-sm", children: accessibleReports.length === 0 ? "No visible tasks yet. You will only see tasks you own, are assigned to, commented on, or were mentioned in." : "No tasks match your filters." })
+    ] }) : /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: "border border-gray-200 rounded-lg overflow-hidden", children: /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("table", { className: "w-full text-sm", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("tr", { className: "bg-gray-50 text-left text-xs text-gray-500 uppercase tracking-wide", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("th", { className: "px-3 py-2 font-medium", children: "Title" }),
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
           "th",
           {
             className: "px-3 py-2 font-medium cursor-pointer select-none",
             onClick: () => handleSort("status"),
-            children: /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("span", { className: "inline-flex items-center gap-1", children: [
+            children: /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("span", { className: "inline-flex items-center gap-1", children: [
               "Status ",
-              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(SortIcon, { field: "status" })
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(SortIcon, { field: "status" })
             ] })
           }
         ),
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
           "th",
           {
             className: "px-3 py-2 font-medium cursor-pointer select-none",
             onClick: () => handleSort("severity"),
-            children: /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("span", { className: "inline-flex items-center gap-1", children: [
+            children: /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("span", { className: "inline-flex items-center gap-1", children: [
               "Severity ",
-              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(SortIcon, { field: "severity" })
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(SortIcon, { field: "severity" })
             ] })
           }
         ),
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("th", { className: "px-3 py-2 font-medium hidden md:table-cell", children: "Page" }),
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("th", { className: "px-3 py-2 font-medium hidden lg:table-cell", children: "Assigned" }),
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("th", { className: "px-3 py-2 font-medium hidden md:table-cell", children: "Page" }),
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("th", { className: "px-3 py-2 font-medium hidden lg:table-cell", children: "Assigned" }),
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
           "th",
           {
             className: "px-3 py-2 font-medium cursor-pointer select-none hidden md:table-cell",
             onClick: () => handleSort("stale"),
-            children: /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("span", { className: "inline-flex items-center gap-1", children: [
+            children: /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("span", { className: "inline-flex items-center gap-1", children: [
               "Freshness ",
-              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(SortIcon, { field: "stale" })
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(SortIcon, { field: "stale" })
             ] })
           }
         ),
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
           "th",
           {
             className: "px-3 py-2 font-medium cursor-pointer select-none",
             onClick: () => handleSort("created_at"),
-            children: /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("span", { className: "inline-flex items-center gap-1", children: [
+            children: /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("span", { className: "inline-flex items-center gap-1", children: [
               "Date ",
-              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(SortIcon, { field: "created_at" })
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(SortIcon, { field: "created_at" })
             ] })
           }
         )
       ] }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("tbody", { className: "divide-y divide-gray-100", children: filteredReports.map((report) => {
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("tbody", { className: "divide-y divide-gray-100", children: filteredReports.map((report) => {
         const unread = unreadCounts[report.id] || 0;
         const stale = getStaleMeta(report);
-        return /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(
+        return /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)(
           "tr",
           {
             className: "hover:bg-gray-50 cursor-pointer transition",
             onClick: () => setSelectedReport(report),
             children: [
-              /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("td", { className: "px-3 py-2.5 max-w-[280px]", children: [
-                /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "flex items-center gap-2", children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "font-medium text-gray-900 truncate", children: report.title }),
-                  unread > 0 && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "inline-flex min-w-[18px] items-center justify-center rounded-full bg-purple-100 px-1.5 text-[10px] font-bold text-purple-700", children: unread }),
-                  stale.isStale && /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("span", { className: "inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800", children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(import_fi9.FiClock, { size: 10 }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("td", { className: "px-3 py-2.5 max-w-[280px]", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "flex items-center gap-2", children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { className: "font-medium text-gray-900 truncate", children: report.title }),
+                  unread > 0 && /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { className: "inline-flex min-w-[18px] items-center justify-center rounded-full bg-purple-100 px-1.5 text-[10px] font-bold text-purple-700", children: unread }),
+                  stale.isStale && /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("span", { className: "inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800", children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(import_fi10.FiClock, { size: 10 }),
                     "Stale ",
                     stale.ageDays,
                     "d"
                   ] })
                 ] }),
-                report.types.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "flex gap-1 mt-0.5", children: report.types.slice(0, 2).map((t) => /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
+                report.types.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: "flex gap-1 mt-0.5", children: report.types.slice(0, 2).map((t) => /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
                   "span",
                   {
                     className: "text-[0.6rem] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500",
@@ -6111,23 +6242,23 @@ function DevNotesTaskList({
                   t
                 )) })
               ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("td", { className: "px-3 py-2.5", children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("td", { className: "px-3 py-2.5", children: /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
                 "span",
                 {
                   className: `inline-block px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[report.status] || "bg-gray-100 text-gray-600"}`,
                   children: report.status
                 }
               ) }),
-              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("td", { className: "px-3 py-2.5", children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("td", { className: "px-3 py-2.5", children: /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
                 "span",
                 {
                   className: `inline-block px-2 py-0.5 rounded-full text-xs font-medium ${SEVERITY_COLORS[report.severity] || "bg-gray-100 text-gray-600"}`,
                   children: report.severity
                 }
               ) }),
-              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("td", { className: "px-3 py-2.5 hidden md:table-cell", children: /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "flex items-center gap-1 text-xs text-gray-500", children: [
-                /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "truncate max-w-[140px]", children: getPageLabel(report.page_url) }),
-                onNavigateToPage && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("td", { className: "px-3 py-2.5 hidden md:table-cell", children: /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "flex items-center gap-1 text-xs text-gray-500", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { className: "truncate max-w-[140px]", children: getPageLabel(report.page_url) }),
+                onNavigateToPage && /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
                   "button",
                   {
                     type: "button",
@@ -6137,17 +6268,17 @@ function DevNotesTaskList({
                       onNavigateToPage(report.page_url, report.id);
                     },
                     title: "Go to page",
-                    children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(import_fi9.FiExternalLink, { size: 12 })
+                    children: /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(import_fi10.FiExternalLink, { size: 12 })
                   }
                 )
               ] }) }),
-              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("td", { className: "px-3 py-2.5 hidden lg:table-cell text-xs text-gray-500", children: getProfileName(report.assigned_to) || "\u2014" }),
-              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("td", { className: "px-3 py-2.5 hidden md:table-cell", children: stale.isStale ? /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("span", { className: "inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800", children: [
-                /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(import_fi9.FiClock, { size: 11 }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("td", { className: "px-3 py-2.5 hidden lg:table-cell text-xs text-gray-500", children: getProfileName(report.assigned_to) || "\u2014" }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("td", { className: "px-3 py-2.5 hidden md:table-cell", children: stale.isStale ? /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("span", { className: "inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(import_fi10.FiClock, { size: 11 }),
                 stale.ageDays,
                 "d stale"
-              ] }) : /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700", children: "Fresh" }) }),
-              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("td", { className: "px-3 py-2.5 text-xs text-gray-500 whitespace-nowrap", children: formatDate(report.created_at) })
+              ] }) : /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { className: "inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700", children: "Fresh" }) }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("td", { className: "px-3 py-2.5 text-xs text-gray-500 whitespace-nowrap", children: formatDate(report.created_at) })
             ]
           },
           report.id
@@ -6175,21 +6306,35 @@ var defaultCapabilities = {
   ai: false,
   appLink: true
 };
-async function parseResponse(response) {
-  const text = await response.text();
-  const payload = text ? JSON.parse(text) : null;
-  if (!response.ok) {
-    const message = payload?.error?.message || payload?.error || payload?.message || `Request failed with status ${response.status}`;
-    throw new Error(message);
+var DevNotesRequestError = class extends Error {
+  constructor(message, status, forge) {
+    super(message);
+    this.name = "DevNotesRequestError";
+    this.forge = forge;
+    this.status = status;
   }
-  return payload;
-}
+};
+var normalizeForge = (raw) => {
+  if (!raw || typeof raw !== "object") return null;
+  const connected = Boolean(raw.connected);
+  let error = null;
+  if (raw.error && typeof raw.error === "object") {
+    error = {
+      path: typeof raw.error.path === "string" ? raw.error.path : "",
+      status: typeof raw.error.status === "number" ? raw.error.status : raw.error.status == null ? null : Number(raw.error.status) || null,
+      code: typeof raw.error.code === "string" ? raw.error.code : "UNKNOWN",
+      message: typeof raw.error.message === "string" ? raw.error.message : "Forge connection failed."
+    };
+  }
+  return { connected, error };
+};
 function createDevNotesClient(options) {
   const basePath = normalizeBasePath(options.basePath);
   const fetchImpl = options.fetch ?? globalThis.fetch;
   if (typeof fetchImpl !== "function") {
     throw new Error("createDevNotesClient requires a fetch implementation.");
   }
+  let latestForgeStatus = null;
   const request = async (path, init = {}) => {
     const token = await options.getAuthToken();
     const headers = new Headers(init.headers || {});
@@ -6201,17 +6346,52 @@ function createDevNotesClient(options) {
       ...init,
       headers
     });
-    return await parseResponse(response);
+    const text = await response.text();
+    let payload = null;
+    try {
+      payload = text ? JSON.parse(text) : null;
+    } catch {
+      payload = null;
+    }
+    if (payload && typeof payload === "object" && "forge" in payload) {
+      latestForgeStatus = normalizeForge(payload.forge);
+    }
+    if (!response.ok) {
+      const message = payload?.error?.message || payload?.error || payload?.message || `Request failed with status ${response.status}`;
+      throw new DevNotesRequestError(
+        typeof message === "string" ? message : `Request failed with status ${response.status}`,
+        response.status,
+        latestForgeStatus
+      );
+    }
+    return payload;
   };
-  const fetchTasks = async () => await request("/tasks");
-  const createTask = async (data) => await request("/tasks", {
-    method: "POST",
-    body: JSON.stringify(data)
-  });
-  const updateTask = async (id, data) => await request(`/tasks/${encodeURIComponent(id)}`, {
-    method: "PATCH",
-    body: JSON.stringify(data)
-  });
+  const extractReports = (payload) => {
+    if (Array.isArray(payload)) return payload;
+    if (payload && Array.isArray(payload.reports)) return payload.reports;
+    if (payload && Array.isArray(payload.tasks)) return payload.tasks;
+    return [];
+  };
+  const extractTask = (payload) => {
+    if (payload && typeof payload === "object") {
+      if (payload.report && typeof payload.report === "object") return payload.report;
+      if (payload.task && typeof payload.task === "object") return payload.task;
+    }
+    return payload;
+  };
+  const fetchTasks = async () => extractReports(await request("/tasks"));
+  const createTask = async (data) => extractTask(
+    await request("/tasks", {
+      method: "POST",
+      body: JSON.stringify(data)
+    })
+  );
+  const updateTask = async (id, data) => extractTask(
+    await request(`/tasks/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify(data)
+    })
+  );
   const deleteTask = async (id) => {
     await request(`/tasks/${encodeURIComponent(id)}`, { method: "DELETE" });
   };
@@ -6234,6 +6414,7 @@ function createDevNotesClient(options) {
     body: JSON.stringify({ body })
   });
   return {
+    getForgeStatus: () => latestForgeStatus,
     fetchTasks,
     createTask,
     updateTask,
@@ -6297,10 +6478,12 @@ function createDevNotesClient(options) {
   DevNotesButton,
   DevNotesDiscussion,
   DevNotesDot,
+  DevNotesForgeBanner,
   DevNotesForm,
   DevNotesMenu,
   DevNotesOverlay,
   DevNotesProvider,
+  DevNotesRequestError,
   DevNotesStepDot,
   DevNotesStoryRecorder,
   DevNotesTaskList,
@@ -6308,6 +6491,7 @@ function createDevNotesClient(options) {
   USER_STORY_TYPE_NAME,
   buildAiFixPayload,
   buildCaptureContext,
+  buildForgeDebugPrompt,
   calculateBugPositionFromPoint,
   createDevNotesClient,
   deriveRouteLabelFromUrl,

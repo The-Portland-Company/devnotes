@@ -1,6 +1,6 @@
-import { d as DevNotesServerOptions } from '../types-DPJ2ViSN.js';
-import { D as DevNotesProxyBackend } from '../router-BaHJ1f49.js';
-import '../types-Cz12QCWk.js';
+import { e as DevNotesServerOptions } from '../types-CN69T2nf.js';
+import { D as DevNotesProxyBackend } from '../router-BzsYYdK-.js';
+import '../types-CaO2Gfn7.js';
 
 declare function createNextDevNotesHandler(options: DevNotesServerOptions): (request: Request) => Promise<Response>;
 declare function createNextDevNotesProxy(backendOrOptions: DevNotesProxyBackend | DevNotesServerOptions): (request: Request, context?: {

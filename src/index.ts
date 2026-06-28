@@ -12,10 +12,11 @@ export { default as DevNotesStoryRecorder } from './DevNotesStoryRecorder';
 export { default as DevNotesDiscussion } from './DevNotesDiscussion';
 export { default as DevNotesTaskList } from './DevNotesTaskList';
 export { default as DevNotesTaskListModal } from './DevNotesTaskListModal';
+export { default as DevNotesForgeBanner, buildForgeDebugPrompt } from './DevNotesForgeBanner';
 
 // Client
 export type { TaskCreateData } from './adapters/types';
-export { createDevNotesClient } from './client';
+export { createDevNotesClient, DevNotesRequestError } from './client';
 export type { BugReportCreateData } from './adapters/types';
 
 // Types
@@ -30,6 +31,8 @@ export type {
   DevNotesConfig,
   DevNotesRole,
   DevNotesCapabilities,
+  ForgeStatus,
+  ForgeError,
   DevNotesAppLinkStatus,
   DevNotesClientOptions,
   DevNotesLinkAppInput,

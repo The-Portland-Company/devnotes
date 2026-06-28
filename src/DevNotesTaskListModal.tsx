@@ -9,6 +9,7 @@ import {
   FiX,
 } from 'react-icons/fi';
 import DevNotesForm from './DevNotesForm';
+import DevNotesForgeBanner from './DevNotesForgeBanner';
 import { useTaskListData, type TaskSortField } from './hooks/useTaskListData';
 
 type DevNotesTaskListModalProps = {
@@ -532,6 +533,7 @@ export default function DevNotesTaskListModal({
           boxSizing: 'border-box',
         }}
       >
+        <DevNotesForgeBanner style={{ marginBottom: 16 }} />
         {renderBody()}
       </div>
     </div>
