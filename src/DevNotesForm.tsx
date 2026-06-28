@@ -31,6 +31,8 @@ import {
   shouldRequireExplicitStatusSelection,
 } from './internal/formState';
 import type { BugReport, BugReportType } from './types';
+import { USER_STORY_TYPE_NAME } from './internal/core-types';
+import DevNotesStoryStepsBuilder, { type StoryBuilderStep } from './DevNotesStoryStepsBuilder';
 
 type DevNotesFormProps = {
   pageUrl: string;
@@ -218,6 +220,12 @@ export default function DevNotesForm({
     error: bugReportingError,
     role,
     appLinkStatus,
+    canRecordUserStory,
+    isRecordingStory,
+    recordedSteps,
+    startUserStoryRecording,
+    stopUserStoryRecording,
+    createUserStory,
   } = useDevNotes();
 
   const isAdmin = role === 'admin' || role === 'contributor';
@@ -266,6 +274,42 @@ export default function DevNotesForm({
     const bugType = taskTypes.find((t) => t.name.toLowerCase() === 'bug');
     setSelectedTypes([(bugType || taskTypes[0]).id]);
   }, [taskTypes, existingReport, selectedTypes.length]);
+
+  // ----- Guided User Story (Test Case) builder -----
+  // When the single selected type is the canonical User Stories type, the form
+  // swaps its description field for an ordered, multi-step builder.
+  const selectedTypeName =
+    selectedTypes.length === 1
+      ? taskTypes.find((t) => t.id === selectedTypes[0])?.name ?? ''
+      : '';
+  const isUserStorySelected =
+    selectedTypeName.trim().toLowerCase() === USER_STORY_TYPE_NAME.toLowerCase();
+  // Only new reports route through the user-story persistence path; editing an
+  // existing report keeps the normal update flow.
+  const useStoryBuilder = isUserStorySelected && !existingReport;
+
+  const [storySteps, setStorySteps] = useState<StoryBuilderStep[]>([]);
+  const importedRecordedIdsRef = useRef<Set<string>>(new Set());
+
+  // Append recorder-captured steps into the builder list so manual + recorded
+  // steps coexist. Reuses the recorder's RecordedStep shape (id/body/selector/x/y).
+  useEffect(() => {
+    if (!useStoryBuilder || recordedSteps.length === 0) return;
+    const fresh = recordedSteps.filter((s) => !importedRecordedIdsRef.current.has(s.id));
+    if (fresh.length === 0) return;
+    fresh.forEach((s) => importedRecordedIdsRef.current.add(s.id));
+    setStorySteps((prev) => [
+      ...prev,
+      ...fresh.map((s) => ({
+        id: `rec-${s.id}`,
+        body: s.body,
+        page_url: s.page_url || null,
+        x_position: s.x,
+        y_position: s.y,
+        target_selector: s.selector,
+      })),
+    ]);
+  }, [recordedSteps, useStoryBuilder]);
 
   const [severity, setSeverity] = useState<'Critical' | 'High' | 'Medium' | 'Low'>(
     existingReport?.severity || 'Medium'
@@ -472,8 +516,10 @@ export default function DevNotesForm({
 
   const availableTypes = taskTypes.filter((type) => !selectedTypes.includes(type.id));
 
+  // Single-select: a report has exactly one type. Selecting REPLACES the current
+  // selection. The wire shape stays a `types` array (length ≤ 1) for backend compat.
   const handleTypeSelect = (typeId: string) => {
-    setSelectedTypes((prev) => [...prev, typeId]);
+    setSelectedTypes([typeId]);
     setShowTypeDropdown(false);
     setNewTypeName('');
   };
@@ -491,9 +537,7 @@ export default function DevNotesForm({
     );
 
     if (existingType) {
-      if (!selectedTypes.includes(existingType.id)) {
-        setSelectedTypes((prev) => [...prev, existingType.id]);
-      }
+      setSelectedTypes([existingType.id]);
       setNewTypeName('');
       setShowTypeDropdown(false);
       setPendingTypeName(null);
@@ -502,7 +546,7 @@ export default function DevNotesForm({
 
     const newType = await addTaskType(trimmedValue);
     if (newType) {
-      setSelectedTypes((prev) => [...prev, newType.id]);
+      setSelectedTypes([newType.id]);
       setNewTypeName('');
       setShowTypeDropdown(false);
       setPendingTypeName(null);
@@ -532,10 +576,17 @@ export default function DevNotesForm({
     }
   };
 
+  const isCanonicalUserStoryType = (type?: BugReportType | null) =>
+    !!type && type.name.trim().toLowerCase() === USER_STORY_TYPE_NAME.toLowerCase();
+
   const handleDeleteType = async (typeId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     const typeToDelete = taskTypes.find((t) => t.id === typeId);
     if (typeToDelete?.is_default) return;
+    // The canonical "User Stories (Test Cases)" type is protected and must not be
+    // deleted (matched by name, never by hardcoded id). The backend hard-blocks it
+    // too; if a rejection slips through, deleteTaskType returns false and we no-op.
+    if (isCanonicalUserStoryType(typeToDelete)) return;
 
     const success = await deleteTaskType(typeId);
     if (success) {
@@ -650,8 +701,17 @@ export default function DevNotesForm({
   // These are surfaced as validation so Save never silently no-ops.
   const missingTaskList = !existingReport && !taskListId;
   const missingType = !existingReport && selectedTypes.length === 0;
-  const submitDisabled = loading || !hasNarrative || statusRequired;
-  const submitTitle = !hasNarrative
+  const storyStepsValid = storySteps.some((s) => s.body.trim().length > 0);
+  const submitDisabled = useStoryBuilder
+    ? loading || !title.trim() || !storyStepsValid
+    : loading || !hasNarrative || statusRequired;
+  const submitTitle = useStoryBuilder
+    ? !title.trim()
+      ? 'Add a title before saving'
+      : !storyStepsValid
+        ? 'Add at least one step before saving'
+        : 'Save user story'
+    : !hasNarrative
     ? 'Add a description, expected behavior, or actual behavior'
     : missingTaskList
       ? 'Select a task list before saving'
@@ -741,7 +801,57 @@ export default function DevNotesForm({
     }
   };
 
+  const handleSaveUserStory = async () => {
+    setSubmitAttempted(true);
+    if (!title.trim()) {
+      setSubmitError('Add a title before saving.');
+      return;
+    }
+    const steps = storySteps.filter((s) => s.body.trim());
+    if (steps.length === 0) {
+      setSubmitError('Add at least one step before saving.');
+      return;
+    }
+
+    setSubmitError(null);
+    setIsSaving(true);
+    let result: { slug?: string | null; error?: string | null } | null = null;
+    try {
+      result = await createUserStory({
+        title: title.trim(),
+        description_md: trimmedDescription || null,
+        test_url: normalizePageUrl(composePageUrlWithTab(reportPageUrl)) || null,
+        steps: steps.map((s) => ({
+          body: s.body.trim(),
+          url: s.page_url ?? null,
+          page_url: s.page_url ?? null,
+          x_position: s.x_position ?? null,
+          y_position: s.y_position ?? null,
+          target_selector: s.target_selector ?? null,
+        })),
+      });
+    } catch (err: any) {
+      result = { error: err?.message || 'Failed to save the user story.' };
+    } finally {
+      setIsSaving(false);
+    }
+
+    if (isRecordingStory) stopUserStoryRecording();
+
+    if (result && !result.error) {
+      setSubmitError(null);
+      // Consumers ignore the report arg (they just close the form on save).
+      onSave(undefined as unknown as BugReport);
+    } else {
+      setSubmitError(result?.error || 'Could not save the user story. Please try again.');
+    }
+  };
+
   const handleSubmit = async () => {
+    if (useStoryBuilder) {
+      await handleSaveUserStory();
+      return;
+    }
     setSubmitAttempted(true);
     // Tell the user exactly what's missing instead of silently no-opping —
     // a blocked Save with no feedback reads as an "unresponsive" button.
@@ -1006,6 +1116,21 @@ export default function DevNotesForm({
           </div>
         </div>
 
+        {useStoryBuilder ? (
+          <DevNotesStoryStepsBuilder
+            steps={storySteps}
+            onChange={setStorySteps}
+            canRecord={canRecordUserStory}
+            isRecording={isRecordingStory}
+            onStartRecording={startUserStoryRecording}
+            onStopRecording={stopUserStoryRecording}
+            isSuperscriptLabels={isSuperscriptLabels}
+            fieldSurfaceClass={FIELD_SURFACE_CLASS}
+            controlInputClass={CONTROL_INPUT_CLASS}
+            floatingLabelClass={floatingLabelClass}
+            showError={submitAttempted}
+          />
+        ) : (
         <div>
           <div className="mb-4">
             <div className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white p-1 shadow-sm shadow-slate-900/5">
@@ -1102,6 +1227,7 @@ export default function DevNotesForm({
             </p>
           )}
         </div>
+        )}
 
         {showAiChat && aiProvider && (
           <AiDescriptionChat
@@ -1187,7 +1313,7 @@ export default function DevNotesForm({
         <section className={SECTION_CARD_CLASS}>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             <div className={isSuperscriptLabels ? 'relative' : ''}>
-              <label className={floatingLabelClass(isSuperscriptLabels)}>Type(s)</label>
+              <label className={floatingLabelClass(isSuperscriptLabels)}>Type</label>
               <div className="relative">
                 <div className={`${FIELD_SURFACE_CLASS} flex flex-wrap items-center gap-1.5 px-3 py-2`}>
                   <FiSearch size={14} className="shrink-0 text-slate-400" />
@@ -1236,7 +1362,7 @@ export default function DevNotesForm({
                           onMouseDown={() => handleTypeSelect(type.id)}
                         >
                           <span className="text-sm text-slate-700">{type.name}</span>
-                          {!type.is_default && (
+                          {!type.is_default && !isCanonicalUserStoryType(type) && (
                             <button
                               type="button"
                               className="rounded-full p-1 text-rose-500 transition hover:bg-rose-50 hover:text-rose-700"

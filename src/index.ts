@@ -13,6 +13,8 @@ export { default as DevNotesDiscussion } from './DevNotesDiscussion';
 export { default as DevNotesTaskList } from './DevNotesTaskList';
 export { default as DevNotesTaskListModal } from './DevNotesTaskListModal';
 export { default as DevNotesForgeBanner, buildForgeDebugPrompt } from './DevNotesForgeBanner';
+export { default as DevNotesStoryStepsBuilder } from './DevNotesStoryStepsBuilder';
+export type { StoryBuilderStep } from './DevNotesStoryStepsBuilder';
 
 // Client
 export type { TaskCreateData } from './adapters/types';

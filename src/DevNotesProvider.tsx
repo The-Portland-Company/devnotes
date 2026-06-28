@@ -61,6 +61,8 @@ type DevNotesContextValue = {
     description_md?: string | null;
     test_url?: string | null;
   }) => Promise<boolean>;
+  /** Persist a fully-assembled User Story draft (manual + recorded steps). */
+  createUserStory: (draft: UserStoryDraft) => Promise<UserStoryCreateResult>;
   userStoryStepDots: UserStoryStepDot[];
   currentPageStepDots: UserStoryStepDot[];
   tasks: BugReport[];
@@ -367,6 +369,45 @@ export function DevNotesProvider({ adapter, user, config, children }: DevNotesPr
       return true;
     },
     [onCreateUserStory, recordedSteps, persistStepDots]
+  );
+
+  // Persist a fully-formed User Story draft (steps already assembled by the caller,
+  // e.g. the in-form guided builder mixing manual + recorded steps). Mirrors
+  // saveUserStory's dot persistence but takes an explicit draft instead of reading
+  // the recorder buffer. The host's onCreateUserStory owns transport.
+  const createUserStory = useCallback(
+    async (draft: UserStoryDraft): Promise<UserStoryCreateResult> => {
+      if (!onCreateUserStory) {
+        return { error: 'Saving user stories is not configured for this app.' };
+      }
+      let result: UserStoryCreateResult;
+      try {
+        result = await onCreateUserStory(draft);
+      } catch (err: any) {
+        return { error: err?.message || 'Failed to save the user story.' };
+      }
+      if (result?.error) return result;
+
+      const slug = result?.slug || draft.title;
+      const newDots: UserStoryStepDot[] = draft.steps.map((s, i) => ({
+        id: `${slug}:${i}`,
+        storySlug: slug,
+        storyTitle: draft.title,
+        index: i + 1,
+        body: s.body,
+        page_url: s.page_url ?? s.url ?? null,
+        x_position: s.x_position ?? null,
+        y_position: s.y_position ?? null,
+        target_selector: s.target_selector ?? null,
+      }));
+      setUserStoryStepDots((prev) => {
+        const merged = [...prev.filter((d) => d.storySlug !== slug), ...newDots];
+        persistStepDots(merged);
+        return merged;
+      });
+      return result;
+    },
+    [onCreateUserStory, persistStepDots]
   );
 
   useEffect(() => {
@@ -876,6 +917,7 @@ export function DevNotesProvider({ adapter, user, config, children }: DevNotesPr
       deleteRecordedStep,
       moveRecordedStep,
       saveUserStory,
+      createUserStory,
       userStoryStepDots,
       currentPageStepDots,
       tasks: visibleTasks,
@@ -946,6 +988,7 @@ export function DevNotesProvider({ adapter, user, config, children }: DevNotesPr
       deleteRecordedStep,
       moveRecordedStep,
       saveUserStory,
+      createUserStory,
       userStoryStepDots,
       currentPageStepDots,
       visibleTasks,
@@ -1010,6 +1053,7 @@ const defaultContextValue: DevNotesContextValue = {
   deleteRecordedStep: () => {},
   moveRecordedStep: () => {},
   saveUserStory: async () => false,
+  createUserStory: async () => ({ error: 'DevNotes provider is not mounted.' }),
   userStoryStepDots: [],
   currentPageStepDots: [],
   tasks: [],
