@@ -232,6 +232,7 @@ export default function DevNotesTaskList({
                 </th>
                 <th className="px-3 py-2 font-medium hidden md:table-cell">Page</th>
                 <th className="px-3 py-2 font-medium hidden lg:table-cell">Assigned</th>
+                <th className="px-3 py-2 font-medium hidden lg:table-cell">Created By</th>
                 <th
                   className="px-3 py-2 font-medium cursor-pointer select-none hidden md:table-cell"
                   onClick={() => handleSort('stale')}
@@ -330,6 +331,12 @@ export default function DevNotesTaskList({
                     </td>
                     <td className="px-3 py-2.5 hidden lg:table-cell text-xs text-gray-500">
                       {getProfileName(report.assigned_to) || '—'}
+                    </td>
+                    <td className="px-3 py-2.5 hidden lg:table-cell text-xs text-gray-500">
+                      {report.creator?.full_name?.split(/\s+/)[0] ||
+                        getProfileName(report.created_by) ||
+                        report.creator?.email?.split('@')[0] ||
+                        '—'}
                     </td>
                     <td className="px-3 py-2.5 hidden md:table-cell">
                       {stale.isStale ? (

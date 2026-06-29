@@ -2532,7 +2532,7 @@ function formatAiFixPayloadForCopy(payload) {
 }
 
 // src/version.ts
-var DEVNOTES_VERSION = "0.6.1";
+var DEVNOTES_VERSION = "0.6.2";
 
 // src/internal/formState.ts
 function getInitialTaskStatus(existingStatus) {
@@ -6464,6 +6464,7 @@ function DevNotesTaskList({
         ),
         /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("th", { className: "px-3 py-2 font-medium hidden md:table-cell", children: "Page" }),
         /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("th", { className: "px-3 py-2 font-medium hidden lg:table-cell", children: "Assigned" }),
+        /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("th", { className: "px-3 py-2 font-medium hidden lg:table-cell", children: "Created By" }),
         /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
           "th",
           {
@@ -6547,6 +6548,7 @@ function DevNotesTaskList({
                 )
               ] }) }),
               /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("td", { className: "px-3 py-2.5 hidden lg:table-cell text-xs text-gray-500", children: getProfileName(report.assigned_to) || "\u2014" }),
+              /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("td", { className: "px-3 py-2.5 hidden lg:table-cell text-xs text-gray-500", children: report.creator?.full_name?.split(/\s+/)[0] || getProfileName(report.created_by) || report.creator?.email?.split("@")[0] || "\u2014" }),
               /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("td", { className: "px-3 py-2.5 hidden md:table-cell", children: stale.isStale ? /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("span", { className: "inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800", children: [
                 /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(import_fi11.FiClock, { size: 11 }),
                 stale.ageDays,
