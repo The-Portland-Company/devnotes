@@ -620,7 +620,7 @@ function buildDevNotesReportFromForgeTask(task, overrides, defaultTaskListId) {
   const creatorEmail = String(combined.creator_email || "").trim() || null;
   const createdBy = String(combined.created_by || "").trim() || `forge:${taskId}:creator`;
   const taskCompleted = normalizeForgeBoolean(task.completed);
-  const status = String(combined.status || (taskCompleted ? "Resolved" : "Open"));
+  const status = taskCompleted ? "Resolved" : String(combined.status || "Open");
   const description = overrides && Object.prototype.hasOwnProperty.call(overrides, "description") ? overrides.description === null ? null : String(overrides.description || "") : normalized.description.trim() || (base.description ? String(base.description) : null);
   return {
     id: taskId,

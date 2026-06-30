@@ -930,7 +930,14 @@ function buildDevNotesReportFromForgeTask(
   const creatorEmail = String(combined.creator_email || '').trim() || null;
   const createdBy = String(combined.created_by || '').trim() || `forge:${taskId}:creator`;
   const taskCompleted = normalizeForgeBoolean(task.completed);
-  const status = String(combined.status || (taskCompleted ? 'Resolved' : 'Open')) as Task['status'];
+  // Reverse sync (Forge -> DevNotes): a completed Forge task is authoritative,
+  // so the report is Resolved regardless of any stale stored DevNotes status.
+  // Closes the one-way-sync gap where tasks completed via the Forge checkbox/API
+  // (not the DevNotes UI) kept showing as Open. Non-completed tasks fall back to
+  // the stored status (or Open).
+  const status = (taskCompleted
+    ? 'Resolved'
+    : String(combined.status || 'Open')) as Task['status'];
   const description =
     overrides && Object.prototype.hasOwnProperty.call(overrides, 'description')
       ? overrides.description === null
