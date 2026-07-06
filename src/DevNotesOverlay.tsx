@@ -271,7 +271,7 @@ export default function DevNotesOverlay({
         />
         <div style={{ position: 'absolute', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', padding: 16 }}>
           <div
-            className="pointer-events-auto max-h-[calc(100vh-32px)] overflow-y-auto rounded-lg shadow-xl"
+            className="pointer-events-auto max-h-[calc(100vh-32px)] overflow-y-auto rounded-lg bg-white shadow-xl"
             data-bug-form
           >
             <DevNotesForm
@@ -408,7 +408,7 @@ export default function DevNotesOverlay({
           {showPendingForm && (
             <div style={{ position: 'absolute', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', padding: 16 }}>
               <div
-                className="pointer-events-auto max-h-[calc(100vh-32px)] overflow-y-auto rounded-lg shadow-xl"
+                className="pointer-events-auto max-h-[calc(100vh-32px)] overflow-y-auto rounded-lg bg-white shadow-xl"
                 data-bug-form
               >
                 <DevNotesForm

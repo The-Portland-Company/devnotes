@@ -16,3 +16,12 @@ input.dn-flat-input:not([type='checkbox']):not([type='radio']):not([type='file']
   background-color: transparent !important;
   box-shadow: none !important;
 }
+
+/* The form-modal panel (create/edit a report) had no background of its own — its
+   inner section cards use a translucent bg-slate-50/80, so on a host page the
+   page content bled through the gaps and the modal looked see-through. Give the
+   panel a solid surface so it reads as a proper opaque modal regardless of host
+   styling. Applies to every mount point that wraps DevNotesForm. */
+[data-bug-form] {
+  background-color: #ffffff;
+}

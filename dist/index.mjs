@@ -2520,7 +2520,7 @@ function formatAiFixPayloadForCopy(payload) {
 }
 
 // src/version.ts
-var DEVNOTES_VERSION = "0.6.3";
+var DEVNOTES_VERSION = "0.6.4";
 
 // src/internal/formState.ts
 function getInitialTaskStatus(existingStatus) {
@@ -5502,7 +5502,7 @@ function DevNotesDot({ report }) {
           onClick: () => setIsFormOpen(false)
         }
       ),
-      /* @__PURE__ */ jsx9("div", { style: { position: "absolute", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", padding: 16 }, children: /* @__PURE__ */ jsx9("div", { className: "pointer-events-auto max-h-[calc(100vh-32px)] overflow-y-auto rounded-lg shadow-xl", "data-bug-form": true, children: /* @__PURE__ */ jsx9(
+      /* @__PURE__ */ jsx9("div", { style: { position: "absolute", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", padding: 16 }, children: /* @__PURE__ */ jsx9("div", { className: "pointer-events-auto max-h-[calc(100vh-32px)] overflow-y-auto rounded-lg bg-white shadow-xl", "data-bug-form": true, children: /* @__PURE__ */ jsx9(
         DevNotesForm,
         {
           pageUrl: report.page_url,
@@ -6089,7 +6089,7 @@ function DevNotesOverlay({
       /* @__PURE__ */ jsx12("div", { style: { position: "absolute", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", padding: 16 }, children: /* @__PURE__ */ jsx12(
         "div",
         {
-          className: "pointer-events-auto max-h-[calc(100vh-32px)] overflow-y-auto rounded-lg shadow-xl",
+          className: "pointer-events-auto max-h-[calc(100vh-32px)] overflow-y-auto rounded-lg bg-white shadow-xl",
           "data-bug-form": true,
           children: /* @__PURE__ */ jsx12(
             DevNotesForm,
@@ -6183,7 +6183,7 @@ function DevNotesOverlay({
           showPendingForm && /* @__PURE__ */ jsx12("div", { style: { position: "absolute", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", padding: 16 }, children: /* @__PURE__ */ jsx12(
             "div",
             {
-              className: "pointer-events-auto max-h-[calc(100vh-32px)] overflow-y-auto rounded-lg shadow-xl",
+              className: "pointer-events-auto max-h-[calc(100vh-32px)] overflow-y-auto rounded-lg bg-white shadow-xl",
               "data-bug-form": true,
               children: /* @__PURE__ */ jsx12(
                 DevNotesForm,

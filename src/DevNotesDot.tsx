@@ -367,7 +367,7 @@ export default function DevNotesDot({ report }: DevNotesDotProps) {
             onClick={() => setIsFormOpen(false)}
           />
           <div style={{ position: 'absolute', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', padding: 16 }}>
-            <div className="pointer-events-auto max-h-[calc(100vh-32px)] overflow-y-auto rounded-lg shadow-xl" data-bug-form>
+            <div className="pointer-events-auto max-h-[calc(100vh-32px)] overflow-y-auto rounded-lg bg-white shadow-xl" data-bug-form>
               <DevNotesForm
                 pageUrl={report.page_url}
                 xPosition={report.x_position}
