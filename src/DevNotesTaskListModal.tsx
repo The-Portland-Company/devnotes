@@ -116,7 +116,18 @@ export default function DevNotesTaskListModal({
     getPageLabel,
     formatDate,
     tasks,
+    appLinkStatus,
   } = useTaskListData();
+
+  // Deep link to the configured project's board in Focus Forge, mirroring the
+  // per-task "Open in Forge" link in DevNotesForm.
+  const forgeProjectUrl = (() => {
+    const discovery = appLinkStatus?.projectDiscovery;
+    const baseUrl = discovery?.baseUrl?.trim();
+    const projectId = discovery?.projectId;
+    if (!baseUrl || !projectId) return null;
+    return `${baseUrl.replace(/\/+$/, '')}/projects/${encodeURIComponent(projectId)}`;
+  })();
 
   useEffect(() => {
     if (!open) return undefined;
@@ -201,10 +212,36 @@ export default function DevNotesTaskListModal({
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h2 style={{ fontSize: 18, fontWeight: 600, color: '#111827', margin: 0 }}>{title}</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {forgeProjectUrl && (
+              <a
+                href={forgeProjectUrl}
+                target="_blank"
+                rel="noreferrer"
+                title="Open project in Forge"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '5px 10px',
+                  borderRadius: 9999,
+                  border: '1px solid #e2e8f0',
+                  background: '#f8fafc',
+                  color: '#334155',
+                  fontSize: 12,
+                  fontWeight: 500,
+                  textDecoration: 'none',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <FiExternalLink size={12} style={{ color: '#94a3b8' }} />
+                View in Forge
+              </a>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close"
             style={{
               padding: 4,
               borderRadius: 6,
@@ -217,6 +254,7 @@ export default function DevNotesTaskListModal({
           >
             <FiX size={18} />
           </button>
+          </div>
         </div>
 
         {/* Stats row */}

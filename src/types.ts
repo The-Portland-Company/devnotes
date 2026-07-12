@@ -69,6 +69,8 @@ export type DevNotesProjectSummary = {
 export type DevNotesProjectDiscovery = {
   path: string | null;
   baseUrl: string;
+  projectId?: string | null;
+  organizationId?: string | null;
 };
 
 export type DevNotesServerUser = {

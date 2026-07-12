@@ -225,6 +225,8 @@ test('Deno handler returns discovered projects when projectName is unset', async
     projectDiscovery: {
       path: '/api/mobile/projects',
       baseUrl: 'https://focusforge.example.com',
+      projectId: null,
+      organizationId: null,
     },
   });
 });
@@ -314,6 +316,8 @@ test('app-link reports a configured project match from bootstrap discovery', asy
     projectDiscovery: {
       path: '/api/mobile/bootstrap',
       baseUrl: 'https://focusforge.example.com',
+      projectId: 'project-1',
+      organizationId: 'org-1',
     },
   });
 });

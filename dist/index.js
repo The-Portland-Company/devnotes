@@ -2532,7 +2532,7 @@ function formatAiFixPayloadForCopy(payload) {
 }
 
 // src/version.ts
-var DEVNOTES_VERSION = "0.6.4";
+var DEVNOTES_VERSION = "0.6.5";
 
 // src/internal/formState.ts
 function getInitialTaskStatus(existingStatus) {
@@ -4178,7 +4178,8 @@ function useTaskListData() {
     unreadCounts,
     deleteTask,
     updateTask,
-    user
+    user,
+    appLinkStatus
   } = useDevNotes();
   const [searchQuery, setSearchQuery] = (0, import_react7.useState)("");
   const [filterStatus, setFilterStatus] = (0, import_react7.useState)("all");
@@ -4285,6 +4286,7 @@ function useTaskListData() {
     updateTask,
     deleteTask,
     user,
+    appLinkStatus,
     // visibility / derived data
     visibleReportIds,
     stats,
@@ -4394,8 +4396,16 @@ function DevNotesTaskListModal({
     getProfileName,
     getPageLabel,
     formatDate,
-    tasks
+    tasks,
+    appLinkStatus
   } = useTaskListData();
+  const forgeProjectUrl = (() => {
+    const discovery = appLinkStatus?.projectDiscovery;
+    const baseUrl = discovery?.baseUrl?.trim();
+    const projectId = discovery?.projectId;
+    if (!baseUrl || !projectId) return null;
+    return `${baseUrl.replace(/\/+$/, "")}/projects/${encodeURIComponent(projectId)}`;
+  })();
   (0, import_react8.useEffect)(() => {
     if (!open) return void 0;
     const onKeyDown = (e) => {
@@ -4473,24 +4483,53 @@ function DevNotesTaskListModal({
     return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { style: { display: "flex", flexDirection: "column", gap: 16 }, children: [
       /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between" }, children: [
         /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("h2", { style: { fontSize: 18, fontWeight: 600, color: "#111827", margin: 0 }, children: title }),
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
-          "button",
-          {
-            type: "button",
-            onClick: onClose,
-            "aria-label": "Close",
-            style: {
-              padding: 4,
-              borderRadius: 6,
-              border: "none",
-              background: "transparent",
-              color: "#6b7280",
-              cursor: "pointer",
-              display: "inline-flex"
-            },
-            children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_fi6.FiX, { size: 18 })
-          }
-        )
+        /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { style: { display: "flex", alignItems: "center", gap: 8 }, children: [
+          forgeProjectUrl && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
+            "a",
+            {
+              href: forgeProjectUrl,
+              target: "_blank",
+              rel: "noreferrer",
+              title: "Open project in Forge",
+              style: {
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "5px 10px",
+                borderRadius: 9999,
+                border: "1px solid #e2e8f0",
+                background: "#f8fafc",
+                color: "#334155",
+                fontSize: 12,
+                fontWeight: 500,
+                textDecoration: "none",
+                whiteSpace: "nowrap"
+              },
+              children: [
+                /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_fi6.FiExternalLink, { size: 12, style: { color: "#94a3b8" } }),
+                "View in Forge"
+              ]
+            }
+          ),
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+            "button",
+            {
+              type: "button",
+              onClick: onClose,
+              "aria-label": "Close",
+              style: {
+                padding: 4,
+                borderRadius: 6,
+                border: "none",
+                background: "transparent",
+                color: "#6b7280",
+                cursor: "pointer",
+                display: "inline-flex"
+              },
+              children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_fi6.FiX, { size: 18 })
+            }
+          )
+        ] })
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
         "div",

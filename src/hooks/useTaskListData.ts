@@ -24,6 +24,7 @@ export function useTaskListData() {
     deleteTask,
     updateTask,
     user,
+    appLinkStatus,
   } = useDevNotes();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -158,6 +159,7 @@ export function useTaskListData() {
     updateTask,
     deleteTask,
     user,
+    appLinkStatus,
     // visibility / derived data
     visibleReportIds,
     stats,

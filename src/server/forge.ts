@@ -771,9 +771,12 @@ function parseRequestPath(pathname: string, basePath: string): string[] | null {
 }
 
 function toProjectDiscovery(discovery: ForgeProjectDiscoveryResult): DevNotesAppLinkStatus['projectDiscovery'] {
+  const project = discovery.ok ? discovery.project : null;
   return {
     path: discovery.discoveryPath,
     baseUrl: discovery.resolvedBaseUrl,
+    projectId: project?.id ?? null,
+    organizationId: project?.organizationId ?? null,
   };
 }
 

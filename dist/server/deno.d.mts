@@ -1,4 +1,4 @@
-import { e as DevNotesServerOptions } from '../types-CN69T2nf.mjs';
+import { e as DevNotesServerOptions } from '../types-Dhm6E817.mjs';
 
 declare function createDenoDevNotesHandler(options: DevNotesServerOptions): (request: Request) => Promise<Response>;
 

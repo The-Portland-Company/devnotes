@@ -519,9 +519,12 @@ function parseRequestPath(pathname, basePath) {
   return pathname.slice(basePath.length + 1).split("/").filter(Boolean).map((segment) => decodeURIComponent(segment));
 }
 function toProjectDiscovery(discovery) {
+  const project = discovery.ok ? discovery.project : null;
   return {
     path: discovery.discoveryPath,
-    baseUrl: discovery.resolvedBaseUrl
+    baseUrl: discovery.resolvedBaseUrl,
+    projectId: project?.id ?? null,
+    organizationId: project?.organizationId ?? null
   };
 }
 function buildKnownUsers(metadataComments, reports, currentUser) {
