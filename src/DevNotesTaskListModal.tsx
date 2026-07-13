@@ -1,4 +1,11 @@
-import { useEffect, type CSSProperties } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
 import {
   FiSearch,
   FiExternalLink,
@@ -6,6 +13,8 @@ import {
   FiChevronUp,
   FiAlertTriangle,
   FiClock,
+  FiMinus,
+  FiSquare,
   FiX,
 } from 'react-icons/fi';
 import DevNotesForm from './DevNotesForm';
@@ -129,6 +138,81 @@ export default function DevNotesTaskListModal({
     return `${baseUrl.replace(/\/+$/, '')}/projects/${encodeURIComponent(projectId)}`;
   })();
 
+  // Window-style behavior: the modal panel has a title bar that can be dragged
+  // to reposition it, a minimize button that collapses it to just the bar, and
+  // a close (exit) button. `pos === null` means "centered" (default).
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const dragStateRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    originX: number;
+    originY: number;
+  } | null>(null);
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+  const [minimized, setMinimized] = useState(false);
+
+  const clampPos = useCallback((p: { x: number; y: number }) => {
+    if (typeof window === 'undefined') return p;
+    const w = panelRef.current?.offsetWidth ?? 0;
+    const h = panelRef.current?.offsetHeight ?? 0;
+    return {
+      x: Math.min(Math.max(p.x, 8), Math.max(8, window.innerWidth - w - 8)),
+      y: Math.min(Math.max(p.y, 8), Math.max(8, window.innerHeight - h - 8)),
+    };
+  }, []);
+
+  const onBarPointerDown = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+    if ((e.target as HTMLElement).closest('button, a')) return;
+    const rect = panelRef.current?.getBoundingClientRect();
+    dragStateRef.current = {
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      originX: rect?.left ?? 0,
+      originY: rect?.top ?? 0,
+    };
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      /* pointer may already be gone */
+    }
+    e.preventDefault();
+  }, []);
+
+  const onBarPointerMove = useCallback(
+    (e: ReactPointerEvent<HTMLDivElement>) => {
+      const st = dragStateRef.current;
+      if (!st || e.pointerId !== st.pointerId) return;
+      setPos(
+        clampPos({
+          x: st.originX + (e.clientX - st.startX),
+          y: st.originY + (e.clientY - st.startY),
+        })
+      );
+    },
+    [clampPos]
+  );
+
+  const onBarPointerEnd = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
+    const st = dragStateRef.current;
+    if (!st || e.pointerId !== st.pointerId) return;
+    try {
+      e.currentTarget.releasePointerCapture(st.pointerId);
+    } catch {
+      /* ignore */
+    }
+    dragStateRef.current = null;
+  }, []);
+
+  // Reset window state each time the modal is opened.
+  useEffect(() => {
+    if (open) {
+      setMinimized(false);
+    }
+  }, [open]);
+
   useEffect(() => {
     if (!open) return undefined;
     const onKeyDown = (e: KeyboardEvent) => {
@@ -209,10 +293,9 @@ export default function DevNotesTaskListModal({
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h2 style={{ fontSize: 18, fontWeight: 600, color: '#111827', margin: 0 }}>{title}</h2>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {/* Header (title + window controls live in the drag bar above) */}
+        {forgeProjectUrl && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
             {forgeProjectUrl && (
               <a
                 href={forgeProjectUrl}
@@ -238,24 +321,8 @@ export default function DevNotesTaskListModal({
                 View in Forge
               </a>
             )}
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Close"
-            style={{
-              padding: 4,
-              borderRadius: 6,
-              border: 'none',
-              background: 'transparent',
-              color: '#6b7280',
-              cursor: 'pointer',
-              display: 'inline-flex',
-            }}
-          >
-            <FiX size={18} />
-          </button>
           </div>
-        </div>
+        )}
 
         {/* Stats row */}
         <div
@@ -537,10 +604,83 @@ export default function DevNotesTaskListModal({
     );
   };
 
+  const windowButtonStyle: CSSProperties = {
+    padding: 6,
+    borderRadius: 6,
+    border: 'none',
+    background: 'transparent',
+    color: '#6b7280',
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+  };
+
+  const titleBar = (
+    <div
+      onPointerDown={onBarPointerDown}
+      onPointerMove={onBarPointerMove}
+      onPointerUp={onBarPointerEnd}
+      onPointerCancel={onBarPointerEnd}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 8,
+        padding: '10px 12px 10px 16px',
+        borderBottom: minimized ? 'none' : '1px solid #f3f4f6',
+        cursor: 'move',
+        userSelect: 'none',
+        touchAction: 'none',
+        background: '#f9fafb',
+        borderRadius: minimized ? 12 : '12px 12px 0 0',
+      }}
+    >
+      <h2 style={{ fontSize: 15, fontWeight: 600, color: '#111827', margin: 0, whiteSpace: 'nowrap' }}>
+        {title}
+      </h2>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <button
+          type="button"
+          onClick={() => setMinimized((v) => !v)}
+          aria-label={minimized ? 'Restore' : 'Minimize'}
+          title={minimized ? 'Restore' : 'Minimize'}
+          style={windowButtonStyle}
+        >
+          {minimized ? <FiSquare size={14} /> : <FiMinus size={16} />}
+        </button>
+        <button type="button" onClick={onClose} aria-label="Close" title="Close" style={windowButtonStyle}>
+          <FiX size={18} />
+        </button>
+      </div>
+    </div>
+  );
+
+  // Minimized: just the floating title bar (no backdrop, page stays interactive).
+  if (minimized) {
+    return (
+      <div
+        role="dialog"
+        style={{
+          position: 'fixed',
+          ...(pos ? { left: pos.x, top: pos.y } : { right: 16, bottom: 16 }),
+          zIndex: 9998,
+          width: 280,
+          borderRadius: 12,
+          background: '#ffffff',
+          boxShadow: '0 10px 25px -5px rgba(0,0,0,0.25)',
+          pointerEvents: 'auto',
+          overflow: 'hidden',
+        }}
+      >
+        {titleBar}
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
-        position: 'absolute',
+        position: 'fixed',
         inset: 0,
         zIndex: 9998,
         display: 'flex',
@@ -556,23 +696,28 @@ export default function DevNotesTaskListModal({
         onClick={() => (selectedReport ? setSelectedReport(null) : onClose())}
       />
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         style={{
-          position: 'relative',
-          width: '100%',
-          maxWidth: 1024,
+          ...(pos
+            ? { position: 'fixed', left: pos.x, top: pos.y, width: 'min(1024px, calc(100vw - 32px))' }
+            : { position: 'relative', width: '100%', maxWidth: 1024 }),
           maxHeight: 'calc(100vh - 32px)',
-          overflowY: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
           borderRadius: 12,
           background: '#ffffff',
-          padding: 24,
           boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
           boxSizing: 'border-box',
+          overflow: 'hidden',
         }}
       >
-        <DevNotesForgeBanner style={{ marginBottom: 16 }} />
-        {renderBody()}
+        {titleBar}
+        <div style={{ padding: 24, overflowY: 'auto' }}>
+          <DevNotesForgeBanner style={{ marginBottom: 16 }} />
+          {renderBody()}
+        </div>
       </div>
     </div>
   );
