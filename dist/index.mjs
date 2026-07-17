@@ -2071,7 +2071,7 @@ Dev Notes`,
           {
             ref: backdropRef,
             "aria-hidden": "true",
-            className: "pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words px-3 py-3 text-sm text-transparent",
+            className: "pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words px-3 py-3 font-sans text-sm leading-5 text-transparent",
             children: [
               renderComposeHighlight(newMessage),
               "\n"
@@ -2097,7 +2097,7 @@ Dev Notes`,
               }
             },
             rows: 4,
-            className: "relative block w-full resize-y rounded-xl border-0 bg-transparent px-3 py-3 text-sm text-slate-900 caret-slate-900 outline-none placeholder:text-slate-400"
+            className: "relative block w-full resize-y rounded-xl border-0 bg-transparent px-3 py-3 font-sans text-sm leading-5 text-slate-900 caret-slate-900 outline-none placeholder:text-slate-400"
           }
         ),
         mentionRange && (() => {
@@ -2714,7 +2714,7 @@ function formatAiFixPayloadForCopy(payload) {
 }
 
 // src/version.ts
-var DEVNOTES_VERSION = "0.6.8";
+var DEVNOTES_VERSION = "0.6.9";
 
 // src/internal/formState.ts
 function getInitialTaskStatus(existingStatus) {

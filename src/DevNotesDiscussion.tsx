@@ -685,7 +685,7 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
           <div
             ref={backdropRef}
             aria-hidden="true"
-            className="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words px-3 py-3 text-sm text-transparent"
+            className="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words px-3 py-3 font-sans text-sm leading-5 text-transparent"
           >
             {renderComposeHighlight(newMessage)}
             {/* trailing newline guard so the last line stays measurable */}
@@ -708,7 +708,7 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
               }
             }}
             rows={4}
-            className="relative block w-full resize-y rounded-xl border-0 bg-transparent px-3 py-3 text-sm text-slate-900 caret-slate-900 outline-none placeholder:text-slate-400"
+            className="relative block w-full resize-y rounded-xl border-0 bg-transparent px-3 py-3 font-sans text-sm leading-5 text-slate-900 caret-slate-900 outline-none placeholder:text-slate-400"
           />
           {mentionRange && (() => {
             const caret = mentionCaret ?? { top: 0, left: 0, height: 20 };
