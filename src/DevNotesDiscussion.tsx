@@ -106,6 +106,7 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
   const [editLoading, setEditLoading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const backdropRef = useRef<HTMLDivElement>(null);
   const [mentionRange, setMentionRange] = useState<{ start: number; end: number } | null>(null);
   const [mentionQuery, setMentionQuery] = useState('');
   const [mentionHighlight, setMentionHighlight] = useState(0);
@@ -512,6 +513,43 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
     return nodes;
   };
 
+  // Highlight overlay for the compose box: a textarea can't render styled
+  // pills inline, so we draw an aligned backdrop behind it that boxes each
+  // "@Full Name" mention token. Padding must stay symmetric/zero-width-safe so
+  // the backdrop stays character-aligned with the textarea text on top.
+  const renderComposeHighlight = (body: string) => {
+    if (!mentionLabels.length || !body.includes('@')) return body;
+    const nodes: React.ReactNode[] = [];
+    let buffer = '';
+    let i = 0;
+    while (i < body.length) {
+      if (body[i] === '@') {
+        const rest = body.slice(i + 1);
+        const match = mentionLabels.find((x) => rest.startsWith(x.label));
+        if (match) {
+          if (buffer) {
+            nodes.push(buffer);
+            buffer = '';
+          }
+          nodes.push(
+            <span
+              key={i}
+              className="rounded-[4px] bg-blue-100 ring-1 ring-blue-200"
+            >
+              {`@${match.label}`}
+            </span>
+          );
+          i += 1 + match.label.length;
+          continue;
+        }
+      }
+      buffer += body[i];
+      i++;
+    }
+    if (buffer) nodes.push(buffer);
+    return nodes;
+  };
+
   // Avatar initials helper
   const getInitials = (name: string) => {
     const parts = name.trim().split(/\s+/);
@@ -643,7 +681,16 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-        <div className="relative">
+        <div className="relative rounded-xl border border-slate-300 bg-slate-50 transition focus-within:border-slate-900 focus-within:ring-1 focus-within:ring-slate-900/20">
+          <div
+            ref={backdropRef}
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words px-3 py-3 text-sm text-transparent"
+          >
+            {renderComposeHighlight(newMessage)}
+            {/* trailing newline guard so the last line stays measurable */}
+            {'\n'}
+          </div>
           <textarea
             ref={textareaRef}
             placeholder="Add a reply or request more info..."
@@ -652,8 +699,16 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
             onKeyDown={handleTextareaKeyDown}
             onKeyUp={handleMentionCursorUpdate}
             onClick={handleMentionCursorUpdate}
+            onScroll={() => {
+              const ta = textareaRef.current;
+              const bd = backdropRef.current;
+              if (ta && bd) {
+                bd.scrollTop = ta.scrollTop;
+                bd.scrollLeft = ta.scrollLeft;
+              }
+            }}
             rows={4}
-            className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-900 focus:ring-1 focus:ring-slate-900/20"
+            className="relative block w-full resize-y rounded-xl border-0 bg-transparent px-3 py-3 text-sm text-slate-900 caret-slate-900 outline-none placeholder:text-slate-400"
           />
           {mentionRange && (() => {
             const caret = mentionCaret ?? { top: 0, left: 0, height: 20 };

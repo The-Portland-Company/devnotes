@@ -1564,6 +1564,7 @@ function DevNotesDiscussion({ report }) {
   const [editLoading, setEditLoading] = useState3(false);
   const [deletingId, setDeletingId] = useState3(null);
   const textareaRef = useRef3(null);
+  const backdropRef = useRef3(null);
   const [mentionRange, setMentionRange] = useState3(null);
   const [mentionQuery, setMentionQuery] = useState3("");
   const [mentionHighlight, setMentionHighlight] = useState3(0);
@@ -1926,6 +1927,40 @@ Dev Notes`,
     if (buffer) nodes.push(buffer);
     return nodes;
   };
+  const renderComposeHighlight = (body) => {
+    if (!mentionLabels.length || !body.includes("@")) return body;
+    const nodes = [];
+    let buffer = "";
+    let i = 0;
+    while (i < body.length) {
+      if (body[i] === "@") {
+        const rest = body.slice(i + 1);
+        const match = mentionLabels.find((x) => rest.startsWith(x.label));
+        if (match) {
+          if (buffer) {
+            nodes.push(buffer);
+            buffer = "";
+          }
+          nodes.push(
+            /* @__PURE__ */ jsx2(
+              "span",
+              {
+                className: "rounded-[4px] bg-blue-100 ring-1 ring-blue-200",
+                children: `@${match.label}`
+              },
+              i
+            )
+          );
+          i += 1 + match.label.length;
+          continue;
+        }
+      }
+      buffer += body[i];
+      i++;
+    }
+    if (buffer) nodes.push(buffer);
+    return nodes;
+  };
   const getInitials = (name) => {
     const parts = name.trim().split(/\s+/);
     if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
@@ -2030,7 +2065,19 @@ Dev Notes`,
       );
     }) }) }),
     /* @__PURE__ */ jsxs("div", { className: "rounded-2xl border border-slate-200 bg-white p-3 shadow-sm", children: [
-      /* @__PURE__ */ jsxs("div", { className: "relative", children: [
+      /* @__PURE__ */ jsxs("div", { className: "relative rounded-xl border border-slate-300 bg-slate-50 transition focus-within:border-slate-900 focus-within:ring-1 focus-within:ring-slate-900/20", children: [
+        /* @__PURE__ */ jsxs(
+          "div",
+          {
+            ref: backdropRef,
+            "aria-hidden": "true",
+            className: "pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words px-3 py-3 text-sm text-transparent",
+            children: [
+              renderComposeHighlight(newMessage),
+              "\n"
+            ]
+          }
+        ),
         /* @__PURE__ */ jsx2(
           "textarea",
           {
@@ -2041,8 +2088,16 @@ Dev Notes`,
             onKeyDown: handleTextareaKeyDown,
             onKeyUp: handleMentionCursorUpdate,
             onClick: handleMentionCursorUpdate,
+            onScroll: () => {
+              const ta = textareaRef.current;
+              const bd = backdropRef.current;
+              if (ta && bd) {
+                bd.scrollTop = ta.scrollTop;
+                bd.scrollLeft = ta.scrollLeft;
+              }
+            },
             rows: 4,
-            className: "w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-900 focus:ring-1 focus:ring-slate-900/20"
+            className: "relative block w-full resize-y rounded-xl border-0 bg-transparent px-3 py-3 text-sm text-slate-900 caret-slate-900 outline-none placeholder:text-slate-400"
           }
         ),
         mentionRange && (() => {
@@ -2659,7 +2714,7 @@ function formatAiFixPayloadForCopy(payload) {
 }
 
 // src/version.ts
-var DEVNOTES_VERSION = "0.6.7";
+var DEVNOTES_VERSION = "0.6.8";
 
 // src/internal/formState.ts
 function getInitialTaskStatus(existingStatus) {
