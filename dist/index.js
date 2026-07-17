@@ -1490,6 +1490,61 @@ var setCachedMessages = (reportId, messages) => {
     messageCache.delete(oldestKey);
   }
 };
+var CARET_MIRROR_PROPS = [
+  "boxSizing",
+  "width",
+  "paddingTop",
+  "paddingRight",
+  "paddingBottom",
+  "paddingLeft",
+  "borderTopWidth",
+  "borderRightWidth",
+  "borderBottomWidth",
+  "borderLeftWidth",
+  "fontStyle",
+  "fontVariant",
+  "fontWeight",
+  "fontStretch",
+  "fontSize",
+  "fontSizeAdjust",
+  "lineHeight",
+  "fontFamily",
+  "textAlign",
+  "textTransform",
+  "textIndent",
+  "letterSpacing",
+  "wordSpacing",
+  "tabSize",
+  "whiteSpace",
+  "wordWrap"
+];
+var getCaretCoordinates = (textarea, position) => {
+  const doc = textarea.ownerDocument;
+  const mirror = doc.createElement("div");
+  const style = mirror.style;
+  const computed = window.getComputedStyle(textarea);
+  style.position = "absolute";
+  style.visibility = "hidden";
+  style.whiteSpace = "pre-wrap";
+  style.wordWrap = "break-word";
+  style.overflow = "hidden";
+  CARET_MIRROR_PROPS.forEach((prop) => {
+    style.setProperty(
+      prop.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`),
+      computed.getPropertyValue(prop.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`))
+    );
+  });
+  mirror.textContent = textarea.value.slice(0, position);
+  const marker = doc.createElement("span");
+  marker.textContent = textarea.value.slice(position) || ".";
+  mirror.appendChild(marker);
+  doc.body.appendChild(mirror);
+  const top = marker.offsetTop - textarea.scrollTop;
+  const left = marker.offsetLeft - textarea.scrollLeft;
+  const height = parseInt(computed.lineHeight, 10) || marker.offsetHeight;
+  doc.body.removeChild(mirror);
+  return { top, left, height };
+};
 var detectActiveMention = (value, cursor) => {
   const slice = value.slice(0, cursor);
   const atIndex = slice.lastIndexOf("@");
@@ -1517,16 +1572,28 @@ function DevNotesDiscussion({ report }) {
   const [mentionRange, setMentionRange] = (0, import_react3.useState)(null);
   const [mentionQuery, setMentionQuery] = (0, import_react3.useState)("");
   const [mentionHighlight, setMentionHighlight] = (0, import_react3.useState)(0);
+  const [mentionCaret, setMentionCaret] = (0, import_react3.useState)(null);
+  const lastMentionQueryRef = (0, import_react3.useRef)(null);
   const updateMentionTracking = (0, import_react3.useCallback)((value, cursor) => {
     const mention = detectActiveMention(value, cursor);
     if (mention) {
+      const nextQuery = mention.query.toLowerCase();
       setMentionRange({ start: mention.start, end: mention.end });
-      setMentionQuery(mention.query.toLowerCase());
-      setMentionHighlight(0);
+      setMentionQuery(nextQuery);
+      if (lastMentionQueryRef.current !== nextQuery) {
+        setMentionHighlight(0);
+        lastMentionQueryRef.current = nextQuery;
+      }
+      const textarea = textareaRef.current;
+      if (textarea) {
+        setMentionCaret(getCaretCoordinates(textarea, mention.start));
+      }
     } else {
       setMentionRange(null);
       setMentionQuery("");
       setMentionHighlight(0);
+      setMentionCaret(null);
+      lastMentionQueryRef.current = null;
     }
   }, []);
   const mentionCandidates = (0, import_react3.useMemo)(() => {
@@ -1580,6 +1647,8 @@ function DevNotesDiscussion({ report }) {
     setMentionRange(null);
     setMentionQuery("");
     setMentionHighlight(0);
+    setMentionCaret(null);
+    lastMentionQueryRef.current = null;
     requestAnimationFrame(() => {
       const textarea = textareaRef.current;
       if (textarea) {
@@ -1699,6 +1768,8 @@ function DevNotesDiscussion({ report }) {
       setMentionRange(null);
       setMentionQuery("");
       setMentionHighlight(0);
+      setMentionCaret(null);
+      lastMentionQueryRef.current = null;
     }
   };
   const handleSendMessage = async () => {
@@ -1716,6 +1787,9 @@ function DevNotesDiscussion({ report }) {
       setNewMessage("");
       setMentionRange(null);
       setMentionQuery("");
+      setMentionHighlight(0);
+      setMentionCaret(null);
+      lastMentionQueryRef.current = null;
       if (onNotify) {
         try {
           const commenterName = data.author?.full_name || "Someone";
@@ -1813,6 +1887,50 @@ Dev Notes`,
       ] })
     ] }) });
   }
+  const mentionLabels = (0, import_react3.useMemo)(
+    () => mentionCandidates.map((c) => ({ collaborator: c, label: (c.full_name || c.email || "").trim() })).filter((x) => x.label).sort((a, b) => b.label.length - a.label.length),
+    [mentionCandidates]
+  );
+  const renderMessageBody = (body) => {
+    if (!mentionLabels.length || !body.includes("@")) return body;
+    const nodes = [];
+    let buffer = "";
+    let i = 0;
+    while (i < body.length) {
+      if (body[i] === "@") {
+        const rest = body.slice(i + 1);
+        const match = mentionLabels.find((x) => rest.startsWith(x.label));
+        if (match) {
+          if (buffer) {
+            nodes.push(buffer);
+            buffer = "";
+          }
+          const { full_name, email } = match.collaborator;
+          nodes.push(
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
+              "span",
+              {
+                title: email || void 0,
+                className: "mx-0.5 inline-flex items-center gap-1 rounded-md bg-blue-50 px-1.5 py-0.5 align-baseline text-xs font-medium text-blue-700",
+                children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_fi.FiAtSign, { size: 10, className: "shrink-0 text-blue-400" }),
+                  /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: full_name || email }),
+                  full_name && email && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "text-blue-400", children: email })
+                ]
+              },
+              i
+            )
+          );
+          i += 1 + match.label.length;
+          continue;
+        }
+      }
+      buffer += body[i];
+      i++;
+    }
+    if (buffer) nodes.push(buffer);
+    return nodes;
+  };
   const getInitials = (name) => {
     const parts = name.trim().split(/\s+/);
     if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
@@ -1910,7 +2028,7 @@ Dev Notes`,
                   }
                 )
               ] })
-            ] }) : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { className: "whitespace-pre-wrap text-sm text-slate-700", children: message.body })
+            ] }) : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { className: "whitespace-pre-wrap text-sm text-slate-700", children: renderMessageBody(message.body) })
           ]
         },
         message.id
@@ -1932,33 +2050,47 @@ Dev Notes`,
             className: "w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-900 focus:ring-1 focus:ring-slate-900/20"
           }
         ),
-        mentionRange && /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "absolute bottom-3 left-3 z-[2] min-w-[260px] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "flex items-center gap-2 border-b border-slate-100 px-3 py-2 text-xs font-medium text-slate-500", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_fi.FiAtSign, { size: 12 }),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: "Mentions" }),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "ml-auto", children: "Type to filter, Enter to select" })
-          ] }),
-          hasNoMentionResults ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "px-3 py-3", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("p", { className: "text-sm text-slate-500", children: [
-            'No collaborators match "',
-            mentionQuery,
-            '"'
-          ] }) }) : mentionOptions.map((collaborator, index) => /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
+        mentionRange && (() => {
+          const caret = mentionCaret ?? { top: 0, left: 0, height: 20 };
+          const textarea = textareaRef.current;
+          const fieldHeight = textarea?.clientHeight ?? 0;
+          const showAbove = fieldHeight > 0 && caret.top + caret.height + 200 > fieldHeight;
+          const posStyle = showAbove ? { left: caret.left, bottom: Math.max(fieldHeight - caret.top + 4, 0) } : { left: caret.left, top: caret.top + caret.height + 4 };
+          return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
             "div",
             {
-              className: `cursor-pointer px-3 py-2 transition hover:bg-slate-50 ${mentionHighlight === index ? "bg-slate-100" : ""}`,
-              onMouseDown: (e) => {
-                e.preventDefault();
-                insertMention(collaborator);
-                setMentionHighlight(index);
-              },
+              className: "absolute z-[2] max-h-[220px] min-w-[260px] max-w-[320px] overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg",
+              style: posStyle,
               children: [
-                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { className: "text-sm font-medium text-slate-900", children: collaborator.full_name || collaborator.email || "Unknown" }),
-                collaborator.email && collaborator.full_name && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { className: "text-xs text-slate-500", children: collaborator.email })
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "sticky top-0 flex items-center gap-2 border-b border-slate-100 bg-white px-3 py-2 text-xs font-medium text-slate-500", children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_fi.FiAtSign, { size: 12 }),
+                  /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: "Mentions" }),
+                  /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "ml-auto", children: "Type to filter, Enter to select" })
+                ] }),
+                hasNoMentionResults ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "px-3 py-3", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("p", { className: "text-sm text-slate-500", children: [
+                  'No collaborators match "',
+                  mentionQuery,
+                  '"'
+                ] }) }) : mentionOptions.map((collaborator, index) => /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
+                  "div",
+                  {
+                    className: `cursor-pointer px-3 py-2 transition hover:bg-slate-50 ${mentionHighlight === index ? "bg-slate-100" : ""}`,
+                    onMouseDown: (e) => {
+                      e.preventDefault();
+                      insertMention(collaborator);
+                      setMentionHighlight(index);
+                    },
+                    children: [
+                      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { className: "text-sm font-medium text-slate-900", children: collaborator.full_name || collaborator.email || "Unknown" }),
+                      collaborator.email && collaborator.full_name && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { className: "text-xs text-slate-500", children: collaborator.email })
+                    ]
+                  },
+                  collaborator.id
+                ))
               ]
-            },
-            collaborator.id
-          ))
-        ] })
+            }
+          );
+        })()
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "mt-2 flex flex-wrap items-center justify-between gap-3", children: [
         /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("span", { className: "inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-600", children: [
@@ -2532,7 +2664,7 @@ function formatAiFixPayloadForCopy(payload) {
 }
 
 // src/version.ts
-var DEVNOTES_VERSION = "0.6.5";
+var DEVNOTES_VERSION = "0.6.7";
 
 // src/internal/formState.ts
 function getInitialTaskStatus(existingStatus) {
@@ -2702,7 +2834,7 @@ var CONTROL_INPUT_CLASS = "w-full border-0 bg-transparent px-3 py-2 text-sm text
 var CONTROL_TEXTAREA_CLASS = "w-full resize-none border-0 bg-transparent px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-[height] duration-200";
 var SECTION_CARD_CLASS = "rounded-2xl border border-slate-200 bg-slate-50/80 p-4 shadow-sm shadow-slate-900/5";
 var ACTION_ICON_BUTTON_CLASS = "inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm shadow-slate-900/5 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50";
-var floatingLabelClass = (isSuperscript) => isSuperscript ? "absolute -top-2.5 left-3 z-[2] rounded-full border border-slate-200 bg-white px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 pointer-events-none" : "mb-2 block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500";
+var floatingLabelClass = (isSuperscript) => isSuperscript ? "absolute -top-3.5 left-3 z-[2] rounded-full border border-slate-200 bg-white px-1.5 py-0 text-[9px] leading-tight font-semibold uppercase tracking-[0.14em] text-slate-500 pointer-events-none" : "mb-2 block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500";
 function SearchableSingleSelect({
   label,
   options,
@@ -4406,6 +4538,63 @@ function DevNotesTaskListModal({
     if (!baseUrl || !projectId) return null;
     return `${baseUrl.replace(/\/+$/, "")}/projects/${encodeURIComponent(projectId)}`;
   })();
+  const panelRef = (0, import_react8.useRef)(null);
+  const dragStateRef = (0, import_react8.useRef)(null);
+  const [pos, setPos] = (0, import_react8.useState)(null);
+  const [minimized, setMinimized] = (0, import_react8.useState)(false);
+  const clampPos = (0, import_react8.useCallback)((p) => {
+    if (typeof window === "undefined") return p;
+    const w = panelRef.current?.offsetWidth ?? 0;
+    const h = panelRef.current?.offsetHeight ?? 0;
+    return {
+      x: Math.min(Math.max(p.x, 8), Math.max(8, window.innerWidth - w - 8)),
+      y: Math.min(Math.max(p.y, 8), Math.max(8, window.innerHeight - h - 8))
+    };
+  }, []);
+  const onBarPointerDown = (0, import_react8.useCallback)((e) => {
+    if (e.button !== 0) return;
+    if (e.target.closest("button, a")) return;
+    const rect = panelRef.current?.getBoundingClientRect();
+    dragStateRef.current = {
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      originX: rect?.left ?? 0,
+      originY: rect?.top ?? 0
+    };
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+    }
+    e.preventDefault();
+  }, []);
+  const onBarPointerMove = (0, import_react8.useCallback)(
+    (e) => {
+      const st = dragStateRef.current;
+      if (!st || e.pointerId !== st.pointerId) return;
+      setPos(
+        clampPos({
+          x: st.originX + (e.clientX - st.startX),
+          y: st.originY + (e.clientY - st.startY)
+        })
+      );
+    },
+    [clampPos]
+  );
+  const onBarPointerEnd = (0, import_react8.useCallback)((e) => {
+    const st = dragStateRef.current;
+    if (!st || e.pointerId !== st.pointerId) return;
+    try {
+      e.currentTarget.releasePointerCapture(st.pointerId);
+    } catch {
+    }
+    dragStateRef.current = null;
+  }, []);
+  (0, import_react8.useEffect)(() => {
+    if (open) {
+      setMinimized(false);
+    }
+  }, [open]);
   (0, import_react8.useEffect)(() => {
     if (!open) return void 0;
     const onKeyDown = (e) => {
@@ -4481,56 +4670,33 @@ function DevNotesTaskListModal({
       ) });
     }
     return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { style: { display: "flex", flexDirection: "column", gap: 16 }, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between" }, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("h2", { style: { fontSize: 18, fontWeight: 600, color: "#111827", margin: 0 }, children: title }),
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { style: { display: "flex", alignItems: "center", gap: 8 }, children: [
-          forgeProjectUrl && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
-            "a",
-            {
-              href: forgeProjectUrl,
-              target: "_blank",
-              rel: "noreferrer",
-              title: "Open project in Forge",
-              style: {
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "5px 10px",
-                borderRadius: 9999,
-                border: "1px solid #e2e8f0",
-                background: "#f8fafc",
-                color: "#334155",
-                fontSize: 12,
-                fontWeight: 500,
-                textDecoration: "none",
-                whiteSpace: "nowrap"
-              },
-              children: [
-                /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_fi6.FiExternalLink, { size: 12, style: { color: "#94a3b8" } }),
-                "View in Forge"
-              ]
-            }
-          ),
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
-            "button",
-            {
-              type: "button",
-              onClick: onClose,
-              "aria-label": "Close",
-              style: {
-                padding: 4,
-                borderRadius: 6,
-                border: "none",
-                background: "transparent",
-                color: "#6b7280",
-                cursor: "pointer",
-                display: "inline-flex"
-              },
-              children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_fi6.FiX, { size: 18 })
-            }
-          )
-        ] })
-      ] }),
+      forgeProjectUrl && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { style: { display: "flex", alignItems: "center", justifyContent: "flex-end" }, children: forgeProjectUrl && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
+        "a",
+        {
+          href: forgeProjectUrl,
+          target: "_blank",
+          rel: "noreferrer",
+          title: "Open project in Forge",
+          style: {
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "5px 10px",
+            borderRadius: 9999,
+            border: "1px solid #e2e8f0",
+            background: "#f8fafc",
+            color: "#334155",
+            fontSize: 12,
+            fontWeight: 500,
+            textDecoration: "none",
+            whiteSpace: "nowrap"
+          },
+          children: [
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_fi6.FiExternalLink, { size: 12, style: { color: "#94a3b8" } }),
+            "View in Forge"
+          ]
+        }
+      ) }),
       /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
         "div",
         {
@@ -4807,11 +4973,80 @@ function DevNotesTaskListModal({
       ] }) })
     ] });
   };
+  const windowButtonStyle = {
+    padding: 6,
+    borderRadius: 6,
+    border: "none",
+    background: "transparent",
+    color: "#6b7280",
+    cursor: "pointer",
+    display: "inline-flex",
+    alignItems: "center"
+  };
+  const titleBar = /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
+    "div",
+    {
+      onPointerDown: onBarPointerDown,
+      onPointerMove: onBarPointerMove,
+      onPointerUp: onBarPointerEnd,
+      onPointerCancel: onBarPointerEnd,
+      style: {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 8,
+        padding: "10px 12px 10px 16px",
+        borderBottom: minimized ? "none" : "1px solid #f3f4f6",
+        cursor: "move",
+        userSelect: "none",
+        touchAction: "none",
+        background: "#f9fafb",
+        borderRadius: minimized ? 12 : "12px 12px 0 0"
+      },
+      children: [
+        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("h2", { style: { fontSize: 15, fontWeight: 600, color: "#111827", margin: 0, whiteSpace: "nowrap" }, children: title }),
+        /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { style: { display: "flex", alignItems: "center", gap: 2 }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+            "button",
+            {
+              type: "button",
+              onClick: () => setMinimized((v) => !v),
+              "aria-label": minimized ? "Restore" : "Minimize",
+              title: minimized ? "Restore" : "Minimize",
+              style: windowButtonStyle,
+              children: minimized ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_fi6.FiSquare, { size: 14 }) : /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_fi6.FiMinus, { size: 16 })
+            }
+          ),
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("button", { type: "button", onClick: onClose, "aria-label": "Close", title: "Close", style: windowButtonStyle, children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_fi6.FiX, { size: 18 }) })
+        ] })
+      ]
+    }
+  );
+  if (minimized) {
+    return /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+      "div",
+      {
+        role: "dialog",
+        style: {
+          position: "fixed",
+          ...pos ? { left: pos.x, top: pos.y } : { right: 16, bottom: 16 },
+          zIndex: 9998,
+          width: 280,
+          borderRadius: 12,
+          background: "#ffffff",
+          boxShadow: "0 10px 25px -5px rgba(0,0,0,0.25)",
+          pointerEvents: "auto",
+          overflow: "hidden"
+        },
+        children: titleBar
+      }
+    );
+  }
   return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
     "div",
     {
       style: {
-        position: "absolute",
+        position: "fixed",
         inset: 0,
         zIndex: 9998,
         display: "flex",
@@ -4832,23 +5067,26 @@ function DevNotesTaskListModal({
         /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
           "div",
           {
+            ref: panelRef,
             role: "dialog",
             "aria-modal": "true",
             style: {
-              position: "relative",
-              width: "100%",
-              maxWidth: 1024,
+              ...pos ? { position: "fixed", left: pos.x, top: pos.y, width: "min(1024px, calc(100vw - 32px))" } : { position: "relative", width: "100%", maxWidth: 1024 },
               maxHeight: "calc(100vh - 32px)",
-              overflowY: "auto",
+              display: "flex",
+              flexDirection: "column",
               borderRadius: 12,
               background: "#ffffff",
-              padding: 24,
               boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
-              boxSizing: "border-box"
+              boxSizing: "border-box",
+              overflow: "hidden"
             },
             children: [
-              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(DevNotesForgeBanner, { style: { marginBottom: 16 } }),
-              renderBody()
+              titleBar,
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { style: { padding: 24, overflowY: "auto" }, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(DevNotesForgeBanner, { style: { marginBottom: 16 } }),
+                renderBody()
+              ] })
             ]
           }
         )

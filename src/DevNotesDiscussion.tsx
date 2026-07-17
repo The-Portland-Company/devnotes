@@ -33,6 +33,54 @@ const setCachedMessages = (reportId: string, messages: BugReportMessage[]) => {
   }
 };
 
+// Mirror-div technique: measure the pixel position of the caret inside a
+// textarea so the mention popup can be anchored to where the "@" was typed
+// instead of being pinned to the corner of the field.
+const CARET_MIRROR_PROPS = [
+  'boxSizing', 'width', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
+  'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth',
+  'fontStyle', 'fontVariant', 'fontWeight', 'fontStretch', 'fontSize', 'fontSizeAdjust',
+  'lineHeight', 'fontFamily', 'textAlign', 'textTransform', 'textIndent',
+  'letterSpacing', 'wordSpacing', 'tabSize', 'whiteSpace', 'wordWrap',
+] as const;
+
+const getCaretCoordinates = (
+  textarea: HTMLTextAreaElement,
+  position: number
+): { top: number; left: number; height: number } => {
+  const doc = textarea.ownerDocument;
+  const mirror = doc.createElement('div');
+  const style = mirror.style;
+  const computed = window.getComputedStyle(textarea);
+
+  style.position = 'absolute';
+  style.visibility = 'hidden';
+  style.whiteSpace = 'pre-wrap';
+  style.wordWrap = 'break-word';
+  style.overflow = 'hidden';
+
+  CARET_MIRROR_PROPS.forEach((prop) => {
+    style.setProperty(
+      prop.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`),
+      computed.getPropertyValue(prop.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`))
+    );
+  });
+
+  mirror.textContent = textarea.value.slice(0, position);
+  const marker = doc.createElement('span');
+  // Use a zero-width char so an empty tail still yields a measurable box.
+  marker.textContent = textarea.value.slice(position) || '.';
+  mirror.appendChild(marker);
+
+  doc.body.appendChild(mirror);
+  const top = marker.offsetTop - textarea.scrollTop;
+  const left = marker.offsetLeft - textarea.scrollLeft;
+  const height = parseInt(computed.lineHeight, 10) || marker.offsetHeight;
+  doc.body.removeChild(mirror);
+
+  return { top, left, height };
+};
+
 const detectActiveMention = (value: string, cursor: number) => {
   const slice = value.slice(0, cursor);
   const atIndex = slice.lastIndexOf('@');
@@ -61,17 +109,31 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
   const [mentionRange, setMentionRange] = useState<{ start: number; end: number } | null>(null);
   const [mentionQuery, setMentionQuery] = useState('');
   const [mentionHighlight, setMentionHighlight] = useState(0);
+  const [mentionCaret, setMentionCaret] = useState<{ top: number; left: number; height: number } | null>(null);
+  // Tracks the last query so cursor/keyup events that don't change the query
+  // (e.g. arrow navigation) don't stomp the highlighted index back to 0.
+  const lastMentionQueryRef = useRef<string | null>(null);
 
   const updateMentionTracking = useCallback((value: string, cursor: number) => {
     const mention = detectActiveMention(value, cursor);
     if (mention) {
+      const nextQuery = mention.query.toLowerCase();
       setMentionRange({ start: mention.start, end: mention.end });
-      setMentionQuery(mention.query.toLowerCase());
-      setMentionHighlight(0);
+      setMentionQuery(nextQuery);
+      if (lastMentionQueryRef.current !== nextQuery) {
+        setMentionHighlight(0);
+        lastMentionQueryRef.current = nextQuery;
+      }
+      const textarea = textareaRef.current;
+      if (textarea) {
+        setMentionCaret(getCaretCoordinates(textarea, mention.start));
+      }
     } else {
       setMentionRange(null);
       setMentionQuery('');
       setMentionHighlight(0);
+      setMentionCaret(null);
+      lastMentionQueryRef.current = null;
     }
   }, []);
 
@@ -130,6 +192,8 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
     setMentionRange(null);
     setMentionQuery('');
     setMentionHighlight(0);
+    setMentionCaret(null);
+    lastMentionQueryRef.current = null;
     requestAnimationFrame(() => {
       const textarea = textareaRef.current;
       if (textarea) {
@@ -266,6 +330,8 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
       setMentionRange(null);
       setMentionQuery('');
       setMentionHighlight(0);
+      setMentionCaret(null);
+      lastMentionQueryRef.current = null;
     }
   };
 
@@ -285,6 +351,9 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
       setNewMessage('');
       setMentionRange(null);
       setMentionQuery('');
+      setMentionHighlight(0);
+      setMentionCaret(null);
+      lastMentionQueryRef.current = null;
 
       // Fire notification callback
       if (onNotify) {
@@ -394,6 +463,54 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
       </div>
     );
   }
+
+  // Render a message body, turning "@Full Name" tokens that match a known
+  // collaborator into a styled badge showing their full name and email.
+  const mentionLabels = useMemo(
+    () =>
+      mentionCandidates
+        .map((c) => ({ collaborator: c, label: (c.full_name || c.email || '').trim() }))
+        .filter((x) => x.label)
+        .sort((a, b) => b.label.length - a.label.length),
+    [mentionCandidates]
+  );
+
+  const renderMessageBody = (body: string) => {
+    if (!mentionLabels.length || !body.includes('@')) return body;
+    const nodes: React.ReactNode[] = [];
+    let buffer = '';
+    let i = 0;
+    while (i < body.length) {
+      if (body[i] === '@') {
+        const rest = body.slice(i + 1);
+        const match = mentionLabels.find((x) => rest.startsWith(x.label));
+        if (match) {
+          if (buffer) {
+            nodes.push(buffer);
+            buffer = '';
+          }
+          const { full_name, email } = match.collaborator;
+          nodes.push(
+            <span
+              key={i}
+              title={email || undefined}
+              className="mx-0.5 inline-flex items-center gap-1 rounded-md bg-blue-50 px-1.5 py-0.5 align-baseline text-xs font-medium text-blue-700"
+            >
+              <FiAtSign size={10} className="shrink-0 text-blue-400" />
+              <span>{full_name || email}</span>
+              {full_name && email && <span className="text-blue-400">{email}</span>}
+            </span>
+          );
+          i += 1 + match.label.length;
+          continue;
+        }
+      }
+      buffer += body[i];
+      i++;
+    }
+    if (buffer) nodes.push(buffer);
+    return nodes;
+  };
 
   // Avatar initials helper
   const getInitials = (name: string) => {
@@ -516,7 +633,7 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
                       </div>
                     </div>
                   ) : (
-                    <p className="whitespace-pre-wrap text-sm text-slate-700">{message.body}</p>
+                    <p className="whitespace-pre-wrap text-sm text-slate-700">{renderMessageBody(message.body)}</p>
                   )}
                 </div>
               );
@@ -538,9 +655,21 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
             rows={4}
             className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-900 focus:ring-1 focus:ring-slate-900/20"
           />
-          {mentionRange && (
-            <div className="absolute bottom-3 left-3 z-[2] min-w-[260px] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
-              <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2 text-xs font-medium text-slate-500">
+          {mentionRange && (() => {
+            const caret = mentionCaret ?? { top: 0, left: 0, height: 20 };
+            const textarea = textareaRef.current;
+            const fieldHeight = textarea?.clientHeight ?? 0;
+            // Flip above the caret when there isn't room below inside the field.
+            const showAbove = fieldHeight > 0 && caret.top + caret.height + 200 > fieldHeight;
+            const posStyle: React.CSSProperties = showAbove
+              ? { left: caret.left, bottom: Math.max(fieldHeight - caret.top + 4, 0) }
+              : { left: caret.left, top: caret.top + caret.height + 4 };
+            return (
+            <div
+              className="absolute z-[2] max-h-[220px] min-w-[260px] max-w-[320px] overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg"
+              style={posStyle}
+            >
+              <div className="sticky top-0 flex items-center gap-2 border-b border-slate-100 bg-white px-3 py-2 text-xs font-medium text-slate-500">
                 <FiAtSign size={12} />
                 <span>Mentions</span>
                 <span className="ml-auto">Type to filter, Enter to select</span>
@@ -572,7 +701,8 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
                 ))
               )}
             </div>
-          )}
+            );
+          })()}
         </div>
         <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-600">

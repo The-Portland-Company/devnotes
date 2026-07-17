@@ -81,7 +81,7 @@ const ACTION_ICON_BUTTON_CLASS =
 
 const floatingLabelClass = (isSuperscript: boolean) =>
   isSuperscript
-    ? 'absolute -top-2.5 left-3 z-[2] rounded-full border border-slate-200 bg-white px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 pointer-events-none'
+    ? 'absolute -top-3.5 left-3 z-[2] rounded-full border border-slate-200 bg-white px-1.5 py-0 text-[9px] leading-tight font-semibold uppercase tracking-[0.14em] text-slate-500 pointer-events-none'
     : 'mb-2 block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500';
 
 function SearchableSingleSelect({

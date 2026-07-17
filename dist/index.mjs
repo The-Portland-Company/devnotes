@@ -1404,11 +1404,11 @@ function useDevNotes() {
 }
 
 // src/DevNotesButton.tsx
-import { useState as useState14 } from "react";
+import { useState as useState15 } from "react";
 import { createPortal as createPortal2 } from "react-dom";
 
 // src/DevNotesMenu.tsx
-import { useState as useState8, useEffect as useEffect8, useRef as useRef6 } from "react";
+import { useState as useState9, useEffect as useEffect8, useRef as useRef7 } from "react";
 import {
   FiAlertTriangle as FiAlertTriangle3,
   FiEye as FiEye2,
@@ -1419,12 +1419,17 @@ import {
   FiToggleLeft,
   FiToggleRight,
   FiVideo as FiVideo2,
-  FiSquare as FiSquare2,
+  FiSquare as FiSquare3,
   FiMapPin
 } from "react-icons/fi";
 
 // src/DevNotesTaskListModal.tsx
-import { useEffect as useEffect7 } from "react";
+import {
+  useCallback as useCallback5,
+  useEffect as useEffect7,
+  useRef as useRef6,
+  useState as useState8
+} from "react";
 import {
   FiSearch as FiSearch2,
   FiExternalLink as FiExternalLink2,
@@ -1432,6 +1437,8 @@ import {
   FiChevronUp,
   FiAlertTriangle as FiAlertTriangle2,
   FiClock as FiClock2,
+  FiMinus,
+  FiSquare as FiSquare2,
   FiX as FiX3
 } from "react-icons/fi";
 
@@ -1478,6 +1485,61 @@ var setCachedMessages = (reportId, messages) => {
     messageCache.delete(oldestKey);
   }
 };
+var CARET_MIRROR_PROPS = [
+  "boxSizing",
+  "width",
+  "paddingTop",
+  "paddingRight",
+  "paddingBottom",
+  "paddingLeft",
+  "borderTopWidth",
+  "borderRightWidth",
+  "borderBottomWidth",
+  "borderLeftWidth",
+  "fontStyle",
+  "fontVariant",
+  "fontWeight",
+  "fontStretch",
+  "fontSize",
+  "fontSizeAdjust",
+  "lineHeight",
+  "fontFamily",
+  "textAlign",
+  "textTransform",
+  "textIndent",
+  "letterSpacing",
+  "wordSpacing",
+  "tabSize",
+  "whiteSpace",
+  "wordWrap"
+];
+var getCaretCoordinates = (textarea, position) => {
+  const doc = textarea.ownerDocument;
+  const mirror = doc.createElement("div");
+  const style = mirror.style;
+  const computed = window.getComputedStyle(textarea);
+  style.position = "absolute";
+  style.visibility = "hidden";
+  style.whiteSpace = "pre-wrap";
+  style.wordWrap = "break-word";
+  style.overflow = "hidden";
+  CARET_MIRROR_PROPS.forEach((prop) => {
+    style.setProperty(
+      prop.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`),
+      computed.getPropertyValue(prop.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`))
+    );
+  });
+  mirror.textContent = textarea.value.slice(0, position);
+  const marker = doc.createElement("span");
+  marker.textContent = textarea.value.slice(position) || ".";
+  mirror.appendChild(marker);
+  doc.body.appendChild(mirror);
+  const top = marker.offsetTop - textarea.scrollTop;
+  const left = marker.offsetLeft - textarea.scrollLeft;
+  const height = parseInt(computed.lineHeight, 10) || marker.offsetHeight;
+  doc.body.removeChild(mirror);
+  return { top, left, height };
+};
 var detectActiveMention = (value, cursor) => {
   const slice = value.slice(0, cursor);
   const atIndex = slice.lastIndexOf("@");
@@ -1505,16 +1567,28 @@ function DevNotesDiscussion({ report }) {
   const [mentionRange, setMentionRange] = useState3(null);
   const [mentionQuery, setMentionQuery] = useState3("");
   const [mentionHighlight, setMentionHighlight] = useState3(0);
+  const [mentionCaret, setMentionCaret] = useState3(null);
+  const lastMentionQueryRef = useRef3(null);
   const updateMentionTracking = useCallback3((value, cursor) => {
     const mention = detectActiveMention(value, cursor);
     if (mention) {
+      const nextQuery = mention.query.toLowerCase();
       setMentionRange({ start: mention.start, end: mention.end });
-      setMentionQuery(mention.query.toLowerCase());
-      setMentionHighlight(0);
+      setMentionQuery(nextQuery);
+      if (lastMentionQueryRef.current !== nextQuery) {
+        setMentionHighlight(0);
+        lastMentionQueryRef.current = nextQuery;
+      }
+      const textarea = textareaRef.current;
+      if (textarea) {
+        setMentionCaret(getCaretCoordinates(textarea, mention.start));
+      }
     } else {
       setMentionRange(null);
       setMentionQuery("");
       setMentionHighlight(0);
+      setMentionCaret(null);
+      lastMentionQueryRef.current = null;
     }
   }, []);
   const mentionCandidates = useMemo2(() => {
@@ -1568,6 +1642,8 @@ function DevNotesDiscussion({ report }) {
     setMentionRange(null);
     setMentionQuery("");
     setMentionHighlight(0);
+    setMentionCaret(null);
+    lastMentionQueryRef.current = null;
     requestAnimationFrame(() => {
       const textarea = textareaRef.current;
       if (textarea) {
@@ -1687,6 +1763,8 @@ function DevNotesDiscussion({ report }) {
       setMentionRange(null);
       setMentionQuery("");
       setMentionHighlight(0);
+      setMentionCaret(null);
+      lastMentionQueryRef.current = null;
     }
   };
   const handleSendMessage = async () => {
@@ -1704,6 +1782,9 @@ function DevNotesDiscussion({ report }) {
       setNewMessage("");
       setMentionRange(null);
       setMentionQuery("");
+      setMentionHighlight(0);
+      setMentionCaret(null);
+      lastMentionQueryRef.current = null;
       if (onNotify) {
         try {
           const commenterName = data.author?.full_name || "Someone";
@@ -1801,6 +1882,50 @@ Dev Notes`,
       ] })
     ] }) });
   }
+  const mentionLabels = useMemo2(
+    () => mentionCandidates.map((c) => ({ collaborator: c, label: (c.full_name || c.email || "").trim() })).filter((x) => x.label).sort((a, b) => b.label.length - a.label.length),
+    [mentionCandidates]
+  );
+  const renderMessageBody = (body) => {
+    if (!mentionLabels.length || !body.includes("@")) return body;
+    const nodes = [];
+    let buffer = "";
+    let i = 0;
+    while (i < body.length) {
+      if (body[i] === "@") {
+        const rest = body.slice(i + 1);
+        const match = mentionLabels.find((x) => rest.startsWith(x.label));
+        if (match) {
+          if (buffer) {
+            nodes.push(buffer);
+            buffer = "";
+          }
+          const { full_name, email } = match.collaborator;
+          nodes.push(
+            /* @__PURE__ */ jsxs(
+              "span",
+              {
+                title: email || void 0,
+                className: "mx-0.5 inline-flex items-center gap-1 rounded-md bg-blue-50 px-1.5 py-0.5 align-baseline text-xs font-medium text-blue-700",
+                children: [
+                  /* @__PURE__ */ jsx2(FiAtSign, { size: 10, className: "shrink-0 text-blue-400" }),
+                  /* @__PURE__ */ jsx2("span", { children: full_name || email }),
+                  full_name && email && /* @__PURE__ */ jsx2("span", { className: "text-blue-400", children: email })
+                ]
+              },
+              i
+            )
+          );
+          i += 1 + match.label.length;
+          continue;
+        }
+      }
+      buffer += body[i];
+      i++;
+    }
+    if (buffer) nodes.push(buffer);
+    return nodes;
+  };
   const getInitials = (name) => {
     const parts = name.trim().split(/\s+/);
     if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
@@ -1898,7 +2023,7 @@ Dev Notes`,
                   }
                 )
               ] })
-            ] }) : /* @__PURE__ */ jsx2("p", { className: "whitespace-pre-wrap text-sm text-slate-700", children: message.body })
+            ] }) : /* @__PURE__ */ jsx2("p", { className: "whitespace-pre-wrap text-sm text-slate-700", children: renderMessageBody(message.body) })
           ]
         },
         message.id
@@ -1920,33 +2045,47 @@ Dev Notes`,
             className: "w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-900 focus:ring-1 focus:ring-slate-900/20"
           }
         ),
-        mentionRange && /* @__PURE__ */ jsxs("div", { className: "absolute bottom-3 left-3 z-[2] min-w-[260px] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg", children: [
-          /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2 border-b border-slate-100 px-3 py-2 text-xs font-medium text-slate-500", children: [
-            /* @__PURE__ */ jsx2(FiAtSign, { size: 12 }),
-            /* @__PURE__ */ jsx2("span", { children: "Mentions" }),
-            /* @__PURE__ */ jsx2("span", { className: "ml-auto", children: "Type to filter, Enter to select" })
-          ] }),
-          hasNoMentionResults ? /* @__PURE__ */ jsx2("div", { className: "px-3 py-3", children: /* @__PURE__ */ jsxs("p", { className: "text-sm text-slate-500", children: [
-            'No collaborators match "',
-            mentionQuery,
-            '"'
-          ] }) }) : mentionOptions.map((collaborator, index) => /* @__PURE__ */ jsxs(
+        mentionRange && (() => {
+          const caret = mentionCaret ?? { top: 0, left: 0, height: 20 };
+          const textarea = textareaRef.current;
+          const fieldHeight = textarea?.clientHeight ?? 0;
+          const showAbove = fieldHeight > 0 && caret.top + caret.height + 200 > fieldHeight;
+          const posStyle = showAbove ? { left: caret.left, bottom: Math.max(fieldHeight - caret.top + 4, 0) } : { left: caret.left, top: caret.top + caret.height + 4 };
+          return /* @__PURE__ */ jsxs(
             "div",
             {
-              className: `cursor-pointer px-3 py-2 transition hover:bg-slate-50 ${mentionHighlight === index ? "bg-slate-100" : ""}`,
-              onMouseDown: (e) => {
-                e.preventDefault();
-                insertMention(collaborator);
-                setMentionHighlight(index);
-              },
+              className: "absolute z-[2] max-h-[220px] min-w-[260px] max-w-[320px] overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg",
+              style: posStyle,
               children: [
-                /* @__PURE__ */ jsx2("p", { className: "text-sm font-medium text-slate-900", children: collaborator.full_name || collaborator.email || "Unknown" }),
-                collaborator.email && collaborator.full_name && /* @__PURE__ */ jsx2("p", { className: "text-xs text-slate-500", children: collaborator.email })
+                /* @__PURE__ */ jsxs("div", { className: "sticky top-0 flex items-center gap-2 border-b border-slate-100 bg-white px-3 py-2 text-xs font-medium text-slate-500", children: [
+                  /* @__PURE__ */ jsx2(FiAtSign, { size: 12 }),
+                  /* @__PURE__ */ jsx2("span", { children: "Mentions" }),
+                  /* @__PURE__ */ jsx2("span", { className: "ml-auto", children: "Type to filter, Enter to select" })
+                ] }),
+                hasNoMentionResults ? /* @__PURE__ */ jsx2("div", { className: "px-3 py-3", children: /* @__PURE__ */ jsxs("p", { className: "text-sm text-slate-500", children: [
+                  'No collaborators match "',
+                  mentionQuery,
+                  '"'
+                ] }) }) : mentionOptions.map((collaborator, index) => /* @__PURE__ */ jsxs(
+                  "div",
+                  {
+                    className: `cursor-pointer px-3 py-2 transition hover:bg-slate-50 ${mentionHighlight === index ? "bg-slate-100" : ""}`,
+                    onMouseDown: (e) => {
+                      e.preventDefault();
+                      insertMention(collaborator);
+                      setMentionHighlight(index);
+                    },
+                    children: [
+                      /* @__PURE__ */ jsx2("p", { className: "text-sm font-medium text-slate-900", children: collaborator.full_name || collaborator.email || "Unknown" }),
+                      collaborator.email && collaborator.full_name && /* @__PURE__ */ jsx2("p", { className: "text-xs text-slate-500", children: collaborator.email })
+                    ]
+                  },
+                  collaborator.id
+                ))
               ]
-            },
-            collaborator.id
-          ))
-        ] })
+            }
+          );
+        })()
       ] }),
       /* @__PURE__ */ jsxs("div", { className: "mt-2 flex flex-wrap items-center justify-between gap-3", children: [
         /* @__PURE__ */ jsxs("span", { className: "inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-600", children: [
@@ -2520,7 +2659,7 @@ function formatAiFixPayloadForCopy(payload) {
 }
 
 // src/version.ts
-var DEVNOTES_VERSION = "0.6.5";
+var DEVNOTES_VERSION = "0.6.7";
 
 // src/internal/formState.ts
 function getInitialTaskStatus(existingStatus) {
@@ -2690,7 +2829,7 @@ var CONTROL_INPUT_CLASS = "w-full border-0 bg-transparent px-3 py-2 text-sm text
 var CONTROL_TEXTAREA_CLASS = "w-full resize-none border-0 bg-transparent px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-[height] duration-200";
 var SECTION_CARD_CLASS = "rounded-2xl border border-slate-200 bg-slate-50/80 p-4 shadow-sm shadow-slate-900/5";
 var ACTION_ICON_BUTTON_CLASS = "inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm shadow-slate-900/5 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50";
-var floatingLabelClass = (isSuperscript) => isSuperscript ? "absolute -top-2.5 left-3 z-[2] rounded-full border border-slate-200 bg-white px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 pointer-events-none" : "mb-2 block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500";
+var floatingLabelClass = (isSuperscript) => isSuperscript ? "absolute -top-3.5 left-3 z-[2] rounded-full border border-slate-200 bg-white px-1.5 py-0 text-[9px] leading-tight font-semibold uppercase tracking-[0.14em] text-slate-500 pointer-events-none" : "mb-2 block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500";
 function SearchableSingleSelect({
   label,
   options,
@@ -4394,6 +4533,63 @@ function DevNotesTaskListModal({
     if (!baseUrl || !projectId) return null;
     return `${baseUrl.replace(/\/+$/, "")}/projects/${encodeURIComponent(projectId)}`;
   })();
+  const panelRef = useRef6(null);
+  const dragStateRef = useRef6(null);
+  const [pos, setPos] = useState8(null);
+  const [minimized, setMinimized] = useState8(false);
+  const clampPos = useCallback5((p) => {
+    if (typeof window === "undefined") return p;
+    const w = panelRef.current?.offsetWidth ?? 0;
+    const h = panelRef.current?.offsetHeight ?? 0;
+    return {
+      x: Math.min(Math.max(p.x, 8), Math.max(8, window.innerWidth - w - 8)),
+      y: Math.min(Math.max(p.y, 8), Math.max(8, window.innerHeight - h - 8))
+    };
+  }, []);
+  const onBarPointerDown = useCallback5((e) => {
+    if (e.button !== 0) return;
+    if (e.target.closest("button, a")) return;
+    const rect = panelRef.current?.getBoundingClientRect();
+    dragStateRef.current = {
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      originX: rect?.left ?? 0,
+      originY: rect?.top ?? 0
+    };
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+    }
+    e.preventDefault();
+  }, []);
+  const onBarPointerMove = useCallback5(
+    (e) => {
+      const st = dragStateRef.current;
+      if (!st || e.pointerId !== st.pointerId) return;
+      setPos(
+        clampPos({
+          x: st.originX + (e.clientX - st.startX),
+          y: st.originY + (e.clientY - st.startY)
+        })
+      );
+    },
+    [clampPos]
+  );
+  const onBarPointerEnd = useCallback5((e) => {
+    const st = dragStateRef.current;
+    if (!st || e.pointerId !== st.pointerId) return;
+    try {
+      e.currentTarget.releasePointerCapture(st.pointerId);
+    } catch {
+    }
+    dragStateRef.current = null;
+  }, []);
+  useEffect7(() => {
+    if (open) {
+      setMinimized(false);
+    }
+  }, [open]);
   useEffect7(() => {
     if (!open) return void 0;
     const onKeyDown = (e) => {
@@ -4469,56 +4665,33 @@ function DevNotesTaskListModal({
       ) });
     }
     return /* @__PURE__ */ jsxs6("div", { style: { display: "flex", flexDirection: "column", gap: 16 }, children: [
-      /* @__PURE__ */ jsxs6("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between" }, children: [
-        /* @__PURE__ */ jsx7("h2", { style: { fontSize: 18, fontWeight: 600, color: "#111827", margin: 0 }, children: title }),
-        /* @__PURE__ */ jsxs6("div", { style: { display: "flex", alignItems: "center", gap: 8 }, children: [
-          forgeProjectUrl && /* @__PURE__ */ jsxs6(
-            "a",
-            {
-              href: forgeProjectUrl,
-              target: "_blank",
-              rel: "noreferrer",
-              title: "Open project in Forge",
-              style: {
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "5px 10px",
-                borderRadius: 9999,
-                border: "1px solid #e2e8f0",
-                background: "#f8fafc",
-                color: "#334155",
-                fontSize: 12,
-                fontWeight: 500,
-                textDecoration: "none",
-                whiteSpace: "nowrap"
-              },
-              children: [
-                /* @__PURE__ */ jsx7(FiExternalLink2, { size: 12, style: { color: "#94a3b8" } }),
-                "View in Forge"
-              ]
-            }
-          ),
-          /* @__PURE__ */ jsx7(
-            "button",
-            {
-              type: "button",
-              onClick: onClose,
-              "aria-label": "Close",
-              style: {
-                padding: 4,
-                borderRadius: 6,
-                border: "none",
-                background: "transparent",
-                color: "#6b7280",
-                cursor: "pointer",
-                display: "inline-flex"
-              },
-              children: /* @__PURE__ */ jsx7(FiX3, { size: 18 })
-            }
-          )
-        ] })
-      ] }),
+      forgeProjectUrl && /* @__PURE__ */ jsx7("div", { style: { display: "flex", alignItems: "center", justifyContent: "flex-end" }, children: forgeProjectUrl && /* @__PURE__ */ jsxs6(
+        "a",
+        {
+          href: forgeProjectUrl,
+          target: "_blank",
+          rel: "noreferrer",
+          title: "Open project in Forge",
+          style: {
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "5px 10px",
+            borderRadius: 9999,
+            border: "1px solid #e2e8f0",
+            background: "#f8fafc",
+            color: "#334155",
+            fontSize: 12,
+            fontWeight: 500,
+            textDecoration: "none",
+            whiteSpace: "nowrap"
+          },
+          children: [
+            /* @__PURE__ */ jsx7(FiExternalLink2, { size: 12, style: { color: "#94a3b8" } }),
+            "View in Forge"
+          ]
+        }
+      ) }),
       /* @__PURE__ */ jsx7(
         "div",
         {
@@ -4795,11 +4968,80 @@ function DevNotesTaskListModal({
       ] }) })
     ] });
   };
+  const windowButtonStyle = {
+    padding: 6,
+    borderRadius: 6,
+    border: "none",
+    background: "transparent",
+    color: "#6b7280",
+    cursor: "pointer",
+    display: "inline-flex",
+    alignItems: "center"
+  };
+  const titleBar = /* @__PURE__ */ jsxs6(
+    "div",
+    {
+      onPointerDown: onBarPointerDown,
+      onPointerMove: onBarPointerMove,
+      onPointerUp: onBarPointerEnd,
+      onPointerCancel: onBarPointerEnd,
+      style: {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 8,
+        padding: "10px 12px 10px 16px",
+        borderBottom: minimized ? "none" : "1px solid #f3f4f6",
+        cursor: "move",
+        userSelect: "none",
+        touchAction: "none",
+        background: "#f9fafb",
+        borderRadius: minimized ? 12 : "12px 12px 0 0"
+      },
+      children: [
+        /* @__PURE__ */ jsx7("h2", { style: { fontSize: 15, fontWeight: 600, color: "#111827", margin: 0, whiteSpace: "nowrap" }, children: title }),
+        /* @__PURE__ */ jsxs6("div", { style: { display: "flex", alignItems: "center", gap: 2 }, children: [
+          /* @__PURE__ */ jsx7(
+            "button",
+            {
+              type: "button",
+              onClick: () => setMinimized((v) => !v),
+              "aria-label": minimized ? "Restore" : "Minimize",
+              title: minimized ? "Restore" : "Minimize",
+              style: windowButtonStyle,
+              children: minimized ? /* @__PURE__ */ jsx7(FiSquare2, { size: 14 }) : /* @__PURE__ */ jsx7(FiMinus, { size: 16 })
+            }
+          ),
+          /* @__PURE__ */ jsx7("button", { type: "button", onClick: onClose, "aria-label": "Close", title: "Close", style: windowButtonStyle, children: /* @__PURE__ */ jsx7(FiX3, { size: 18 }) })
+        ] })
+      ]
+    }
+  );
+  if (minimized) {
+    return /* @__PURE__ */ jsx7(
+      "div",
+      {
+        role: "dialog",
+        style: {
+          position: "fixed",
+          ...pos ? { left: pos.x, top: pos.y } : { right: 16, bottom: 16 },
+          zIndex: 9998,
+          width: 280,
+          borderRadius: 12,
+          background: "#ffffff",
+          boxShadow: "0 10px 25px -5px rgba(0,0,0,0.25)",
+          pointerEvents: "auto",
+          overflow: "hidden"
+        },
+        children: titleBar
+      }
+    );
+  }
   return /* @__PURE__ */ jsxs6(
     "div",
     {
       style: {
-        position: "absolute",
+        position: "fixed",
         inset: 0,
         zIndex: 9998,
         display: "flex",
@@ -4820,23 +5062,26 @@ function DevNotesTaskListModal({
         /* @__PURE__ */ jsxs6(
           "div",
           {
+            ref: panelRef,
             role: "dialog",
             "aria-modal": "true",
             style: {
-              position: "relative",
-              width: "100%",
-              maxWidth: 1024,
+              ...pos ? { position: "fixed", left: pos.x, top: pos.y, width: "min(1024px, calc(100vw - 32px))" } : { position: "relative", width: "100%", maxWidth: 1024 },
               maxHeight: "calc(100vh - 32px)",
-              overflowY: "auto",
+              display: "flex",
+              flexDirection: "column",
               borderRadius: 12,
               background: "#ffffff",
-              padding: 24,
               boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
-              boxSizing: "border-box"
+              boxSizing: "border-box",
+              overflow: "hidden"
             },
             children: [
-              /* @__PURE__ */ jsx7(DevNotesForgeBanner, { style: { marginBottom: 16 } }),
-              renderBody()
+              titleBar,
+              /* @__PURE__ */ jsxs6("div", { style: { padding: 24, overflowY: "auto" }, children: [
+                /* @__PURE__ */ jsx7(DevNotesForgeBanner, { style: { marginBottom: 16 } }),
+                renderBody()
+              ] })
             ]
           }
         )
@@ -4866,9 +5111,9 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
     forgeStatus
   } = useDevNotes();
   const forgeDisconnected = forgeStatus?.connected === false;
-  const [open, setOpen] = useState8(false);
-  const [showTaskModal, setShowTaskModal] = useState8(false);
-  const menuRef = useRef6(null);
+  const [open, setOpen] = useState9(false);
+  const [showTaskModal, setShowTaskModal] = useState9(false);
+  const menuRef = useRef7(null);
   useEffect8(() => {
     if (!open) return void 0;
     const handleClickOutside = (e) => {
@@ -5083,7 +5328,7 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                     },
                     className: "flex w-full items-center gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50",
                     children: /* @__PURE__ */ jsxs7("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
-                      isRecordingStory ? /* @__PURE__ */ jsx8(FiSquare2, { className: "text-red-600" }) : /* @__PURE__ */ jsx8(FiVideo2, { className: "text-blue-600" }),
+                      isRecordingStory ? /* @__PURE__ */ jsx8(FiSquare3, { className: "text-red-600" }) : /* @__PURE__ */ jsx8(FiVideo2, { className: "text-blue-600" }),
                       isRecordingStory ? "Stop Recording Test Case" : "Record User Story (Test Case)"
                     ] })
                   }
@@ -5181,16 +5426,16 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
 }
 
 // src/DevNotesOverlay.tsx
-import { useState as useState13, useCallback as useCallback7, useEffect as useEffect11, useRef as useRef8, useMemo as useMemo5 } from "react";
+import { useState as useState14, useCallback as useCallback8, useEffect as useEffect11, useRef as useRef9, useMemo as useMemo5 } from "react";
 import { createPortal } from "react-dom";
 import { FiCrosshair, FiMove as FiMove2 } from "react-icons/fi";
 
 // src/DevNotesDot.tsx
 import {
-  useState as useState10,
-  useCallback as useCallback6,
+  useState as useState11,
+  useCallback as useCallback7,
   useEffect as useEffect10,
-  useRef as useRef7
+  useRef as useRef8
 } from "react";
 import {
   FiAlertCircle as FiAlertCircle2,
@@ -5204,7 +5449,7 @@ import {
 } from "react-icons/fi";
 
 // src/hooks/useBugReportPosition.ts
-import { useState as useState9, useEffect as useEffect9, useCallback as useCallback5 } from "react";
+import { useState as useState10, useEffect as useEffect9, useCallback as useCallback6 } from "react";
 var subscribers = /* @__PURE__ */ new Set();
 var cleanupGlobalListeners = null;
 var rafId = null;
@@ -5259,11 +5504,11 @@ var subscribeToPositionUpdates = (subscriber) => {
   };
 };
 var useBugReportPosition = (report) => {
-  const calculate = useCallback5(() => {
+  const calculate = useCallback6(() => {
     if (!report) return null;
     return resolveBugReportCoordinates(report);
   }, [report]);
-  const [position, setPosition] = useState9(() => calculate());
+  const [position, setPosition] = useState10(() => calculate());
   useEffect9(() => {
     setPosition(calculate());
   }, [calculate]);
@@ -5312,27 +5557,27 @@ var resolveAttachedElementZIndex = (selector) => {
 };
 function DevNotesDot({ report }) {
   const { deleteTask, taskTypes, updateTask, compensate } = useDevNotes();
-  const [isFormOpen, setIsFormOpen] = useState10(false);
-  const [isDragging, setIsDragging] = useState10(false);
-  const [dragPosition, setDragPosition] = useState10(null);
-  const [pendingMove, setPendingMove] = useState10(null);
-  const [showTooltip, setShowTooltip] = useState10(false);
-  const dragStartRef = useRef7(null);
-  const didDragRef = useRef7(false);
-  const dotRef = useRef7(null);
+  const [isFormOpen, setIsFormOpen] = useState11(false);
+  const [isDragging, setIsDragging] = useState11(false);
+  const [dragPosition, setDragPosition] = useState11(null);
+  const [pendingMove, setPendingMove] = useState11(null);
+  const [showTooltip, setShowTooltip] = useState11(false);
+  const dragStartRef = useRef8(null);
+  const didDragRef = useRef8(false);
+  const dotRef = useRef8(null);
   const handleDelete = async () => {
     const success = await deleteTask(report.id);
     if (success) {
       setIsFormOpen(false);
     }
   };
-  const getTypeNames = useCallback6(() => {
+  const getTypeNames = useCallback7(() => {
     return report.types.map((typeId) => {
       const type = taskTypes.find((t) => t.id === typeId);
       return type?.name || "Unknown";
     }).join(", ");
   }, [report.types, taskTypes]);
-  const persistPosition = useCallback6(
+  const persistPosition = useCallback7(
     async (clientX, clientY) => {
       const payload = calculateBugPositionFromPoint({
         clientX,
@@ -5352,7 +5597,7 @@ function DevNotesDot({ report }) {
   );
   const anchoredPosition = useBugReportPosition(report);
   const resolvedPosition = anchoredPosition ?? resolveBugReportCoordinates(report);
-  const handleDragStart = useCallback6(
+  const handleDragStart = useCallback7(
     (event) => {
       event.preventDefault();
       event.stopPropagation();
@@ -5371,7 +5616,7 @@ function DevNotesDot({ report }) {
     },
     [dragPosition, resolvedPosition]
   );
-  const handleDragMove = useCallback6(
+  const handleDragMove = useCallback7(
     (event) => {
       if (!isDragging || !dragStartRef.current) return;
       const deltaX = event.clientX - dragStartRef.current.x;
@@ -5386,7 +5631,7 @@ function DevNotesDot({ report }) {
     },
     [isDragging]
   );
-  const handleDragEnd = useCallback6(
+  const handleDragEnd = useCallback7(
     (event) => {
       if (!isDragging || !dragStartRef.current) return;
       const hasMoved = dragStartRef.current.hasMoved;
@@ -5404,13 +5649,13 @@ function DevNotesDot({ report }) {
     },
     [isDragging, pendingMove]
   );
-  const confirmMove = useCallback6(async () => {
+  const confirmMove = useCallback7(async () => {
     if (!pendingMove) return;
     await persistPosition(pendingMove.clientX, pendingMove.clientY);
     setPendingMove(null);
     setDragPosition(null);
   }, [pendingMove, persistPosition]);
-  const cancelMove = useCallback6(() => {
+  const cancelMove = useCallback7(() => {
     setPendingMove(null);
     setDragPosition(null);
   }, []);
@@ -5561,7 +5806,7 @@ function DevNotesDot({ report }) {
 }
 
 // src/DevNotesStepDot.tsx
-import { useState as useState11 } from "react";
+import { useState as useState12 } from "react";
 import { jsx as jsx10, jsxs as jsxs9 } from "react/jsx-runtime";
 function stepColor(index) {
   const lightness = Math.min(42 + (index - 1) * 7, 74);
@@ -5585,7 +5830,7 @@ function resolvePosition(dot) {
 }
 function DevNotesStepDot({ dot }) {
   const { compensate } = useDevNotes();
-  const [showTooltip, setShowTooltip] = useState11(false);
+  const [showTooltip, setShowTooltip] = useState12(false);
   const position = resolvePosition(dot);
   if (!position) return null;
   const compensated = compensate(position.x, position.y);
@@ -5635,10 +5880,10 @@ function DevNotesStepDot({ dot }) {
 }
 
 // src/DevNotesStoryRecorder.tsx
-import { useState as useState12 } from "react";
+import { useState as useState13 } from "react";
 import {
   FiVideo as FiVideo3,
-  FiSquare as FiSquare3,
+  FiSquare as FiSquare4,
   FiX as FiX5,
   FiTrash2 as FiTrash24,
   FiChevronUp as FiChevronUp2,
@@ -5660,9 +5905,9 @@ function DevNotesStoryRecorder() {
     moveRecordedStep,
     saveUserStory
   } = useDevNotes();
-  const [title, setTitle] = useState12("");
-  const [testUrl, setTestUrl] = useState12("");
-  const [description, setDescription] = useState12("");
+  const [title, setTitle] = useState13("");
+  const [testUrl, setTestUrl] = useState13("");
+  const [description, setDescription] = useState13("");
   if (!canRecordUserStory) return null;
   const reviewing = !isRecordingStory && recordedSteps.length > 0;
   const handleSave = async () => {
@@ -5714,7 +5959,7 @@ function DevNotesStoryRecorder() {
               onClick: stopUserStoryRecording,
               className: "inline-flex items-center gap-1 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold transition hover:bg-white/30",
               children: [
-                /* @__PURE__ */ jsx11(FiSquare3, { size: 12 }),
+                /* @__PURE__ */ jsx11(FiSquare4, { size: 12 }),
                 " Stop & Review"
               ]
             }
@@ -5942,14 +6187,14 @@ function DevNotesOverlay({
     showStepDots,
     currentPageStepDots
   } = useDevNotes();
-  const [pendingDot, setPendingDot] = useState13(null);
-  const [showPendingForm, setShowPendingForm] = useState13(false);
-  const [openedReport, setOpenedReport] = useState13(null);
-  const pendingDotRef = useRef8(null);
-  const [isDragging, setIsDragging] = useState13(false);
-  const dragStartRef = useRef8(null);
-  const didDragRef = useRef8(false);
-  const justEnabledRef = useRef8(false);
+  const [pendingDot, setPendingDot] = useState14(null);
+  const [showPendingForm, setShowPendingForm] = useState14(false);
+  const [openedReport, setOpenedReport] = useState14(null);
+  const pendingDotRef = useRef9(null);
+  const [isDragging, setIsDragging] = useState14(false);
+  const dragStartRef = useRef9(null);
+  const didDragRef = useRef9(false);
+  const justEnabledRef = useRef9(false);
   useEffect11(() => {
     if (isEnabled) {
       justEnabledRef.current = true;
@@ -5993,18 +6238,18 @@ function DevNotesOverlay({
     }
     return void 0;
   }, [isEnabled, showPendingForm]);
-  const handleCloseOpenedReport = useCallback7(() => {
+  const handleCloseOpenedReport = useCallback8(() => {
     setOpenedReport(null);
     onOpenReportClose?.();
   }, [onOpenReportClose]);
-  const handleDeleteOpenedReport = useCallback7(async () => {
+  const handleDeleteOpenedReport = useCallback8(async () => {
     if (openedReport) {
       await deleteTask(openedReport.id);
       setOpenedReport(null);
       onOpenReportClose?.();
     }
   }, [openedReport, deleteTask, onOpenReportClose]);
-  const handleArchiveOpenedReport = useCallback7(async () => {
+  const handleArchiveOpenedReport = useCallback8(async () => {
     if (!openedReport) return;
     const archived = await updateTask(openedReport.id, {
       status: "Closed",
@@ -6032,15 +6277,15 @@ function DevNotesOverlay({
     document.addEventListener("click", handleDocumentClick);
     return () => document.removeEventListener("click", handleDocumentClick);
   }, [isEnabled, showPendingForm]);
-  const handleSave = useCallback7((_report) => {
+  const handleSave = useCallback8((_report) => {
     setPendingDot(null);
     setShowPendingForm(false);
   }, []);
-  const handleCancel = useCallback7(() => {
+  const handleCancel = useCallback8(() => {
     setPendingDot(null);
     setShowPendingForm(false);
   }, []);
-  const handlePendingDotClick = useCallback7((e) => {
+  const handlePendingDotClick = useCallback8((e) => {
     e.stopPropagation();
     if (didDragRef.current) {
       didDragRef.current = false;
@@ -6049,7 +6294,7 @@ function DevNotesOverlay({
     setIsDragging(false);
     setShowPendingForm(true);
   }, []);
-  const handleDragStart = useCallback7(
+  const handleDragStart = useCallback8(
     (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -6065,7 +6310,7 @@ function DevNotesOverlay({
     },
     [pendingDot]
   );
-  const handleDragMove = useCallback7(
+  const handleDragMove = useCallback8(
     (e) => {
       if (!isDragging || !dragStartRef.current || !pendingDot) return;
       const deltaX = e.clientX - dragStartRef.current.x;
@@ -6083,7 +6328,7 @@ function DevNotesOverlay({
     },
     [isDragging, pendingDot]
   );
-  const handleDragEnd = useCallback7((event) => {
+  const handleDragEnd = useCallback8((event) => {
     setIsDragging(false);
     dragStartRef.current = null;
     if (event && didDragRef.current) {
@@ -6264,8 +6509,8 @@ function DevNotesButton({
   onNavigateToPage
 }) {
   const { dotContainer, role } = useDevNotes();
-  const [showTaskPanel, setShowTaskPanel] = useState14(false);
-  const [taskPanelTitle, setTaskPanelTitle] = useState14("All Tasks");
+  const [showTaskPanel, setShowTaskPanel] = useState15(false);
+  const [taskPanelTitle, setTaskPanelTitle] = useState15("All Tasks");
   if (role === "none") return null;
   const openBuiltInTaskPanel = (title) => {
     setTaskPanelTitle(title);
