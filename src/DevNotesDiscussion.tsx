@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { FiAtSign, FiEdit2, FiMessageSquare, FiSend, FiTrash2 } from 'react-icons/fi';
+import { FiAtSign, FiEdit2, FiMessageSquare, FiSend, FiStar, FiTrash2 } from 'react-icons/fi';
 import { useDevNotes } from './DevNotesProvider';
 import type { BugReport, BugReportMessage, BugReportCreator } from './types';
 
@@ -38,6 +38,7 @@ const setCachedMessages = (reportId: string, messages: BugReportMessage[]) => {
 // pill badges (identical styling to posted comments) rather than a highlight
 // overlay behind a textarea, which never reads as a true badge.
 const MENTION_ATTR = 'data-dn-mention';
+const MENTION_FAVORITES_KEY = 'devnotes:mention-favorites';
 
 // Flatten the editor DOM back to the plain-text value we submit. Mention chips
 // serialize to "@Full Name"; <br> and block <div> boundaries become newlines.
@@ -108,6 +109,35 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
   // Tracks the last query so cursor/keyup events that don't change the query
   // (e.g. arrow navigation) don't stomp the highlighted index back to 0.
   const lastMentionQueryRef = useRef<string | null>(null);
+  // DOM nodes for each mention option, so arrow-key navigation can scroll the
+  // highlighted row into view instead of it being clipped at the list edge.
+  const optionRefs = useRef<Array<HTMLDivElement | null>>([]);
+  // Favorited collaborators (persisted) surface first in the mention list.
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(() => {
+    try {
+      const raw = typeof window !== 'undefined' && window.localStorage.getItem(MENTION_FAVORITES_KEY);
+      return new Set(raw ? (JSON.parse(raw) as string[]) : []);
+    } catch {
+      return new Set();
+    }
+  });
+  const toggleFavorite = useCallback((id: string) => {
+    if (!id) return;
+    setFavoriteIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      try {
+        window.localStorage.setItem(MENTION_FAVORITES_KEY, JSON.stringify(Array.from(next)));
+      } catch {
+        /* ignore persistence failures */
+      }
+      return next;
+    });
+  }, []);
+  // "CC/BCC myself" — when on, the sender is added as a recipient of the
+  // comment notification so they can confirm it was actually delivered.
+  const [copySelf, setCopySelf] = useState(false);
 
   const closeMention = useCallback(() => {
     mentionInfoRef.current = null;
@@ -172,12 +202,19 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
   const mentionOptions = useMemo(() => {
     if (!mentionRange) return [];
     const query = mentionQuery.trim();
-    if (!query) return mentionCandidates;
-    return mentionCandidates.filter((c) => {
-      const label = (c.full_name || c.email || '').toLowerCase();
-      return label.includes(query);
+    const base = !query
+      ? mentionCandidates
+      : mentionCandidates.filter((c) => {
+          const label = (c.full_name || c.email || '').toLowerCase();
+          return label.includes(query);
+        });
+    // Favorites first (stable within each group, preserving alpha order).
+    return [...base].sort((a, b) => {
+      const af = favoriteIds.has(a.id || '') ? 0 : 1;
+      const bf = favoriteIds.has(b.id || '') ? 0 : 1;
+      return af - bf;
     });
-  }, [mentionCandidates, mentionQuery, mentionRange]);
+  }, [mentionCandidates, mentionQuery, mentionRange, favoriteIds]);
 
   const hasNoMentionResults = Boolean(mentionRange && mentionOptions.length === 0);
 
@@ -191,6 +228,14 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
       return Math.min(prev, mentionOptions.length - 1);
     });
   }, [mentionOptions, mentionRange]);
+
+  // Keep the highlighted mention row scrolled into view during arrow-key nav so
+  // the selection is never clipped at the top or bottom of the scroll area.
+  useEffect(() => {
+    if (!mentionRange) return;
+    const el = optionRefs.current[mentionHighlight];
+    if (el) el.scrollIntoView({ block: 'nearest' });
+  }, [mentionHighlight, mentionRange, mentionOptions]);
 
   const buildMentionChip = (collaborator: BugReportCreator, doc: Document): HTMLElement => {
     const label = collaborator.full_name || collaborator.email || 'User';
@@ -405,6 +450,13 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
             if (msg.author_id !== user.id && msg.author?.email) {
               recipientEmails.add(msg.author.email);
             }
+          }
+
+          // CC/BCC self: deliver a copy to the sender so they can confirm the
+          // comment notification actually went out to the mentioned recipients.
+          const selfEmail = user.email || data.author?.email || null;
+          if (copySelf && selfEmail) {
+            recipientEmails.add(selfEmail);
           }
 
           for (const email of recipientEmails) {
@@ -718,10 +770,15 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
                   <p className="text-sm text-slate-500">No collaborators match "{mentionQuery}"</p>
                 </div>
               ) : (
-                mentionOptions.map((collaborator, index) => (
+                mentionOptions.map((collaborator, index) => {
+                  const isFav = favoriteIds.has(collaborator.id || '');
+                  return (
                   <div
                     key={collaborator.id}
-                    className={`cursor-pointer px-3 py-2 transition hover:bg-slate-50 ${
+                    ref={(el) => {
+                      optionRefs.current[index] = el;
+                    }}
+                    className={`flex cursor-pointer items-center gap-2 px-3 py-2 transition hover:bg-slate-50 ${
                       mentionHighlight === index ? 'bg-slate-100' : ''
                     }`}
                     onMouseDown={(e) => {
@@ -730,14 +787,32 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
                       setMentionHighlight(index);
                     }}
                   >
-                    <p className="text-sm font-medium text-slate-900">
-                      {collaborator.full_name || collaborator.email || 'Unknown'}
-                    </p>
-                    {collaborator.email && collaborator.full_name && (
-                      <p className="text-xs text-slate-500">{collaborator.email}</p>
-                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-slate-900">
+                        {collaborator.full_name || collaborator.email || 'Unknown'}
+                      </p>
+                      {collaborator.email && collaborator.full_name && (
+                        <p className="truncate text-xs text-slate-500">{collaborator.email}</p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      className={`shrink-0 rounded-md p-1 transition hover:bg-slate-200 ${
+                        isFav ? 'text-amber-500' : 'text-slate-300 hover:text-slate-500'
+                      }`}
+                      aria-label={isFav ? 'Unfavorite teammate' : 'Favorite teammate'}
+                      title={isFav ? 'Unfavorite (stops surfacing first)' : 'Favorite (surfaces first next time)'}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        toggleFavorite(collaborator.id || '');
+                      }}
+                    >
+                      <FiStar size={14} fill={isFav ? 'currentColor' : 'none'} />
+                    </button>
                   </div>
-                ))
+                  );
+                })
               )}
             </div>
             );
@@ -751,16 +826,30 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
               <span className="font-semibold">@</span> to mention a teammate.
             </span>
           </span>
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:opacity-50"
-            onClick={handleSendMessage}
-            disabled={!newMessage.trim() || sending}
-            title="Send note"
-          >
-            <FiSend size={14} />
-            <span>{sending ? 'Sending...' : 'Send'}</span>
-          </button>
+          <div className="flex items-center gap-3">
+            <label
+              className="inline-flex cursor-pointer select-none items-center gap-1.5 text-xs text-slate-600"
+              title="Send yourself a copy of the notification so you can confirm it was delivered"
+            >
+              <input
+                type="checkbox"
+                className="h-3.5 w-3.5 rounded border-slate-300 text-slate-900 focus:ring-slate-900/20"
+                checked={copySelf}
+                onChange={(e) => setCopySelf(e.target.checked)}
+              />
+              <span>CC/BCC me</span>
+            </label>
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:opacity-50"
+              onClick={handleSendMessage}
+              disabled={!newMessage.trim() || sending}
+              title="Send note"
+            >
+              <FiSend size={14} />
+              <span>{sending ? 'Sending...' : 'Send'}</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

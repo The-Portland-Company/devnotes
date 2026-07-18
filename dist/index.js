@@ -1491,6 +1491,7 @@ var setCachedMessages = (reportId, messages) => {
   }
 };
 var MENTION_ATTR = "data-dn-mention";
+var MENTION_FAVORITES_KEY = "devnotes:mention-favorites";
 var getEditorText = (root) => {
   let out = "";
   const nl = () => {
@@ -1549,6 +1550,29 @@ function DevNotesDiscussion({ report }) {
   const [mentionHighlight, setMentionHighlight] = (0, import_react3.useState)(0);
   const [mentionCaret, setMentionCaret] = (0, import_react3.useState)(null);
   const lastMentionQueryRef = (0, import_react3.useRef)(null);
+  const optionRefs = (0, import_react3.useRef)([]);
+  const [favoriteIds, setFavoriteIds] = (0, import_react3.useState)(() => {
+    try {
+      const raw = typeof window !== "undefined" && window.localStorage.getItem(MENTION_FAVORITES_KEY);
+      return new Set(raw ? JSON.parse(raw) : []);
+    } catch {
+      return /* @__PURE__ */ new Set();
+    }
+  });
+  const toggleFavorite = (0, import_react3.useCallback)((id) => {
+    if (!id) return;
+    setFavoriteIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      try {
+        window.localStorage.setItem(MENTION_FAVORITES_KEY, JSON.stringify(Array.from(next)));
+      } catch {
+      }
+      return next;
+    });
+  }, []);
+  const [copySelf, setCopySelf] = (0, import_react3.useState)(false);
   const closeMention = (0, import_react3.useCallback)(() => {
     mentionInfoRef.current = null;
     setMentionRange(null);
@@ -1607,12 +1631,16 @@ function DevNotesDiscussion({ report }) {
   const mentionOptions = (0, import_react3.useMemo)(() => {
     if (!mentionRange) return [];
     const query = mentionQuery.trim();
-    if (!query) return mentionCandidates;
-    return mentionCandidates.filter((c) => {
+    const base = !query ? mentionCandidates : mentionCandidates.filter((c) => {
       const label = (c.full_name || c.email || "").toLowerCase();
       return label.includes(query);
     });
-  }, [mentionCandidates, mentionQuery, mentionRange]);
+    return [...base].sort((a, b) => {
+      const af = favoriteIds.has(a.id || "") ? 0 : 1;
+      const bf = favoriteIds.has(b.id || "") ? 0 : 1;
+      return af - bf;
+    });
+  }, [mentionCandidates, mentionQuery, mentionRange, favoriteIds]);
   const hasNoMentionResults = Boolean(mentionRange && mentionOptions.length === 0);
   (0, import_react3.useEffect)(() => {
     if (!mentionRange) {
@@ -1624,6 +1652,11 @@ function DevNotesDiscussion({ report }) {
       return Math.min(prev, mentionOptions.length - 1);
     });
   }, [mentionOptions, mentionRange]);
+  (0, import_react3.useEffect)(() => {
+    if (!mentionRange) return;
+    const el = optionRefs.current[mentionHighlight];
+    if (el) el.scrollIntoView({ block: "nearest" });
+  }, [mentionHighlight, mentionRange, mentionOptions]);
   const buildMentionChip = (collaborator, doc) => {
     const label = collaborator.full_name || collaborator.email || "User";
     const chip = doc.createElement("span");
@@ -1808,6 +1841,10 @@ function DevNotesDiscussion({ report }) {
             if (msg.author_id !== user.id && msg.author?.email) {
               recipientEmails.add(msg.author.email);
             }
+          }
+          const selfEmail = user.email || data.author?.email || null;
+          if (copySelf && selfEmail) {
+            recipientEmails.add(selfEmail);
           }
           for (const email of recipientEmails) {
             onNotify({
@@ -2078,22 +2115,45 @@ Dev Notes`,
                   'No collaborators match "',
                   mentionQuery,
                   '"'
-                ] }) }) : mentionOptions.map((collaborator, index) => /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
-                  "div",
-                  {
-                    className: `cursor-pointer px-3 py-2 transition hover:bg-slate-50 ${mentionHighlight === index ? "bg-slate-100" : ""}`,
-                    onMouseDown: (e) => {
-                      e.preventDefault();
-                      insertMention(collaborator);
-                      setMentionHighlight(index);
+                ] }) }) : mentionOptions.map((collaborator, index) => {
+                  const isFav = favoriteIds.has(collaborator.id || "");
+                  return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
+                    "div",
+                    {
+                      ref: (el) => {
+                        optionRefs.current[index] = el;
+                      },
+                      className: `flex cursor-pointer items-center gap-2 px-3 py-2 transition hover:bg-slate-50 ${mentionHighlight === index ? "bg-slate-100" : ""}`,
+                      onMouseDown: (e) => {
+                        e.preventDefault();
+                        insertMention(collaborator);
+                        setMentionHighlight(index);
+                      },
+                      children: [
+                        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "min-w-0 flex-1", children: [
+                          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { className: "truncate text-sm font-medium text-slate-900", children: collaborator.full_name || collaborator.email || "Unknown" }),
+                          collaborator.email && collaborator.full_name && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { className: "truncate text-xs text-slate-500", children: collaborator.email })
+                        ] }),
+                        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+                          "button",
+                          {
+                            type: "button",
+                            className: `shrink-0 rounded-md p-1 transition hover:bg-slate-200 ${isFav ? "text-amber-500" : "text-slate-300 hover:text-slate-500"}`,
+                            "aria-label": isFav ? "Unfavorite teammate" : "Favorite teammate",
+                            title: isFav ? "Unfavorite (stops surfacing first)" : "Favorite (surfaces first next time)",
+                            onMouseDown: (e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              toggleFavorite(collaborator.id || "");
+                            },
+                            children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_fi.FiStar, { size: 14, fill: isFav ? "currentColor" : "none" })
+                          }
+                        )
+                      ]
                     },
-                    children: [
-                      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { className: "text-sm font-medium text-slate-900", children: collaborator.full_name || collaborator.email || "Unknown" }),
-                      collaborator.email && collaborator.full_name && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { className: "text-xs text-slate-500", children: collaborator.email })
-                    ]
-                  },
-                  collaborator.id
-                ))
+                    collaborator.id
+                  );
+                })
               ]
             }
           );
@@ -2109,20 +2169,41 @@ Dev Notes`,
             " to mention a teammate."
           ] })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
-          "button",
-          {
-            type: "button",
-            className: "inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:opacity-50",
-            onClick: handleSendMessage,
-            disabled: !newMessage.trim() || sending,
-            title: "Send note",
-            children: [
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_fi.FiSend, { size: 14 }),
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: sending ? "Sending..." : "Send" })
-            ]
-          }
-        )
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "flex items-center gap-3", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
+            "label",
+            {
+              className: "inline-flex cursor-pointer select-none items-center gap-1.5 text-xs text-slate-600",
+              title: "Send yourself a copy of the notification so you can confirm it was delivered",
+              children: [
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+                  "input",
+                  {
+                    type: "checkbox",
+                    className: "h-3.5 w-3.5 rounded border-slate-300 text-slate-900 focus:ring-slate-900/20",
+                    checked: copySelf,
+                    onChange: (e) => setCopySelf(e.target.checked)
+                  }
+                ),
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: "CC/BCC me" })
+              ]
+            }
+          ),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
+            "button",
+            {
+              type: "button",
+              className: "inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:opacity-50",
+              onClick: handleSendMessage,
+              disabled: !newMessage.trim() || sending,
+              title: "Send note",
+              children: [
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_fi.FiSend, { size: 14 }),
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: sending ? "Sending..." : "Send" })
+              ]
+            }
+          )
+        ] })
       ] })
     ] })
   ] });
@@ -2671,7 +2752,7 @@ function formatAiFixPayloadForCopy(payload) {
 }
 
 // src/version.ts
-var DEVNOTES_VERSION = "0.6.10";
+var DEVNOTES_VERSION = "0.6.11";
 
 // src/internal/formState.ts
 function getInitialTaskStatus(existingStatus) {
@@ -2838,7 +2919,7 @@ var COMPACT_BEHAVIOR_HEIGHT = 56;
 var EXPANDED_BEHAVIOR_MIN_HEIGHT = 92;
 var FIELD_SURFACE_CLASS = "rounded-2xl border border-slate-200 bg-white/95 shadow-sm shadow-slate-900/5 transition-colors focus-within:border-slate-400 focus-within:ring-1 focus-within:ring-slate-200";
 var CONTROL_INPUT_CLASS = "w-full border-0 bg-transparent px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none";
-var CONTROL_TEXTAREA_CLASS = "w-full resize-none border-0 bg-transparent px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-[height] duration-200";
+var CONTROL_TEXTAREA_CLASS = "w-full resize-y border-0 bg-transparent px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-[height] duration-200";
 var SECTION_CARD_CLASS = "rounded-2xl border border-slate-200 bg-slate-50/80 p-4 shadow-sm shadow-slate-900/5";
 var ACTION_ICON_BUTTON_CLASS = "inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm shadow-slate-900/5 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50";
 var floatingLabelClass = (isSuperscript) => isSuperscript ? "absolute -top-3.5 left-3 z-[2] rounded-full border border-slate-200 bg-white px-1.5 py-0 text-[9px] leading-tight font-semibold uppercase tracking-[0.14em] text-slate-500 pointer-events-none" : "mb-2 block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500";

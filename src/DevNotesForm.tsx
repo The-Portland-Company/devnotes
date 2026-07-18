@@ -73,7 +73,7 @@ const FIELD_SURFACE_CLASS =
 const CONTROL_INPUT_CLASS =
   'w-full border-0 bg-transparent px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none';
 const CONTROL_TEXTAREA_CLASS =
-  'w-full resize-none border-0 bg-transparent px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-[height] duration-200';
+  'w-full resize-y border-0 bg-transparent px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-[height] duration-200';
 const SECTION_CARD_CLASS =
   'rounded-2xl border border-slate-200 bg-slate-50/80 p-4 shadow-sm shadow-slate-900/5';
 const ACTION_ICON_BUTTON_CLASS =
