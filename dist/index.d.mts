@@ -185,8 +185,9 @@ declare function DevNotesDot({ report }: DevNotesDotProps): react_jsx_runtime.JS
 
 type DevNotesStepDotProps = {
     dot: UserStoryStepDot;
+    onOpenStory?: (dot: UserStoryStepDot) => void;
 };
-declare function DevNotesStepDot({ dot }: DevNotesStepDotProps): react_jsx_runtime.JSX.Element | null;
+declare function DevNotesStepDot({ dot, onOpenStory }: DevNotesStepDotProps): react_jsx_runtime.JSX.Element | null;
 
 /**
  * Floating UI for recording a User Story (Test Case):

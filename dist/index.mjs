@@ -2747,7 +2747,7 @@ function formatAiFixPayloadForCopy(payload) {
 }
 
 // src/version.ts
-var DEVNOTES_VERSION = "0.6.11";
+var DEVNOTES_VERSION = "0.6.12";
 
 // src/internal/formState.ts
 function getInitialTaskStatus(existingStatus) {
@@ -4080,30 +4080,17 @@ function DevNotesForm({
             isSuperscript: isSuperscriptLabels
           }
         ),
-        isAdmin && /* @__PURE__ */ jsx5("div", { className: isSuperscriptLabels ? "relative" : "", children: /* @__PURE__ */ jsxs4("div", { className: "space-y-3", children: [
-          /* @__PURE__ */ jsx5(
-            SearchableSingleSelect,
-            {
-              label: "Assignee",
-              options: [{ id: "", label: "Unassigned" }, ...collaboratorOptions],
-              value: assignedTo ?? "",
-              onChange: (value) => setAssignedTo(value || null),
-              placeholder: "Search assignee...",
-              isSuperscript: isSuperscriptLabels
-            }
-          ),
-          existingReport && (statusValue === "Closed" || statusValue === "Resolved") && /* @__PURE__ */ jsx5(
-            SearchableSingleSelect,
-            {
-              label: "Resolved By",
-              options: [{ id: "", label: "Not Set" }, ...collaboratorOptions],
-              value: resolvedBy ?? "",
-              onChange: (value) => setResolvedBy(value || null),
-              placeholder: "Search resolver...",
-              isSuperscript: isSuperscriptLabels
-            }
-          )
-        ] }) }),
+        isAdmin && /* @__PURE__ */ jsx5("div", { className: isSuperscriptLabels ? "relative" : "", children: /* @__PURE__ */ jsx5("div", { className: "space-y-3", children: /* @__PURE__ */ jsx5(
+          SearchableSingleSelect,
+          {
+            label: "Assignee",
+            options: [{ id: "", label: "Unassigned" }, ...collaboratorOptions],
+            value: assignedTo ?? "",
+            onChange: (value) => setAssignedTo(value || null),
+            placeholder: "Search assignee...",
+            isSuperscript: isSuperscriptLabels
+          }
+        ) }) }),
         /* @__PURE__ */ jsxs4("div", { className: isSuperscriptLabels ? "relative" : "", children: [
           /* @__PURE__ */ jsx5("label", { className: floatingLabelClass(isSuperscriptLabels), children: "Task List" }),
           /* @__PURE__ */ jsxs4("div", { className: "relative", children: [
@@ -4206,32 +4193,48 @@ function DevNotesForm({
             ] }) })
           ] })
         ] }),
-        /* @__PURE__ */ jsxs4("div", { className: isSuperscriptLabels ? "relative" : "", children: [
-          /* @__PURE__ */ jsx5("label", { className: floatingLabelClass(isSuperscriptLabels), children: "Page URL" }),
-          /* @__PURE__ */ jsx5("div", { className: FIELD_SURFACE_CLASS, children: /* @__PURE__ */ jsxs4("div", { className: "relative flex items-center", children: [
-            /* @__PURE__ */ jsx5(
-              "input",
+        (() => {
+          const showResolvedBy = Boolean(existingReport) && (statusValue === "Closed" || statusValue === "Resolved") && isAdmin;
+          return /* @__PURE__ */ jsxs4("div", { className: "grid grid-cols-1 gap-4 md:grid-cols-2", children: [
+            showResolvedBy && /* @__PURE__ */ jsx5(
+              SearchableSingleSelect,
               {
-                type: "text",
-                className: `w-full border-0 bg-transparent py-2 pl-3 pr-10 text-sm text-slate-900 outline-none placeholder:text-slate-400 ${!existingReport ? "cursor-not-allowed text-slate-500" : ""}`,
-                value: reportPageUrl,
-                onChange: (e) => setReportPageUrl(e.target.value),
-                readOnly: !existingReport
+                label: "Resolved By",
+                options: [{ id: "", label: "Not Set" }, ...collaboratorOptions],
+                value: resolvedBy ?? "",
+                onChange: (value) => setResolvedBy(value || null),
+                placeholder: "Search resolver...",
+                isSuperscript: isSuperscriptLabels
               }
             ),
-            /* @__PURE__ */ jsx5(
-              "a",
-              {
-                href: composePageUrlWithTab(reportPageUrl),
-                target: "_blank",
-                rel: "noreferrer",
-                className: "absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700",
-                title: "Open in new tab",
-                children: /* @__PURE__ */ jsx5(FiExternalLink, { size: 14 })
-              }
-            )
-          ] }) })
-        ] })
+            /* @__PURE__ */ jsxs4("div", { className: `${isSuperscriptLabels ? "relative" : ""} ${showResolvedBy ? "" : "md:col-span-2"}`, children: [
+              /* @__PURE__ */ jsx5("label", { className: floatingLabelClass(isSuperscriptLabels), children: "Page URL" }),
+              /* @__PURE__ */ jsx5("div", { className: FIELD_SURFACE_CLASS, children: /* @__PURE__ */ jsxs4("div", { className: "relative flex items-center", children: [
+                /* @__PURE__ */ jsx5(
+                  "input",
+                  {
+                    type: "text",
+                    className: `w-full border-0 bg-transparent py-2 pl-3 pr-10 text-sm text-slate-900 outline-none placeholder:text-slate-400 ${!existingReport ? "cursor-not-allowed text-slate-500" : ""}`,
+                    value: reportPageUrl,
+                    onChange: (e) => setReportPageUrl(e.target.value),
+                    readOnly: !existingReport
+                  }
+                ),
+                /* @__PURE__ */ jsx5(
+                  "a",
+                  {
+                    href: composePageUrlWithTab(reportPageUrl),
+                    target: "_blank",
+                    rel: "noreferrer",
+                    className: "absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700",
+                    title: "Open in new tab",
+                    children: /* @__PURE__ */ jsx5(FiExternalLink, { size: 14 })
+                  }
+                )
+              ] }) })
+            ] })
+          ] });
+        })()
       ] }) }),
       existingReport && /* @__PURE__ */ jsx5("div", { children: /* @__PURE__ */ jsx5(DevNotesDiscussion, { report: existingReport }) }),
       /* @__PURE__ */ jsxs4("div", { className: "flex flex-col-reverse gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between", children: [
@@ -5916,9 +5919,10 @@ function resolvePosition(dot) {
   }
   return resolveStoredCoordinates(dot.x_position, dot.y_position);
 }
-function DevNotesStepDot({ dot }) {
+function DevNotesStepDot({ dot, onOpenStory }) {
   const { compensate } = useDevNotes();
   const [showTooltip, setShowTooltip] = useState12(false);
+  const clickable = Boolean(onOpenStory);
   const position = resolvePosition(dot);
   if (!position) return null;
   const compensated = compensate(position.x, position.y);
@@ -5937,6 +5941,7 @@ function DevNotesStepDot({ dot }) {
       },
       onMouseEnter: () => setShowTooltip(true),
       onMouseLeave: () => setShowTooltip(false),
+      onClick: clickable ? () => onOpenStory?.(dot) : void 0,
       children: [
         /* @__PURE__ */ jsx10(
           "div",
@@ -5948,8 +5953,9 @@ function DevNotesStepDot({ dot }) {
               backgroundColor: color,
               fontSize: 11,
               boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
-              cursor: "default"
+              cursor: clickable ? "pointer" : "default"
             },
+            title: clickable ? `Open story: ${dot.storyTitle}` : void 0,
             children: dot.index
           }
         ),
@@ -6487,7 +6493,19 @@ function DevNotesOverlay({
   const sharedLayer = /* @__PURE__ */ jsxs11(Fragment6, { children: [
     /* @__PURE__ */ jsx12(DevNotesStoryRecorder, {}),
     showStepDots && dotContainer && createPortal(
-      /* @__PURE__ */ jsx12(Fragment6, { children: currentPageStepDots.map((dot) => /* @__PURE__ */ jsx12(DevNotesStepDot, { dot }, dot.id)) }),
+      /* @__PURE__ */ jsx12(Fragment6, { children: currentPageStepDots.map((dot) => /* @__PURE__ */ jsx12(
+        DevNotesStepDot,
+        {
+          dot,
+          onOpenStory: (d) => {
+            const parent = tasks.find(
+              (t) => t.title === d.storyTitle || t.id === d.storySlug
+            );
+            if (parent) setOpenedReport(parent);
+          }
+        },
+        dot.id
+      )) }),
       dotContainer
     )
   ] });

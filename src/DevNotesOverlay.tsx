@@ -306,7 +306,19 @@ export default function DevNotesOverlay({
         createPortal(
           <>
             {currentPageStepDots.map((dot) => (
-              <DevNotesStepDot key={dot.id} dot={dot} />
+              <DevNotesStepDot
+                key={dot.id}
+                dot={dot}
+                onOpenStory={(d) => {
+                  // Open the parent Story task if it exists in the current task
+                  // set (matched by title, since step dots only carry the
+                  // story's slug/title, not a task id).
+                  const parent = tasks.find(
+                    (t) => t.title === d.storyTitle || t.id === d.storySlug
+                  );
+                  if (parent) setOpenedReport(parent);
+                }}
+              />
             ))}
           </>,
           dotContainer

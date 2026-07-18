@@ -1444,16 +1444,6 @@ export default function DevNotesForm({
                     placeholder="Search assignee..."
                     isSuperscript={isSuperscriptLabels}
                   />
-                  {existingReport && (statusValue === 'Closed' || statusValue === 'Resolved') && (
-                    <SearchableSingleSelect
-                      label="Resolved By"
-                      options={[{ id: '', label: 'Not Set' }, ...collaboratorOptions]}
-                      value={resolvedBy ?? ''}
-                      onChange={(value) => setResolvedBy(value || null)}
-                      placeholder="Search resolver..."
-                      isSuperscript={isSuperscriptLabels}
-                    />
-                  )}
                 </div>
               </div>
             )}
@@ -1568,31 +1558,51 @@ export default function DevNotesForm({
               </div>
             </div>
 
-            <div className={isSuperscriptLabels ? 'relative' : ''}>
-              <label className={floatingLabelClass(isSuperscriptLabels)}>Page URL</label>
-              <div className={FIELD_SURFACE_CLASS}>
-                <div className="relative flex items-center">
-                  <input
-                    type="text"
-                    className={`w-full border-0 bg-transparent py-2 pl-3 pr-10 text-sm text-slate-900 outline-none placeholder:text-slate-400 ${
-                      !existingReport ? 'cursor-not-allowed text-slate-500' : ''
-                    }`}
-                    value={reportPageUrl}
-                    onChange={(e) => setReportPageUrl(e.target.value)}
-                    readOnly={!existingReport}
-                  />
-                  <a
-                    href={composePageUrlWithTab(reportPageUrl)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-                    title="Open in new tab"
-                  >
-                    <FiExternalLink size={14} />
-                  </a>
+            {(() => {
+              const showResolvedBy =
+                Boolean(existingReport) &&
+                (statusValue === 'Closed' || statusValue === 'Resolved') &&
+                isAdmin;
+              return (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {showResolvedBy && (
+                    <SearchableSingleSelect
+                      label="Resolved By"
+                      options={[{ id: '', label: 'Not Set' }, ...collaboratorOptions]}
+                      value={resolvedBy ?? ''}
+                      onChange={(value) => setResolvedBy(value || null)}
+                      placeholder="Search resolver..."
+                      isSuperscript={isSuperscriptLabels}
+                    />
+                  )}
+                  <div className={`${isSuperscriptLabels ? 'relative' : ''} ${showResolvedBy ? '' : 'md:col-span-2'}`}>
+                    <label className={floatingLabelClass(isSuperscriptLabels)}>Page URL</label>
+                    <div className={FIELD_SURFACE_CLASS}>
+                      <div className="relative flex items-center">
+                        <input
+                          type="text"
+                          className={`w-full border-0 bg-transparent py-2 pl-3 pr-10 text-sm text-slate-900 outline-none placeholder:text-slate-400 ${
+                            !existingReport ? 'cursor-not-allowed text-slate-500' : ''
+                          }`}
+                          value={reportPageUrl}
+                          onChange={(e) => setReportPageUrl(e.target.value)}
+                          readOnly={!existingReport}
+                        />
+                        <a
+                          href={composePageUrlWithTab(reportPageUrl)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                          title="Open in new tab"
+                        >
+                          <FiExternalLink size={14} />
+                        </a>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+              );
+            })()}
           </div>
         </section>
 
