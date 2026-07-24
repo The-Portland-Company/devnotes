@@ -661,6 +661,49 @@ function buildDevNotesReportFromForgeTask(task, overrides, defaultTaskListId) {
     )
   };
 }
+var DEFAULT_FORGE_TIMEOUT_MS = 25e3;
+var ForgeTimeoutError = class extends Error {
+  constructor(path, timeoutMs) {
+    super(`Focus Forge did not respond within ${timeoutMs}ms (${path}).`);
+    this.path = path;
+    this.timeoutMs = timeoutMs;
+    this.name = "ForgeTimeoutError";
+  }
+};
+var FORGE_DISCOVERY_TTL_MS = 6e4;
+var FORGE_DATA_TTL_MS = 15e3;
+function createForgeCache() {
+  return { entries: /* @__PURE__ */ new Map(), inFlight: /* @__PURE__ */ new Map() };
+}
+function forgeCacheScope(context) {
+  return `${context.baseUrl}|pat${context.pat.length}:${context.pat.slice(-6)}`;
+}
+async function cachedForgeRead(context, key, ttlMs, load) {
+  const { entries, inFlight } = context.cache;
+  const hit = entries.get(key);
+  if (hit) {
+    if (hit.expiresAt > Date.now()) return hit.value;
+    entries.delete(key);
+  }
+  const pending = inFlight.get(key);
+  if (pending) return await pending;
+  const promise = load().then((value) => {
+    entries.set(key, { value, expiresAt: Date.now() + ttlMs });
+    inFlight.delete(key);
+    return value;
+  });
+  promise.catch(() => inFlight.delete(key));
+  inFlight.set(key, promise);
+  return await promise;
+}
+function invalidateForgeProjectData(context) {
+  const prefix = `${forgeCacheScope(context)}|`;
+  for (const key of Array.from(context.cache.entries.keys())) {
+    if (key.startsWith(`${prefix}tasks|`) || key.startsWith(`${prefix}comments|`)) {
+      context.cache.entries.delete(key);
+    }
+  }
+}
 async function fetchFocusForge(context, path, init = {}) {
   const url = `${context.baseUrl}${path.startsWith("/") ? path : `/${path}`}`;
   const headers = new Headers(init.headers || {});
@@ -668,11 +711,22 @@ async function fetchFocusForge(context, path, init = {}) {
   if (!headers.has("Content-Type") && init.body) {
     headers.set("Content-Type", "application/json");
   }
-  const response = await context.fetchImpl(url, {
-    ...init,
-    headers
-  });
+  let response;
+  try {
+    response = await context.fetchImpl(url, {
+      ...init,
+      headers,
+      signal: init.signal ?? createForgeTimeoutSignal(context.timeoutMs)
+    });
+  } catch (error) {
+    if (isAbortError(error)) throw new ForgeTimeoutError(path, context.timeoutMs);
+    throw error;
+  }
   const text = await response.text();
+  const method = String(init.method || "GET").toUpperCase();
+  if (response.ok && method !== "GET" && method !== "HEAD") {
+    invalidateForgeProjectData(context);
+  }
   return {
     status: response.status,
     ok: response.ok,
@@ -680,6 +734,21 @@ async function fetchFocusForge(context, path, init = {}) {
     payload: parseJsonSafe(text),
     contentType: response.headers.get("content-type")
   };
+}
+function createForgeTimeoutSignal(timeoutMs) {
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) return void 0;
+  if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function") {
+    return AbortSignal.timeout(timeoutMs);
+  }
+  if (typeof AbortController === "undefined") return void 0;
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(), timeoutMs);
+  return controller.signal;
+}
+function isAbortError(error) {
+  if (!error || typeof error !== "object") return false;
+  const name = String(error.name || "");
+  return name === "AbortError" || name === "TimeoutError";
 }
 async function fetchForgeOrThrow(context, path, init = {}) {
   const response = await fetchFocusForge(context, path, init);
@@ -689,6 +758,29 @@ async function fetchForgeOrThrow(context, path, init = {}) {
   return response;
 }
 async function discoverForgeProjects(context) {
+  const discovery = await cachedForgeRead(
+    context,
+    `${forgeCacheScope(context)}|discovery`,
+    FORGE_DISCOVERY_TTL_MS,
+    async () => {
+      const result = await discoverForgeProjectsUncached(context);
+      if (!result.ok) throw new ForgeDiscoveryFailure(result);
+      return result;
+    }
+  ).catch((error) => {
+    if (error instanceof ForgeDiscoveryFailure) return error.result;
+    throw error;
+  });
+  return { ...discovery, preferredProjectName: context.projectName };
+}
+var ForgeDiscoveryFailure = class extends Error {
+  constructor(result) {
+    super("Focus Forge project discovery failed.");
+    this.result = result;
+    this.name = "ForgeDiscoveryFailure";
+  }
+};
+async function discoverForgeProjectsUncached(context) {
   const bootstrap = await fetchFocusForge(context, "/api/mobile/bootstrap", { method: "GET" });
   const bootstrapUser = extractBootstrapUser(bootstrap.payload);
   if (!bootstrap.ok) {
@@ -762,20 +854,34 @@ async function resolveForgeProject(context) {
   };
 }
 async function fetchForgeTasksForProject(context, projectId) {
-  const response = await fetchForgeOrThrow(
+  return await cachedForgeRead(
     context,
-    `/api/mobile/tasks?projectId=${encodeURIComponent(projectId)}`,
-    { method: "GET" }
+    `${forgeCacheScope(context)}|tasks|${projectId}`,
+    FORGE_DATA_TTL_MS,
+    async () => {
+      const response = await fetchForgeOrThrow(
+        context,
+        `/api/mobile/tasks?projectId=${encodeURIComponent(projectId)}`,
+        { method: "GET" }
+      );
+      return pickTaskArray(response.payload);
+    }
   );
-  return pickTaskArray(response.payload);
 }
 async function fetchForgeProjectComments(context, projectId) {
-  const response = await fetchForgeOrThrow(
+  return await cachedForgeRead(
     context,
-    `/api/sync/comments?projectId=${encodeURIComponent(projectId)}`,
-    { method: "GET" }
+    `${forgeCacheScope(context)}|comments|${projectId}`,
+    FORGE_DATA_TTL_MS,
+    async () => {
+      const response = await fetchForgeOrThrow(
+        context,
+        `/api/sync/comments?projectId=${encodeURIComponent(projectId)}`,
+        { method: "GET" }
+      );
+      return pickTaskArray(response.payload);
+    }
   );
-  return pickTaskArray(response.payload);
 }
 async function fetchForgeTaskComments(context, taskId) {
   const response = await fetchForgeOrThrow(
@@ -906,6 +1012,7 @@ function createDevNotesServerHandler(options) {
   if (typeof fetchImpl !== "function") {
     throw new Error("DevNotes server helpers require a fetch implementation.");
   }
+  const cache = createForgeCache();
   return async function handleDevNotesRequest(request) {
     if (request.method === "OPTIONS") {
       return await emptyResponse(request, options.corsHeaders);
@@ -927,7 +1034,9 @@ function createDevNotesServerHandler(options) {
       baseUrl,
       pat: String(options.forge.pat || "").trim(),
       projectName: (rawProjectName || "").trim() || null,
-      fetchImpl
+      fetchImpl,
+      timeoutMs: typeof options.forge.timeoutMs === "number" && options.forge.timeoutMs > 0 ? options.forge.timeoutMs : DEFAULT_FORGE_TIMEOUT_MS,
+      cache
     };
     if (resource === "capabilities" && method === "GET") {
       return await jsonResponse(request, options.corsHeaders, buildCapabilities());
@@ -1423,6 +1532,14 @@ function createDevNotesServerHandler(options) {
     } catch (error) {
       if (error instanceof UpstreamForgeError) {
         return await passthroughUpstreamResponse(request, options.corsHeaders, error);
+      }
+      if (error instanceof ForgeTimeoutError) {
+        return await jsonResponse(
+          request,
+          options.corsHeaders,
+          { error: error.message },
+          504
+        );
       }
       return await jsonResponse(
         request,

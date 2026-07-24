@@ -1027,7 +1027,108 @@ type ForgeContext = {
   pat: string;
   projectName: string | null;
   fetchImpl: typeof globalThis.fetch;
+  timeoutMs: number;
+  cache: ForgeCache;
 };
+
+export const DEFAULT_FORGE_TIMEOUT_MS = 25_000;
+
+export class ForgeTimeoutError extends Error {
+  constructor(
+    readonly path: string,
+    readonly timeoutMs: number
+  ) {
+    super(`Focus Forge did not respond within ${timeoutMs}ms (${path}).`);
+    this.name = 'ForgeTimeoutError';
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Forge read cache + single-flight
+//
+// Every DevNotes lane re-resolved the project and re-pulled the project's
+// ENTIRE comment and task set before it looked at the requested resource. The
+// widget fires six lanes concurrently on mount (tasks, task-types, task-lists,
+// collaborators, capabilities, app-link), so one page load meant ~11 uncached
+// Forge round-trips — for the shared "Politogy: VRM" project that is ~7MB over
+// 498 tasks and 259 comments, and Forge degrades superlinearly under that
+// concurrency. Multiplied across apps, tabs and the 60s poll it blew past
+// Cloudflare's 100s origin budget, so the browser saw 524 on collaborators and
+// bug-report-types.
+//
+// Two changes collapse the fanout without touching the wire contract:
+//   * single-flight — concurrent identical reads share one upstream request, so
+//     a six-lane mount costs one bootstrap + one comments + one tasks;
+//   * short TTL — repeat reads (the poll, a second app in another tab) are
+//     served from memory.
+//
+// Any successful write invalidates the writer's cached project data, so a user
+// never sees their own change go missing.
+// ---------------------------------------------------------------------------
+const FORGE_DISCOVERY_TTL_MS = 60_000;
+const FORGE_DATA_TTL_MS = 15_000;
+
+type ForgeCacheEntry = { value: unknown; expiresAt: number };
+
+/**
+ * One cache per handler instance (created once at server start-up), not a
+ * module global — so two handlers, and two tests, never share state.
+ */
+type ForgeCache = {
+  entries: Map<string, ForgeCacheEntry>;
+  inFlight: Map<string, Promise<unknown>>;
+};
+
+function createForgeCache(): ForgeCache {
+  return { entries: new Map(), inFlight: new Map() };
+}
+
+/**
+ * Cache scope: one Forge account (base URL + credential). The PAT is
+ * fingerprinted rather than embedded so the key is never a copy of the secret.
+ */
+function forgeCacheScope(context: ForgeContext): string {
+  return `${context.baseUrl}|pat${context.pat.length}:${context.pat.slice(-6)}`;
+}
+
+async function cachedForgeRead<T>(
+  context: ForgeContext,
+  key: string,
+  ttlMs: number,
+  load: () => Promise<T>
+): Promise<T> {
+  const { entries, inFlight } = context.cache;
+
+  const hit = entries.get(key);
+  if (hit) {
+    if (hit.expiresAt > Date.now()) return hit.value as T;
+    entries.delete(key);
+  }
+
+  const pending = inFlight.get(key);
+  if (pending) return (await pending) as T;
+
+  const promise = load().then((value) => {
+    entries.set(key, { value, expiresAt: Date.now() + ttlMs });
+    inFlight.delete(key);
+    return value;
+  });
+  // Failures are never cached, and must not wedge the single-flight slot.
+  promise.catch(() => inFlight.delete(key));
+
+  inFlight.set(key, promise as Promise<unknown>);
+  return await promise;
+}
+
+/** Drop every cached task/comment list for this Forge account after a write. */
+function invalidateForgeProjectData(context: ForgeContext): void {
+  const prefix = `${forgeCacheScope(context)}|`;
+  for (const key of Array.from(context.cache.entries.keys())) {
+    if (key.startsWith(`${prefix}tasks|`) || key.startsWith(`${prefix}comments|`)) {
+      context.cache.entries.delete(key);
+    }
+  }
+}
 
 async function fetchFocusForge(
   context: ForgeContext,
@@ -1041,11 +1142,26 @@ async function fetchFocusForge(
     headers.set('Content-Type', 'application/json');
   }
 
-  const response = await context.fetchImpl(url, {
-    ...init,
-    headers,
-  });
+  let response: Response;
+  try {
+    response = await context.fetchImpl(url, {
+      ...init,
+      headers,
+      signal: init.signal ?? createForgeTimeoutSignal(context.timeoutMs),
+    });
+  } catch (error) {
+    if (isAbortError(error)) throw new ForgeTimeoutError(path, context.timeoutMs);
+    throw error;
+  }
+
   const text = await response.text();
+
+  // A write just changed the project — the cached lists are stale now.
+  const method = String(init.method || 'GET').toUpperCase();
+  if (response.ok && method !== 'GET' && method !== 'HEAD') {
+    invalidateForgeProjectData(context);
+  }
+
   return {
     status: response.status,
     ok: response.ok,
@@ -1053,6 +1169,24 @@ async function fetchFocusForge(
     payload: parseJsonSafe(text),
     contentType: response.headers.get('content-type'),
   };
+}
+
+function createForgeTimeoutSignal(timeoutMs: number): AbortSignal | undefined {
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) return undefined;
+  // AbortSignal.timeout is Node 18+/Deno/Workers; fall back to a manual timer.
+  if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+    return AbortSignal.timeout(timeoutMs);
+  }
+  if (typeof AbortController === 'undefined') return undefined;
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(), timeoutMs);
+  return controller.signal;
+}
+
+function isAbortError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const name = String((error as { name?: unknown }).name || '');
+  return name === 'AbortError' || name === 'TimeoutError';
 }
 
 async function fetchForgeOrThrow(
@@ -1067,7 +1201,41 @@ async function fetchForgeOrThrow(
   return response;
 }
 
+// Project discovery is identical for every lane and every app on this Forge
+// account (the /api/mobile/bootstrap payload alone is ~250KB), so it is cached
+// per account rather than per project name; the name match happens in memory.
 async function discoverForgeProjects(context: ForgeContext): Promise<ForgeProjectDiscoveryResult> {
+  const discovery = await cachedForgeRead(
+    context,
+    `${forgeCacheScope(context)}|discovery`,
+    FORGE_DISCOVERY_TTL_MS,
+    async () => {
+      const result = await discoverForgeProjectsUncached(context);
+      // Never let a Forge outage stick around for the whole TTL.
+      if (!result.ok) throw new ForgeDiscoveryFailure(result);
+      return result;
+    }
+  ).catch((error) => {
+    if (error instanceof ForgeDiscoveryFailure) return error.result;
+    throw error;
+  });
+
+  // `preferredProjectName` is per-app (one backend serves several apps), so it
+  // is stamped from the caller's context rather than read from the shared entry.
+  return { ...discovery, preferredProjectName: context.projectName };
+}
+
+/** Carries a non-ok discovery out of the cache loader without caching it. */
+class ForgeDiscoveryFailure extends Error {
+  constructor(readonly result: ForgeProjectDiscoveryResult) {
+    super('Focus Forge project discovery failed.');
+    this.name = 'ForgeDiscoveryFailure';
+  }
+}
+
+async function discoverForgeProjectsUncached(
+  context: ForgeContext
+): Promise<ForgeProjectDiscoveryResult> {
   const bootstrap = await fetchFocusForge(context, '/api/mobile/bootstrap', { method: 'GET' });
   const bootstrapUser = extractBootstrapUser(bootstrap.payload);
   if (!bootstrap.ok) {
@@ -1149,24 +1317,38 @@ async function resolveForgeProject(context: ForgeContext): Promise<ForgeProjectD
 }
 
 async function fetchForgeTasksForProject(context: ForgeContext, projectId: string): Promise<Record<string, unknown>[]> {
-  const response = await fetchForgeOrThrow(
+  return await cachedForgeRead(
     context,
-    `/api/mobile/tasks?projectId=${encodeURIComponent(projectId)}`,
-    { method: 'GET' }
+    `${forgeCacheScope(context)}|tasks|${projectId}`,
+    FORGE_DATA_TTL_MS,
+    async () => {
+      const response = await fetchForgeOrThrow(
+        context,
+        `/api/mobile/tasks?projectId=${encodeURIComponent(projectId)}`,
+        { method: 'GET' }
+      );
+      return pickTaskArray(response.payload);
+    }
   );
-  return pickTaskArray(response.payload);
 }
 
 async function fetchForgeProjectComments(
   context: ForgeContext,
   projectId: string
 ): Promise<Record<string, unknown>[]> {
-  const response = await fetchForgeOrThrow(
+  return await cachedForgeRead(
     context,
-    `/api/sync/comments?projectId=${encodeURIComponent(projectId)}`,
-    { method: 'GET' }
+    `${forgeCacheScope(context)}|comments|${projectId}`,
+    FORGE_DATA_TTL_MS,
+    async () => {
+      const response = await fetchForgeOrThrow(
+        context,
+        `/api/sync/comments?projectId=${encodeURIComponent(projectId)}`,
+        { method: 'GET' }
+      );
+      return pickTaskArray(response.payload);
+    }
   );
-  return pickTaskArray(response.payload);
 }
 
 async function fetchForgeTaskComments(
@@ -1344,6 +1526,9 @@ export function createDevNotesServerHandler(options: DevNotesServerOptions) {
     throw new Error('DevNotes server helpers require a fetch implementation.');
   }
 
+  // Lives for the life of the handler, i.e. the life of the server process.
+  const cache = createForgeCache();
+
   return async function handleDevNotesRequest(request: Request): Promise<Response> {
     if (request.method === 'OPTIONS') {
       return await emptyResponse(request, options.corsHeaders);
@@ -1372,6 +1557,11 @@ export function createDevNotesServerHandler(options: DevNotesServerOptions) {
       pat: String(options.forge.pat || '').trim(),
       projectName: (rawProjectName || '').trim() || null,
       fetchImpl,
+      timeoutMs:
+        typeof options.forge.timeoutMs === 'number' && options.forge.timeoutMs > 0
+          ? options.forge.timeoutMs
+          : DEFAULT_FORGE_TIMEOUT_MS,
+      cache,
     };
 
     if (resource === 'capabilities' && method === 'GET') {
@@ -1978,6 +2168,15 @@ export function createDevNotesServerHandler(options: DevNotesServerOptions) {
     } catch (error) {
       if (error instanceof UpstreamForgeError) {
         return await passthroughUpstreamResponse(request, options.corsHeaders, error);
+      }
+
+      if (error instanceof ForgeTimeoutError) {
+        return await jsonResponse(
+          request,
+          options.corsHeaders,
+          { error: error.message },
+          504
+        );
       }
 
       return await jsonResponse(

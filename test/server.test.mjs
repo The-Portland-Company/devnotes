@@ -772,3 +772,160 @@ test('tasks returned with dedicated devnotes_meta keep description human-readabl
     },
   ]);
 });
+
+// Regression: a widget mount fires six lanes at once and every lane used to
+// re-resolve the project and re-pull the project's whole comment/task set —
+// ~11 uncached Forge round-trips per page load. That fanout is what pushed the
+// chrome API past Cloudflare's 100s origin budget and produced 524s on
+// /collaborators and /bug-report-types. Concurrent identical reads must now
+// share one upstream request.
+test('a concurrent widget mount collapses to one Forge read per resource', async () => {
+  const calls = [];
+  const fetch = createFetchMock(
+    new Map([
+      [
+        'GET /api/mobile/bootstrap',
+        async (url) => {
+          calls.push(url.pathname);
+          await new Promise((resolve) => setTimeout(resolve, 5));
+          return jsonResponse({
+            data: { bootstrap: { projects: [{ id: 'project-1', name: 'Politogy' }] } },
+          });
+        },
+      ],
+      [
+        'GET /api/mobile/tasks?projectId=project-1',
+        async (url) => {
+          calls.push(url.pathname);
+          await new Promise((resolve) => setTimeout(resolve, 5));
+          return jsonResponse({ data: [] });
+        },
+      ],
+      [
+        'GET /api/sync/comments?projectId=project-1',
+        async (url) => {
+          calls.push(url.pathname);
+          await new Promise((resolve) => setTimeout(resolve, 5));
+          return jsonResponse({
+            data: [
+              {
+                id: 'task-list-1',
+                created_at: '2026-01-01T00:00:00.000Z',
+                updated_at: '2026-01-01T00:00:00.000Z',
+                content:
+                  '[DEVNOTES_META:eyJraW5kIjoidGFza19saXN0IiwibmFtZSI6IkdlbmVyYWwiLCJzaGFyZV9zbHVnIjoiZ2VuZXJhbC1zbHVnIiwiaXNfZGVmYXVsdCI6dHJ1ZSwiY3JlYXRlZF9ieSI6InVzZXItMSIsImNyZWF0ZWRfYXQiOiIyMDI2LTAxLTAxVDAwOjAwOjAwLjAwMFoiLCJ1cGRhdGVkX2F0IjoiMjAyNi0wMS0wMVQwMDowMDowMC4wMDBaIn0=]',
+              },
+              {
+                id: 'type-1',
+                created_at: '2026-01-01T00:00:00.000Z',
+                updated_at: '2026-01-01T00:00:00.000Z',
+                content:
+                  '[DEVNOTES_META:eyJraW5kIjoicmVwb3J0X3R5cGUiLCJuYW1lIjoiQnVnIiwiaXNfZGVmYXVsdCI6dHJ1ZSwiY3JlYXRlZF9ieSI6InVzZXItMSIsImNyZWF0ZWRfYXQiOiIyMDI2LTAxLTAxVDAwOjAwOjAwLjAwMFoifQ==]',
+              },
+            ],
+          });
+        },
+      ],
+    ])
+  );
+
+  const handler = createNextDevNotesHandler(createOptions({ fetch }));
+  const mount = ['tasks', 'task-types', 'task-lists', 'collaborators', 'app-link'];
+  const responses = await Promise.all(
+    mount.map((resource) =>
+      handler(new Request(`https://app.example.com/api/devnotes/${resource}`))
+    )
+  );
+
+  assert.deepEqual(
+    responses.map((response) => response.status),
+    [200, 200, 200, 200, 200]
+  );
+  assert.deepEqual(
+    {
+      bootstrap: calls.filter((path) => path === '/api/mobile/bootstrap').length,
+      comments: calls.filter((path) => path === '/api/sync/comments').length,
+      tasks: calls.filter((path) => path === '/api/mobile/tasks').length,
+    },
+    { bootstrap: 1, comments: 1, tasks: 1 }
+  );
+});
+
+test('a write drops the cached project data so the next read is fresh', async () => {
+  let commentsReads = 0;
+  const comments = [
+    {
+      id: 'task-list-1',
+      created_at: '2026-01-01T00:00:00.000Z',
+      updated_at: '2026-01-01T00:00:00.000Z',
+      content:
+        '[DEVNOTES_META:eyJraW5kIjoidGFza19saXN0IiwibmFtZSI6IkdlbmVyYWwiLCJzaGFyZV9zbHVnIjoiZ2VuZXJhbC1zbHVnIiwiaXNfZGVmYXVsdCI6dHJ1ZSwiY3JlYXRlZF9ieSI6InVzZXItMSIsImNyZWF0ZWRfYXQiOiIyMDI2LTAxLTAxVDAwOjAwOjAwLjAwMFoiLCJ1cGRhdGVkX2F0IjoiMjAyNi0wMS0wMVQwMDowMDowMC4wMDBaIn0=]',
+    },
+    {
+      id: 'type-1',
+      created_at: '2026-01-01T00:00:00.000Z',
+      updated_at: '2026-01-01T00:00:00.000Z',
+      content:
+        '[DEVNOTES_META:eyJraW5kIjoicmVwb3J0X3R5cGUiLCJuYW1lIjoiQnVnIiwiaXNfZGVmYXVsdCI6dHJ1ZSwiY3JlYXRlZF9ieSI6InVzZXItMSIsImNyZWF0ZWRfYXQiOiIyMDI2LTAxLTAxVDAwOjAwOjAwLjAwMFoifQ==]',
+    },
+  ];
+  const fetch = createFetchMock(
+    new Map([
+      [
+        'GET /api/mobile/bootstrap',
+        async () =>
+          jsonResponse({
+            data: { bootstrap: { projects: [{ id: 'project-1', name: 'Politogy' }] } },
+          }),
+      ],
+      [
+        'GET /api/sync/comments?projectId=project-1',
+        async () => {
+          commentsReads += 1;
+          return jsonResponse({ data: comments });
+        },
+      ],
+      [
+        'POST /api/sync/comments',
+        async (_url, init) => {
+          const created = {
+            id: 'type-2',
+            created_at: '2026-01-02T00:00:00.000Z',
+            updated_at: '2026-01-02T00:00:00.000Z',
+            content: String(JSON.parse(init.body).content || ''),
+          };
+          comments.push(created);
+          return jsonResponse({ data: created });
+        },
+      ],
+    ])
+  );
+
+  const handler = createNextDevNotesHandler(createOptions({ fetch }));
+  const url = 'https://app.example.com/api/devnotes/task-types';
+
+  await handler(new Request(url));
+  assert.equal(commentsReads, 1);
+
+  // Within the TTL and with no write in between, the read is served from cache.
+  await handler(new Request(url));
+  assert.equal(commentsReads, 1);
+
+  const created = await handler(
+    new Request(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: 'Regression' }),
+    })
+  );
+  assert.equal(created.status, 200);
+
+  // The write invalidated the entry, so the next read goes back to Forge and
+  // the author sees their own new type rather than a stale cached list.
+  const after = await handler(new Request(url));
+  assert.equal(commentsReads, 2);
+  assert.deepEqual(
+    (await after.json()).map((type) => type.name).sort(),
+    ['Bug', 'Regression']
+  );
+});

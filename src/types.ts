@@ -97,6 +97,14 @@ export type DevNotesForgeOptions = {
    * falls back to project discovery.
    */
   projectName?: string | null | ((request: Request) => string | null | undefined);
+  /**
+   * Upstream Forge request timeout in ms (default 25000). A guardrail, not a
+   * fix: Cloudflare gives an origin 100s before it returns 524, and a single
+   * DevNotes call can make several Forge round-trips. Failing one slow
+   * round-trip fast keeps the lane inside that budget and surfaces a real 504
+   * instead of a dead connection.
+   */
+  timeoutMs?: number;
 };
 
 export type DevNotesCorsHeaders =

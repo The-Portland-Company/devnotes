@@ -2747,7 +2747,7 @@ function formatAiFixPayloadForCopy(payload) {
 }
 
 // src/version.ts
-var DEVNOTES_VERSION = "0.6.13";
+var DEVNOTES_VERSION = "0.6.14";
 
 // src/internal/formState.ts
 function getInitialTaskStatus(existingStatus) {
