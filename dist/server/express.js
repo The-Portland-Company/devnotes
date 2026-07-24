@@ -923,10 +923,11 @@ function createDevNotesServerHandler(options) {
     const method = request.method.toUpperCase();
     const body = await readJsonBody(request) || {};
     const [resource, resourceId, nested] = slug;
+    const rawProjectName = typeof options.forge.projectName === "function" ? options.forge.projectName(request) : options.forge.projectName;
     const forgeContext = {
       baseUrl,
       pat: String(options.forge.pat || "").trim(),
-      projectName: options.forge.projectName?.trim() || null,
+      projectName: (rawProjectName || "").trim() || null,
       fetchImpl
     };
     if (resource === "capabilities" && method === "GET") {

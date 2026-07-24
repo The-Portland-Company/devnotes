@@ -89,7 +89,14 @@ export type DevNotesResolvedUser = {
 export type DevNotesForgeOptions = {
   baseUrl: string;
   pat: string;
-  projectName?: string | null;
+  /**
+   * The Forge project to file into. Either a fixed name, or a resolver called
+   * per request — so one shared backend (e.g. the Contacts API that every
+   * feature app proxies through) can route each app to its OWN project by
+   * reading a request header (e.g. `x-politogy-app`). Returning null/undefined
+   * falls back to project discovery.
+   */
+  projectName?: string | null | ((request: Request) => string | null | undefined);
 };
 
 export type DevNotesCorsHeaders =
