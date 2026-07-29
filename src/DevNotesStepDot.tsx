@@ -5,6 +5,7 @@ import type { UserStoryStepDot } from './types';
 
 type DevNotesStepDotProps = {
   dot: UserStoryStepDot;
+  onOpenStory?: (dot: UserStoryStepDot) => void;
 };
 
 /**
@@ -36,9 +37,10 @@ function resolvePosition(dot: UserStoryStepDot): { x: number; y: number } | null
   return resolveStoredCoordinates(dot.x_position, dot.y_position);
 }
 
-export default function DevNotesStepDot({ dot }: DevNotesStepDotProps) {
+export default function DevNotesStepDot({ dot, onOpenStory }: DevNotesStepDotProps) {
   const { compensate } = useDevNotes();
   const [showTooltip, setShowTooltip] = useState(false);
+  const clickable = Boolean(onOpenStory);
 
   const position = resolvePosition(dot);
   if (!position) return null;
@@ -59,6 +61,7 @@ export default function DevNotesStepDot({ dot }: DevNotesStepDotProps) {
       }}
       onMouseEnter={() => setShowTooltip(true)}
       onMouseLeave={() => setShowTooltip(false)}
+      onClick={clickable ? () => onOpenStory?.(dot) : undefined}
     >
       <div
         className="flex items-center justify-center rounded-full border-2 border-white font-semibold text-white"
@@ -68,8 +71,9 @@ export default function DevNotesStepDot({ dot }: DevNotesStepDotProps) {
           backgroundColor: color,
           fontSize: 11,
           boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-          cursor: 'default',
+          cursor: clickable ? 'pointer' : 'default',
         }}
+        title={clickable ? `Open story: ${dot.storyTitle}` : undefined}
       >
         {dot.index}
       </div>

@@ -89,7 +89,22 @@ export type DevNotesResolvedUser = {
 export type DevNotesForgeOptions = {
   baseUrl: string;
   pat: string;
-  projectName?: string | null;
+  /**
+   * The Forge project to file into. Either a fixed name, or a resolver called
+   * per request — so one shared backend (e.g. the Contacts API that every
+   * feature app proxies through) can route each app to its OWN project by
+   * reading a request header (e.g. `x-politogy-app`). Returning null/undefined
+   * falls back to project discovery.
+   */
+  projectName?: string | null | ((request: Request) => string | null | undefined);
+  /**
+   * Upstream Forge request timeout in ms (default 25000). A guardrail, not a
+   * fix: Cloudflare gives an origin 100s before it returns 524, and a single
+   * DevNotes call can make several Forge round-trips. Failing one slow
+   * round-trip fast keeps the lane inside that budget and surfaces a real 504
+   * instead of a dead connection.
+   */
+  timeoutMs?: number;
 };
 
 export type DevNotesCorsHeaders =

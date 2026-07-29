@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { FiAtSign, FiEdit2, FiMessageSquare, FiSend, FiTrash2 } from 'react-icons/fi';
+import { FiAtSign, FiEdit2, FiMessageSquare, FiSend, FiStar, FiTrash2 } from 'react-icons/fi';
 import { useDevNotes } from './DevNotesProvider';
 import type { BugReport, BugReportMessage, BugReportCreator } from './types';
 
@@ -33,18 +33,60 @@ const setCachedMessages = (reportId: string, messages: BugReportMessage[]) => {
   }
 };
 
-const detectActiveMention = (value: string, cursor: number) => {
-  const slice = value.slice(0, cursor);
-  const atIndex = slice.lastIndexOf('@');
+// --- contentEditable mention composer helpers ---
+// The compose box is a contentEditable so mentions can render as real inline
+// pill badges (identical styling to posted comments) rather than a highlight
+// overlay behind a textarea, which never reads as a true badge.
+const MENTION_ATTR = 'data-dn-mention';
+const MENTION_FAVORITES_KEY = 'devnotes:mention-favorites';
+
+// Flatten the editor DOM back to the plain-text value we submit. Mention chips
+// serialize to "@Full Name"; <br> and block <div> boundaries become newlines.
+const getEditorText = (root: HTMLElement): string => {
+  let out = '';
+  const nl = () => {
+    if (out.length && !out.endsWith('\n')) out += '\n';
+  };
+  const walk = (node: ChildNode) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      out += (node.nodeValue || '').replace(/ /g, ' ');
+      return;
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) return;
+    const el = node as HTMLElement;
+    if (el.getAttribute(MENTION_ATTR) != null) {
+      out += '@' + (el.getAttribute('data-label') || '');
+      return;
+    }
+    if (el.tagName === 'BR') {
+      out += '\n';
+      return;
+    }
+    if (el.tagName === 'DIV') nl();
+    Array.from(el.childNodes).forEach(walk);
+  };
+  Array.from(root.childNodes).forEach(walk);
+  return out;
+};
+
+// Detect an in-progress "@query" immediately before a collapsed caret.
+const detectMentionAtCaret = (
+  root: HTMLElement
+): { node: Text; atIndex: number; offset: number; query: string } | null => {
+  const sel = root.ownerDocument.getSelection();
+  if (!sel || sel.rangeCount === 0 || !sel.isCollapsed) return null;
+  const node = sel.anchorNode;
+  if (!node || node.nodeType !== Node.TEXT_NODE || !root.contains(node)) return null;
+  const text = node.nodeValue || '';
+  const offset = sel.anchorOffset;
+  const before = text.slice(0, offset);
+  const atIndex = before.lastIndexOf('@');
   if (atIndex === -1) return null;
-  if (atIndex > 0 && /\S/.test(slice.charAt(atIndex - 1))) {
-    return null;
-  }
-  const query = slice.slice(atIndex + 1);
-  if (query.includes(' ') || query.includes('\n') || query.includes('\t')) {
-    return null;
-  }
-  return { start: atIndex, end: cursor, query };
+  // The "@" must start a word: preceded by whitespace/nbsp or the node start.
+  if (atIndex > 0 && /\S/.test(before.charAt(atIndex - 1).replace(/ /g, ' '))) return null;
+  const query = before.slice(atIndex + 1);
+  if (/[\s ]/.test(query)) return null;
+  return { node: node as Text, atIndex, offset, query };
 };
 
 export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) {
@@ -57,23 +99,84 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
   const [editDraft, setEditDraft] = useState('');
   const [editLoading, setEditLoading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
+  // DOM location of the active "@query" so insertMention knows where to splice.
+  const mentionInfoRef = useRef<{ node: Text; atIndex: number; offset: number } | null>(null);
   const [mentionRange, setMentionRange] = useState<{ start: number; end: number } | null>(null);
   const [mentionQuery, setMentionQuery] = useState('');
   const [mentionHighlight, setMentionHighlight] = useState(0);
-
-  const updateMentionTracking = useCallback((value: string, cursor: number) => {
-    const mention = detectActiveMention(value, cursor);
-    if (mention) {
-      setMentionRange({ start: mention.start, end: mention.end });
-      setMentionQuery(mention.query.toLowerCase());
-      setMentionHighlight(0);
-    } else {
-      setMentionRange(null);
-      setMentionQuery('');
-      setMentionHighlight(0);
+  const [mentionCaret, setMentionCaret] = useState<{ top: number; left: number; height: number } | null>(null);
+  // Tracks the last query so cursor/keyup events that don't change the query
+  // (e.g. arrow navigation) don't stomp the highlighted index back to 0.
+  const lastMentionQueryRef = useRef<string | null>(null);
+  // DOM nodes for each mention option, so arrow-key navigation can scroll the
+  // highlighted row into view instead of it being clipped at the list edge.
+  const optionRefs = useRef<Array<HTMLDivElement | null>>([]);
+  // Favorited collaborators (persisted) surface first in the mention list.
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(() => {
+    try {
+      const raw = typeof window !== 'undefined' && window.localStorage.getItem(MENTION_FAVORITES_KEY);
+      return new Set(raw ? (JSON.parse(raw) as string[]) : []);
+    } catch {
+      return new Set();
     }
+  });
+  const toggleFavorite = useCallback((id: string) => {
+    if (!id) return;
+    setFavoriteIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      try {
+        window.localStorage.setItem(MENTION_FAVORITES_KEY, JSON.stringify(Array.from(next)));
+      } catch {
+        /* ignore persistence failures */
+      }
+      return next;
+    });
   }, []);
+  // "CC/BCC myself" — when on, the sender is added as a recipient of the
+  // comment notification so they can confirm it was actually delivered.
+  const [copySelf, setCopySelf] = useState(false);
+
+  const closeMention = useCallback(() => {
+    mentionInfoRef.current = null;
+    setMentionRange(null);
+    setMentionQuery('');
+    setMentionHighlight(0);
+    setMentionCaret(null);
+    lastMentionQueryRef.current = null;
+  }, []);
+
+  const updateMentionTracking = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const mention = detectMentionAtCaret(editor);
+    if (mention) {
+      mentionInfoRef.current = { node: mention.node, atIndex: mention.atIndex, offset: mention.offset };
+      const nextQuery = mention.query.toLowerCase();
+      // mentionRange is kept only as an "open" flag for the popup now.
+      setMentionRange({ start: mention.atIndex, end: mention.offset });
+      setMentionQuery(nextQuery);
+      if (lastMentionQueryRef.current !== nextQuery) {
+        setMentionHighlight(0);
+        lastMentionQueryRef.current = nextQuery;
+      }
+      // Anchor the popup to the caret using the live selection rect.
+      const sel = editor.ownerDocument.getSelection();
+      if (sel && sel.rangeCount > 0) {
+        const rect = sel.getRangeAt(0).getBoundingClientRect();
+        const host = editor.getBoundingClientRect();
+        setMentionCaret({
+          top: rect.top - host.top,
+          left: Math.max(rect.left - host.left, 0),
+          height: rect.height || 20,
+        });
+      }
+    } else {
+      closeMention();
+    }
+  }, [closeMention]);
 
   const mentionCandidates = useMemo(() => {
     const map = new Map<string, BugReportCreator>();
@@ -99,12 +202,19 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
   const mentionOptions = useMemo(() => {
     if (!mentionRange) return [];
     const query = mentionQuery.trim();
-    if (!query) return mentionCandidates;
-    return mentionCandidates.filter((c) => {
-      const label = (c.full_name || c.email || '').toLowerCase();
-      return label.includes(query);
+    const base = !query
+      ? mentionCandidates
+      : mentionCandidates.filter((c) => {
+          const label = (c.full_name || c.email || '').toLowerCase();
+          return label.includes(query);
+        });
+    // Favorites first (stable within each group, preserving alpha order).
+    return [...base].sort((a, b) => {
+      const af = favoriteIds.has(a.id || '') ? 0 : 1;
+      const bf = favoriteIds.has(b.id || '') ? 0 : 1;
+      return af - bf;
     });
-  }, [mentionCandidates, mentionQuery, mentionRange]);
+  }, [mentionCandidates, mentionQuery, mentionRange, favoriteIds]);
 
   const hasNoMentionResults = Boolean(mentionRange && mentionOptions.length === 0);
 
@@ -119,25 +229,68 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
     });
   }, [mentionOptions, mentionRange]);
 
-  const insertMention = (collaborator: BugReportCreator) => {
+  // Keep the highlighted mention row scrolled into view during arrow-key nav so
+  // the selection is never clipped at the top or bottom of the scroll area.
+  useEffect(() => {
     if (!mentionRange) return;
+    const el = optionRefs.current[mentionHighlight];
+    if (el) el.scrollIntoView({ block: 'nearest' });
+  }, [mentionHighlight, mentionRange, mentionOptions]);
+
+  const buildMentionChip = (collaborator: BugReportCreator, doc: Document): HTMLElement => {
     const label = collaborator.full_name || collaborator.email || 'User';
-    const before = newMessage.slice(0, mentionRange.start);
-    const after = newMessage.slice(mentionRange.end);
-    const insertion = `@${label} `;
-    const nextValue = `${before}${insertion}${after}`;
-    setNewMessage(nextValue);
-    setMentionRange(null);
-    setMentionQuery('');
-    setMentionHighlight(0);
-    requestAnimationFrame(() => {
-      const textarea = textareaRef.current;
-      if (textarea) {
-        const cursorPosition = before.length + insertion.length;
-        textarea.focus();
-        textarea.setSelectionRange(cursorPosition, cursorPosition);
-      }
-    });
+    const chip = doc.createElement('span');
+    chip.setAttribute(MENTION_ATTR, collaborator.id || '');
+    chip.setAttribute('data-label', label);
+    chip.setAttribute('contenteditable', 'false');
+    chip.className =
+      'mx-0.5 inline-flex items-center gap-1 rounded-md bg-blue-100 px-1.5 py-0.5 align-baseline text-xs font-medium text-blue-700';
+    const at = doc.createElement('span');
+    at.className = 'text-blue-400';
+    at.textContent = '@';
+    chip.appendChild(at);
+    const name = doc.createElement('span');
+    name.textContent = label;
+    chip.appendChild(name);
+    if (collaborator.email && collaborator.full_name) {
+      const email = doc.createElement('span');
+      email.className = 'text-blue-400';
+      email.textContent = collaborator.email;
+      chip.appendChild(email);
+    }
+    return chip;
+  };
+
+  const insertMention = (collaborator: BugReportCreator) => {
+    const editor = editorRef.current;
+    const info = mentionInfoRef.current;
+    if (!editor || !info) return;
+    const doc = editor.ownerDocument;
+    const { node, atIndex, offset } = info;
+    const text = node.nodeValue || '';
+    // Drop the "@query" the user typed; keep text on either side.
+    node.nodeValue = text.slice(0, atIndex);
+    const afterNode = doc.createTextNode(text.slice(offset));
+    const chip = buildMentionChip(collaborator, doc);
+    const spacer = doc.createTextNode(' '); // keeps a boundary + caret home
+    const parent = node.parentNode;
+    if (!parent) return;
+    const anchor = node.nextSibling;
+    parent.insertBefore(chip, anchor);
+    parent.insertBefore(spacer, anchor);
+    parent.insertBefore(afterNode, anchor);
+    // Place the caret right after the trailing space.
+    const sel = doc.getSelection();
+    if (sel) {
+      const range = doc.createRange();
+      range.setStart(spacer, spacer.length);
+      range.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+    editor.focus();
+    setNewMessage(getEditorText(editor));
+    closeMention();
   };
 
   const loadMessages = useCallback(
@@ -222,21 +375,16 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
     setEditDraft('');
   };
 
-  const handleMentionCursorUpdate = useCallback(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    const cursor = textarea.selectionStart ?? textarea.value.length;
-    updateMentionTracking(textarea.value, cursor);
-  }, [updateMentionTracking]);
-
-  const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value;
-    setNewMessage(value);
-    const cursor = e.target.selectionStart ?? value.length;
-    updateMentionTracking(value, cursor);
+  // Sync plain-text value + mention tracking whenever the editor content or
+  // caret changes.
+  const handleEditorInput = () => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    setNewMessage(getEditorText(editor));
+    updateMentionTracking();
   };
 
-  const handleTextareaKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleEditorKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
       e.preventDefault();
       handleSendMessage();
@@ -263,9 +411,7 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
 
     if (mentionRange && e.key === 'Escape') {
       e.preventDefault();
-      setMentionRange(null);
-      setMentionQuery('');
-      setMentionHighlight(0);
+      closeMention();
     }
   };
 
@@ -283,8 +429,8 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
         return next;
       });
       setNewMessage('');
-      setMentionRange(null);
-      setMentionQuery('');
+      if (editorRef.current) editorRef.current.innerHTML = '';
+      closeMention();
 
       // Fire notification callback
       if (onNotify) {
@@ -304,6 +450,13 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
             if (msg.author_id !== user.id && msg.author?.email) {
               recipientEmails.add(msg.author.email);
             }
+          }
+
+          // CC/BCC self: deliver a copy to the sender so they can confirm the
+          // comment notification actually went out to the mentioned recipients.
+          const selfEmail = user.email || data.author?.email || null;
+          if (copySelf && selfEmail) {
+            recipientEmails.add(selfEmail);
           }
 
           for (const email of recipientEmails) {
@@ -394,6 +547,54 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
       </div>
     );
   }
+
+  // Render a message body, turning "@Full Name" tokens that match a known
+  // collaborator into a styled badge showing their full name and email.
+  const mentionLabels = useMemo(
+    () =>
+      mentionCandidates
+        .map((c) => ({ collaborator: c, label: (c.full_name || c.email || '').trim() }))
+        .filter((x) => x.label)
+        .sort((a, b) => b.label.length - a.label.length),
+    [mentionCandidates]
+  );
+
+  const renderMessageBody = (body: string) => {
+    if (!mentionLabels.length || !body.includes('@')) return body;
+    const nodes: React.ReactNode[] = [];
+    let buffer = '';
+    let i = 0;
+    while (i < body.length) {
+      if (body[i] === '@') {
+        const rest = body.slice(i + 1);
+        const match = mentionLabels.find((x) => rest.startsWith(x.label));
+        if (match) {
+          if (buffer) {
+            nodes.push(buffer);
+            buffer = '';
+          }
+          const { full_name, email } = match.collaborator;
+          nodes.push(
+            <span
+              key={i}
+              title={email || undefined}
+              className="mx-0.5 inline-flex items-center gap-1 rounded-md bg-blue-50 px-1.5 py-0.5 align-baseline text-xs font-medium text-blue-700"
+            >
+              <FiAtSign size={10} className="shrink-0 text-blue-400" />
+              <span>{full_name || email}</span>
+              {full_name && email && <span className="text-blue-400">{email}</span>}
+            </span>
+          );
+          i += 1 + match.label.length;
+          continue;
+        }
+      }
+      buffer += body[i];
+      i++;
+    }
+    if (buffer) nodes.push(buffer);
+    return nodes;
+  };
 
   // Avatar initials helper
   const getInitials = (name: string) => {
@@ -516,7 +717,7 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
                       </div>
                     </div>
                   ) : (
-                    <p className="whitespace-pre-wrap text-sm text-slate-700">{message.body}</p>
+                    <p className="whitespace-pre-wrap text-sm text-slate-700">{renderMessageBody(message.body)}</p>
                   )}
                 </div>
               );
@@ -526,21 +727,40 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-        <div className="relative">
-          <textarea
-            ref={textareaRef}
-            placeholder="Add a reply or request more info..."
-            value={newMessage}
-            onChange={handleMessageChange}
-            onKeyDown={handleTextareaKeyDown}
-            onKeyUp={handleMentionCursorUpdate}
-            onClick={handleMentionCursorUpdate}
-            rows={4}
-            className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-900 focus:ring-1 focus:ring-slate-900/20"
+        <div className="relative rounded-xl border border-slate-300 bg-slate-50 transition focus-within:border-slate-900 focus-within:ring-1 focus-within:ring-slate-900/20">
+          {!newMessage && (
+            <div className="pointer-events-none absolute left-3 top-3 text-sm text-slate-400">
+              Add a reply or request more info...
+            </div>
+          )}
+          <div
+            ref={editorRef}
+            role="textbox"
+            aria-multiline="true"
+            aria-label="Add a reply or request more info"
+            contentEditable
+            suppressContentEditableWarning
+            onInput={handleEditorInput}
+            onKeyDown={handleEditorKeyDown}
+            onKeyUp={updateMentionTracking}
+            onClick={updateMentionTracking}
+            className="min-h-[6.5rem] max-h-[240px] w-full overflow-y-auto whitespace-pre-wrap break-words px-3 py-3 font-sans text-sm leading-5 text-slate-900 outline-none"
           />
-          {mentionRange && (
-            <div className="absolute bottom-3 left-3 z-[2] min-w-[260px] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
-              <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2 text-xs font-medium text-slate-500">
+          {mentionRange && (() => {
+            const caret = mentionCaret ?? { top: 0, left: 0, height: 20 };
+            const editor = editorRef.current;
+            const fieldHeight = editor?.clientHeight ?? 0;
+            // Flip above the caret when there isn't room below inside the field.
+            const showAbove = fieldHeight > 0 && caret.top + caret.height + 200 > fieldHeight;
+            const posStyle: React.CSSProperties = showAbove
+              ? { left: caret.left, bottom: Math.max(fieldHeight - caret.top + 4, 0) }
+              : { left: caret.left, top: caret.top + caret.height + 4 };
+            return (
+            <div
+              className="absolute z-[2] max-h-[220px] min-w-[260px] max-w-[320px] overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg"
+              style={posStyle}
+            >
+              <div className="sticky top-0 flex items-center gap-2 border-b border-slate-100 bg-white px-3 py-2 text-xs font-medium text-slate-500">
                 <FiAtSign size={12} />
                 <span>Mentions</span>
                 <span className="ml-auto">Type to filter, Enter to select</span>
@@ -550,10 +770,15 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
                   <p className="text-sm text-slate-500">No collaborators match "{mentionQuery}"</p>
                 </div>
               ) : (
-                mentionOptions.map((collaborator, index) => (
+                mentionOptions.map((collaborator, index) => {
+                  const isFav = favoriteIds.has(collaborator.id || '');
+                  return (
                   <div
                     key={collaborator.id}
-                    className={`cursor-pointer px-3 py-2 transition hover:bg-slate-50 ${
+                    ref={(el) => {
+                      optionRefs.current[index] = el;
+                    }}
+                    className={`flex cursor-pointer items-center gap-2 px-3 py-2 transition hover:bg-slate-50 ${
                       mentionHighlight === index ? 'bg-slate-100' : ''
                     }`}
                     onMouseDown={(e) => {
@@ -562,17 +787,36 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
                       setMentionHighlight(index);
                     }}
                   >
-                    <p className="text-sm font-medium text-slate-900">
-                      {collaborator.full_name || collaborator.email || 'Unknown'}
-                    </p>
-                    {collaborator.email && collaborator.full_name && (
-                      <p className="text-xs text-slate-500">{collaborator.email}</p>
-                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-slate-900">
+                        {collaborator.full_name || collaborator.email || 'Unknown'}
+                      </p>
+                      {collaborator.email && collaborator.full_name && (
+                        <p className="truncate text-xs text-slate-500">{collaborator.email}</p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      className={`shrink-0 rounded-md p-1 transition hover:bg-slate-200 ${
+                        isFav ? 'text-amber-500' : 'text-slate-300 hover:text-slate-500'
+                      }`}
+                      aria-label={isFav ? 'Unfavorite teammate' : 'Favorite teammate'}
+                      title={isFav ? 'Unfavorite (stops surfacing first)' : 'Favorite (surfaces first next time)'}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        toggleFavorite(collaborator.id || '');
+                      }}
+                    >
+                      <FiStar size={14} fill={isFav ? 'currentColor' : 'none'} />
+                    </button>
                   </div>
-                ))
+                  );
+                })
               )}
             </div>
-          )}
+            );
+          })()}
         </div>
         <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-600">
@@ -582,16 +826,30 @@ export default function DevNotesDiscussion({ report }: DevNotesDiscussionProps) 
               <span className="font-semibold">@</span> to mention a teammate.
             </span>
           </span>
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:opacity-50"
-            onClick={handleSendMessage}
-            disabled={!newMessage.trim() || sending}
-            title="Send note"
-          >
-            <FiSend size={14} />
-            <span>{sending ? 'Sending...' : 'Send'}</span>
-          </button>
+          <div className="flex items-center gap-3">
+            <label
+              className="inline-flex cursor-pointer select-none items-center gap-1.5 text-xs text-slate-600"
+              title="Send yourself a copy of the notification so you can confirm it was delivered"
+            >
+              <input
+                type="checkbox"
+                className="h-3.5 w-3.5 rounded border-slate-300 text-slate-900 focus:ring-slate-900/20"
+                checked={copySelf}
+                onChange={(e) => setCopySelf(e.target.checked)}
+              />
+              <span>CC/BCC me</span>
+            </label>
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:opacity-50"
+              onClick={handleSendMessage}
+              disabled={!newMessage.trim() || sending}
+              title="Send note"
+            >
+              <FiSend size={14} />
+              <span>{sending ? 'Sending...' : 'Send'}</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

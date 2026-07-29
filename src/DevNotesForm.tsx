@@ -73,7 +73,7 @@ const FIELD_SURFACE_CLASS =
 const CONTROL_INPUT_CLASS =
   'w-full border-0 bg-transparent px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none';
 const CONTROL_TEXTAREA_CLASS =
-  'w-full resize-none border-0 bg-transparent px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-[height] duration-200';
+  'w-full resize-y border-0 bg-transparent px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-[height] duration-200';
 const SECTION_CARD_CLASS =
   'rounded-2xl border border-slate-200 bg-slate-50/80 p-4 shadow-sm shadow-slate-900/5';
 const ACTION_ICON_BUTTON_CLASS =
@@ -81,7 +81,7 @@ const ACTION_ICON_BUTTON_CLASS =
 
 const floatingLabelClass = (isSuperscript: boolean) =>
   isSuperscript
-    ? 'absolute -top-2.5 left-3 z-[2] rounded-full border border-slate-200 bg-white px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 pointer-events-none'
+    ? 'absolute -top-3.5 left-3 z-[2] rounded-full border border-slate-200 bg-white px-1.5 py-0 text-[9px] leading-tight font-semibold uppercase tracking-[0.14em] text-slate-500 pointer-events-none'
     : 'mb-2 block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500';
 
 function SearchableSingleSelect({
@@ -1444,16 +1444,6 @@ export default function DevNotesForm({
                     placeholder="Search assignee..."
                     isSuperscript={isSuperscriptLabels}
                   />
-                  {existingReport && (statusValue === 'Closed' || statusValue === 'Resolved') && (
-                    <SearchableSingleSelect
-                      label="Resolved By"
-                      options={[{ id: '', label: 'Not Set' }, ...collaboratorOptions]}
-                      value={resolvedBy ?? ''}
-                      onChange={(value) => setResolvedBy(value || null)}
-                      placeholder="Search resolver..."
-                      isSuperscript={isSuperscriptLabels}
-                    />
-                  )}
                 </div>
               </div>
             )}
@@ -1568,31 +1558,51 @@ export default function DevNotesForm({
               </div>
             </div>
 
-            <div className={isSuperscriptLabels ? 'relative' : ''}>
-              <label className={floatingLabelClass(isSuperscriptLabels)}>Page URL</label>
-              <div className={FIELD_SURFACE_CLASS}>
-                <div className="relative flex items-center">
-                  <input
-                    type="text"
-                    className={`w-full border-0 bg-transparent py-2 pl-3 pr-10 text-sm text-slate-900 outline-none placeholder:text-slate-400 ${
-                      !existingReport ? 'cursor-not-allowed text-slate-500' : ''
-                    }`}
-                    value={reportPageUrl}
-                    onChange={(e) => setReportPageUrl(e.target.value)}
-                    readOnly={!existingReport}
-                  />
-                  <a
-                    href={composePageUrlWithTab(reportPageUrl)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-                    title="Open in new tab"
-                  >
-                    <FiExternalLink size={14} />
-                  </a>
+            {(() => {
+              const showResolvedBy =
+                Boolean(existingReport) &&
+                (statusValue === 'Closed' || statusValue === 'Resolved') &&
+                isAdmin;
+              return (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {showResolvedBy && (
+                    <SearchableSingleSelect
+                      label="Resolved By"
+                      options={[{ id: '', label: 'Not Set' }, ...collaboratorOptions]}
+                      value={resolvedBy ?? ''}
+                      onChange={(value) => setResolvedBy(value || null)}
+                      placeholder="Search resolver..."
+                      isSuperscript={isSuperscriptLabels}
+                    />
+                  )}
+                  <div className={`${isSuperscriptLabels ? 'relative' : ''} ${showResolvedBy ? '' : 'md:col-span-2'}`}>
+                    <label className={floatingLabelClass(isSuperscriptLabels)}>Page URL</label>
+                    <div className={FIELD_SURFACE_CLASS}>
+                      <div className="relative flex items-center">
+                        <input
+                          type="text"
+                          className={`w-full border-0 bg-transparent py-2 pl-3 pr-10 text-sm text-slate-900 outline-none placeholder:text-slate-400 ${
+                            !existingReport ? 'cursor-not-allowed text-slate-500' : ''
+                          }`}
+                          value={reportPageUrl}
+                          onChange={(e) => setReportPageUrl(e.target.value)}
+                          readOnly={!existingReport}
+                        />
+                        <a
+                          href={composePageUrlWithTab(reportPageUrl)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                          title="Open in new tab"
+                        >
+                          <FiExternalLink size={14} />
+                        </a>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+              );
+            })()}
           </div>
         </section>
 

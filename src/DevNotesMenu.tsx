@@ -54,6 +54,66 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
     forgeStatus,
   } = useDevNotes();
   const forgeDisconnected = forgeStatus?.connected === false;
+  // Host apps ship CSS that outranks our utility classes (see the note in
+  // styles.css) — on app.politogyvrm.com it flattened every classed row so they
+  // painted on top of each other. Inline styles can't be outranked, so every
+  // menu row is styled the same way the "View All Tasks" row already was.
+  const rowStyle: React.CSSProperties = {
+    position: 'relative',
+    display: 'flex',
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    padding: '8px 12px',
+    margin: 0,
+    fontSize: 14,
+    lineHeight: '20px',
+    textAlign: 'left',
+    color: '#1f2937',
+    background: 'transparent',
+    border: 'none',
+    cursor: 'pointer',
+  };
+  const rowLabelStyle: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
+    whiteSpace: 'nowrap',
+  };
+  const hoverOn = (e: React.MouseEvent) => {
+    (e.currentTarget as HTMLElement).style.background = '#f9fafb';
+  };
+  const hoverOff = (e: React.MouseEvent) => {
+    (e.currentTarget as HTMLElement).style.background = 'transparent';
+  };
+  const dividerStyle: React.CSSProperties = {
+    height: 1,
+    margin: '4px 0',
+    background: '#e5e7eb',
+  };
+  const switchStyle = (on: boolean, onColor = '#22c55e'): React.CSSProperties => ({
+    position: 'relative',
+    display: 'inline-flex',
+    height: 20,
+    width: 36,
+    flexShrink: 0,
+    borderRadius: 9999,
+    cursor: 'pointer',
+    background: on ? onColor : '#d1d5db',
+    transition: 'background-color 200ms',
+  });
+  const knobStyle = (on: boolean): React.CSSProperties => ({
+    display: 'inline-block',
+    height: 16,
+    width: 16,
+    marginTop: 2,
+    borderRadius: 9999,
+    background: '#ffffff',
+    boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)',
+    transform: on ? 'translateX(18px)' : 'translateX(2px)',
+    transition: 'transform 200ms',
+  });
   const [open, setOpen] = useState(false);
   const [showTaskModal, setShowTaskModal] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -90,17 +150,28 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
     <div
       ref={menuRef}
       data-bug-menu
-      className="relative"
-      style={{ zIndex: open ? 9995 : 'auto' }}
+      style={{ position: 'relative', zIndex: open ? 9995 : 'auto' }}
     >
       <button
         type="button"
         aria-label={isEnabled ? 'Click to disable task creation' : 'Task menu'}
         onClick={handleIconClick}
-        className="inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-700 transition hover:text-emerald-600"
+        style={{
+          display: 'inline-flex',
+          height: 32,
+          width: 32,
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderRadius: 6,
+          padding: 0,
+          border: 'none',
+          background: 'transparent',
+          color: '#374151',
+          cursor: 'pointer',
+        }}
         title="Tasks"
       >
-        <span className="relative">
+        <span style={{ position: 'relative', display: 'inline-flex' }}>
           {IconComponent ? (
             <IconComponent size={20} color={isEnabled ? '#E53E3E' : undefined} />
           ) : (
@@ -109,14 +180,45 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
           {forgeDisconnected ? (
             <span
               title="Forge is disconnected"
-              className="absolute -right-2 -top-1 inline-flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white"
-              style={{ boxShadow: '0 0 0 2px #ffffff' }}
+              style={{
+                position: 'absolute',
+                right: -8,
+                top: -4,
+                display: 'inline-flex',
+                height: 16,
+                minWidth: 16,
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: 9999,
+                background: '#dc2626',
+                padding: '0 4px',
+                fontSize: 10,
+                fontWeight: 700,
+                color: '#ffffff',
+                boxShadow: '0 0 0 2px #ffffff',
+              }}
             >
               !
             </span>
           ) : (
             openBugCount > 0 && (
-              <span className="absolute -right-2 -top-1 inline-flex min-w-[16px] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
+              <span
+                style={{
+                  position: 'absolute',
+                  right: -8,
+                  top: -4,
+                  display: 'inline-flex',
+                  minWidth: 16,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 9999,
+                  background: '#dc2626',
+                  padding: '0 4px',
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: '#ffffff',
+                }}
+              >
                 {openBugCount}
               </span>
             )
@@ -140,8 +242,8 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
             boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)',
           }}
         >
-          <div className="px-3 py-2">
-            <p className="text-xs font-semibold text-gray-500">DEV NOTES</p>
+          <div style={{ padding: '8px 12px' }}>
+            <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: '#6b7280' }}>DEV NOTES</p>
           </div>
 
           {forgeDisconnected && (
@@ -150,7 +252,7 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
             </div>
           )}
 
-          <div className="my-1 border-t border-gray-200" />
+          <div style={dividerStyle} />
 
           <button
             type="button"
@@ -159,28 +261,20 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
               setIsEnabled(!isEnabled);
               setOpen(false);
             }}
-            className="flex w-full items-center justify-between gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50"
+            style={rowStyle}
+            onMouseEnter={hoverOn}
+            onMouseLeave={hoverOff}
           >
-            <span className="inline-flex items-center gap-2 whitespace-nowrap">
+            <span style={rowLabelStyle}>
               {isEnabled ? (
-                <FiToggleRight className="text-green-600" />
+                <FiToggleRight color="#16a34a" style={{ flexShrink: 0 }} />
               ) : (
-                <FiToggleLeft />
+                <FiToggleLeft style={{ flexShrink: 0 }} />
               )}
               {isEnabled ? 'Stop Creating Tasks' : 'Create Task'}
             </span>
-            <span
-              role="switch"
-              aria-checked={isEnabled}
-              className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ${
-                isEnabled ? 'bg-green-500' : 'bg-gray-300'
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${
-                  isEnabled ? 'translate-x-4' : 'translate-x-0.5'
-                } mt-0.5`}
-              />
+            <span role="switch" aria-checked={isEnabled} style={switchStyle(isEnabled)}>
+              <span style={knobStyle(isEnabled)} />
             </span>
           </button>
 
@@ -188,28 +282,20 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
             type="button"
             data-menu-item
             onClick={() => setShowTasksAlways(!showTasksAlways)}
-            className="flex w-full items-center justify-between gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50"
+            style={rowStyle}
+            onMouseEnter={hoverOn}
+            onMouseLeave={hoverOff}
           >
-            <span className="inline-flex items-center gap-2 whitespace-nowrap">
+            <span style={rowLabelStyle}>
               {showTasksAlways ? (
-                <FiEye className="text-blue-600" />
+                <FiEye color="#2563eb" style={{ flexShrink: 0 }} />
               ) : (
-                <FiEyeOff />
+                <FiEyeOff style={{ flexShrink: 0 }} />
               )}
               Show Tasks Always
             </span>
-            <span
-              role="switch"
-              aria-checked={showTasksAlways}
-              className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ${
-                showTasksAlways ? 'bg-green-500' : 'bg-gray-300'
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${
-                  showTasksAlways ? 'translate-x-4' : 'translate-x-0.5'
-                } mt-0.5`}
-              />
+            <span role="switch" aria-checked={showTasksAlways} style={switchStyle(showTasksAlways)}>
+              <span style={knobStyle(showTasksAlways)} />
             </span>
           </button>
 
@@ -217,26 +303,19 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
             type="button"
             data-menu-item
             onClick={() => setHideResolvedClosed(!hideResolvedClosed)}
-            className="flex w-full items-center justify-between gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50"
+            style={rowStyle}
+            onMouseEnter={hoverOn}
+            onMouseLeave={hoverOff}
           >
-            <span className="inline-flex items-center gap-2 whitespace-nowrap">
+            <span style={rowLabelStyle}>
               <FiFilter
-                className={hideResolvedClosed ? 'text-green-600' : 'text-gray-500'}
+                color={hideResolvedClosed ? '#16a34a' : '#6b7280'}
+                style={{ flexShrink: 0 }}
               />
               Hide Resolved/Closed
             </span>
-            <span
-              role="switch"
-              aria-checked={hideResolvedClosed}
-              className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ${
-                hideResolvedClosed ? 'bg-green-500' : 'bg-gray-300'
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${
-                  hideResolvedClosed ? 'translate-x-4' : 'translate-x-0.5'
-                } mt-0.5`}
-              />
+            <span role="switch" aria-checked={hideResolvedClosed} style={switchStyle(hideResolvedClosed)}>
+              <span style={knobStyle(hideResolvedClosed)} />
             </span>
           </button>
 
@@ -244,30 +323,25 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
             type="button"
             data-menu-item
             onClick={() => setShowStepDots(!showStepDots)}
-            className="flex w-full items-center justify-between gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50"
+            style={rowStyle}
+            onMouseEnter={hoverOn}
+            onMouseLeave={hoverOff}
           >
-            <span className="inline-flex items-center gap-2 whitespace-nowrap">
-              <FiMapPin className={showStepDots ? 'text-blue-600' : 'text-gray-500'} />
+            <span style={rowLabelStyle}>
+              <FiMapPin
+                color={showStepDots ? '#2563eb' : '#6b7280'}
+                style={{ flexShrink: 0 }}
+              />
               Show Step Dots
             </span>
-            <span
-              role="switch"
-              aria-checked={showStepDots}
-              className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ${
-                showStepDots ? 'bg-blue-500' : 'bg-gray-300'
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${
-                  showStepDots ? 'translate-x-4' : 'translate-x-0.5'
-                } mt-0.5`}
-              />
+            <span role="switch" aria-checked={showStepDots} style={switchStyle(showStepDots, '#3b82f6')}>
+              <span style={knobStyle(showStepDots)} />
             </span>
           </button>
 
           {canRecordUserStory && (
             <>
-              <div className="my-1 border-t border-gray-200" />
+              <div style={dividerStyle} />
               <button
                 type="button"
                 data-menu-item
@@ -279,13 +353,15 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
                     startUserStoryRecording();
                   }
                 }}
-                className="flex w-full items-center gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50"
+                style={{ ...rowStyle, justifyContent: 'flex-start' }}
+                onMouseEnter={hoverOn}
+                onMouseLeave={hoverOff}
               >
-                <span className="inline-flex items-center gap-2 whitespace-nowrap">
+                <span style={rowLabelStyle}>
                   {isRecordingStory ? (
-                    <FiSquare className="text-red-600" />
+                    <FiSquare color="#dc2626" style={{ flexShrink: 0 }} />
                   ) : (
-                    <FiVideo className="text-blue-600" />
+                    <FiVideo color="#2563eb" style={{ flexShrink: 0 }} />
                   )}
                   {isRecordingStory
                     ? 'Stop Recording Test Case'
@@ -295,7 +371,7 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
             </>
           )}
 
-          <div className="my-1 border-t border-gray-200" />
+          <div style={dividerStyle} />
 
           {/* Always-on, inline-styled trigger for the built-in self-contained task modal */}
           <button
@@ -309,27 +385,11 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
                 setShowTaskModal(true);
               }
             }}
-            style={{
-              display: 'flex',
-              width: '100%',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 12,
-              padding: '8px 12px',
-              fontSize: 14,
-              color: '#1f2937',
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.background = '#f9fafb';
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
-            }}
+            style={rowStyle}
+            onMouseEnter={hoverOn}
+            onMouseLeave={hoverOff}
           >
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}>
+            <span style={rowLabelStyle}>
               <FiList style={{ flexShrink: 0 }} />
               View All Tasks
             </span>
@@ -361,10 +421,12 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
                 setOpen(false);
                 onSettings();
               }}
-              className="flex w-full items-center gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50"
+              style={{ ...rowStyle, justifyContent: 'flex-start' }}
+              onMouseEnter={hoverOn}
+              onMouseLeave={hoverOff}
             >
-              <span className="inline-flex items-center gap-2 whitespace-nowrap">
-                <FiSettings className="flex-shrink-0" />
+              <span style={rowLabelStyle}>
+                <FiSettings style={{ flexShrink: 0 }} />
                 Settings
               </span>
             </button>

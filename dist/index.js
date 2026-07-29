@@ -1490,18 +1490,48 @@ var setCachedMessages = (reportId, messages) => {
     messageCache.delete(oldestKey);
   }
 };
-var detectActiveMention = (value, cursor) => {
-  const slice = value.slice(0, cursor);
-  const atIndex = slice.lastIndexOf("@");
+var MENTION_ATTR = "data-dn-mention";
+var MENTION_FAVORITES_KEY = "devnotes:mention-favorites";
+var getEditorText = (root) => {
+  let out = "";
+  const nl = () => {
+    if (out.length && !out.endsWith("\n")) out += "\n";
+  };
+  const walk = (node) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      out += (node.nodeValue || "").replace(/ /g, " ");
+      return;
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) return;
+    const el = node;
+    if (el.getAttribute(MENTION_ATTR) != null) {
+      out += "@" + (el.getAttribute("data-label") || "");
+      return;
+    }
+    if (el.tagName === "BR") {
+      out += "\n";
+      return;
+    }
+    if (el.tagName === "DIV") nl();
+    Array.from(el.childNodes).forEach(walk);
+  };
+  Array.from(root.childNodes).forEach(walk);
+  return out;
+};
+var detectMentionAtCaret = (root) => {
+  const sel = root.ownerDocument.getSelection();
+  if (!sel || sel.rangeCount === 0 || !sel.isCollapsed) return null;
+  const node = sel.anchorNode;
+  if (!node || node.nodeType !== Node.TEXT_NODE || !root.contains(node)) return null;
+  const text = node.nodeValue || "";
+  const offset = sel.anchorOffset;
+  const before = text.slice(0, offset);
+  const atIndex = before.lastIndexOf("@");
   if (atIndex === -1) return null;
-  if (atIndex > 0 && /\S/.test(slice.charAt(atIndex - 1))) {
-    return null;
-  }
-  const query = slice.slice(atIndex + 1);
-  if (query.includes(" ") || query.includes("\n") || query.includes("	")) {
-    return null;
-  }
-  return { start: atIndex, end: cursor, query };
+  if (atIndex > 0 && /\S/.test(before.charAt(atIndex - 1).replace(/ /g, " "))) return null;
+  const query = before.slice(atIndex + 1);
+  if (/[\s ]/.test(query)) return null;
+  return { node, atIndex, offset, query };
 };
 function DevNotesDiscussion({ report }) {
   const { user, adapter, markMessagesAsRead, userProfiles, collaborators, onNotify } = useDevNotes();
@@ -1513,22 +1543,71 @@ function DevNotesDiscussion({ report }) {
   const [editDraft, setEditDraft] = (0, import_react3.useState)("");
   const [editLoading, setEditLoading] = (0, import_react3.useState)(false);
   const [deletingId, setDeletingId] = (0, import_react3.useState)(null);
-  const textareaRef = (0, import_react3.useRef)(null);
+  const editorRef = (0, import_react3.useRef)(null);
+  const mentionInfoRef = (0, import_react3.useRef)(null);
   const [mentionRange, setMentionRange] = (0, import_react3.useState)(null);
   const [mentionQuery, setMentionQuery] = (0, import_react3.useState)("");
   const [mentionHighlight, setMentionHighlight] = (0, import_react3.useState)(0);
-  const updateMentionTracking = (0, import_react3.useCallback)((value, cursor) => {
-    const mention = detectActiveMention(value, cursor);
-    if (mention) {
-      setMentionRange({ start: mention.start, end: mention.end });
-      setMentionQuery(mention.query.toLowerCase());
-      setMentionHighlight(0);
-    } else {
-      setMentionRange(null);
-      setMentionQuery("");
-      setMentionHighlight(0);
+  const [mentionCaret, setMentionCaret] = (0, import_react3.useState)(null);
+  const lastMentionQueryRef = (0, import_react3.useRef)(null);
+  const optionRefs = (0, import_react3.useRef)([]);
+  const [favoriteIds, setFavoriteIds] = (0, import_react3.useState)(() => {
+    try {
+      const raw = typeof window !== "undefined" && window.localStorage.getItem(MENTION_FAVORITES_KEY);
+      return new Set(raw ? JSON.parse(raw) : []);
+    } catch {
+      return /* @__PURE__ */ new Set();
     }
+  });
+  const toggleFavorite = (0, import_react3.useCallback)((id) => {
+    if (!id) return;
+    setFavoriteIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      try {
+        window.localStorage.setItem(MENTION_FAVORITES_KEY, JSON.stringify(Array.from(next)));
+      } catch {
+      }
+      return next;
+    });
   }, []);
+  const [copySelf, setCopySelf] = (0, import_react3.useState)(false);
+  const closeMention = (0, import_react3.useCallback)(() => {
+    mentionInfoRef.current = null;
+    setMentionRange(null);
+    setMentionQuery("");
+    setMentionHighlight(0);
+    setMentionCaret(null);
+    lastMentionQueryRef.current = null;
+  }, []);
+  const updateMentionTracking = (0, import_react3.useCallback)(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const mention = detectMentionAtCaret(editor);
+    if (mention) {
+      mentionInfoRef.current = { node: mention.node, atIndex: mention.atIndex, offset: mention.offset };
+      const nextQuery = mention.query.toLowerCase();
+      setMentionRange({ start: mention.atIndex, end: mention.offset });
+      setMentionQuery(nextQuery);
+      if (lastMentionQueryRef.current !== nextQuery) {
+        setMentionHighlight(0);
+        lastMentionQueryRef.current = nextQuery;
+      }
+      const sel = editor.ownerDocument.getSelection();
+      if (sel && sel.rangeCount > 0) {
+        const rect = sel.getRangeAt(0).getBoundingClientRect();
+        const host = editor.getBoundingClientRect();
+        setMentionCaret({
+          top: rect.top - host.top,
+          left: Math.max(rect.left - host.left, 0),
+          height: rect.height || 20
+        });
+      }
+    } else {
+      closeMention();
+    }
+  }, [closeMention]);
   const mentionCandidates = (0, import_react3.useMemo)(() => {
     const map = /* @__PURE__ */ new Map();
     collaborators.forEach((c) => {
@@ -1552,12 +1631,16 @@ function DevNotesDiscussion({ report }) {
   const mentionOptions = (0, import_react3.useMemo)(() => {
     if (!mentionRange) return [];
     const query = mentionQuery.trim();
-    if (!query) return mentionCandidates;
-    return mentionCandidates.filter((c) => {
+    const base = !query ? mentionCandidates : mentionCandidates.filter((c) => {
       const label = (c.full_name || c.email || "").toLowerCase();
       return label.includes(query);
     });
-  }, [mentionCandidates, mentionQuery, mentionRange]);
+    return [...base].sort((a, b) => {
+      const af = favoriteIds.has(a.id || "") ? 0 : 1;
+      const bf = favoriteIds.has(b.id || "") ? 0 : 1;
+      return af - bf;
+    });
+  }, [mentionCandidates, mentionQuery, mentionRange, favoriteIds]);
   const hasNoMentionResults = Boolean(mentionRange && mentionOptions.length === 0);
   (0, import_react3.useEffect)(() => {
     if (!mentionRange) {
@@ -1569,25 +1652,61 @@ function DevNotesDiscussion({ report }) {
       return Math.min(prev, mentionOptions.length - 1);
     });
   }, [mentionOptions, mentionRange]);
-  const insertMention = (collaborator) => {
+  (0, import_react3.useEffect)(() => {
     if (!mentionRange) return;
+    const el = optionRefs.current[mentionHighlight];
+    if (el) el.scrollIntoView({ block: "nearest" });
+  }, [mentionHighlight, mentionRange, mentionOptions]);
+  const buildMentionChip = (collaborator, doc) => {
     const label = collaborator.full_name || collaborator.email || "User";
-    const before = newMessage.slice(0, mentionRange.start);
-    const after = newMessage.slice(mentionRange.end);
-    const insertion = `@${label} `;
-    const nextValue = `${before}${insertion}${after}`;
-    setNewMessage(nextValue);
-    setMentionRange(null);
-    setMentionQuery("");
-    setMentionHighlight(0);
-    requestAnimationFrame(() => {
-      const textarea = textareaRef.current;
-      if (textarea) {
-        const cursorPosition = before.length + insertion.length;
-        textarea.focus();
-        textarea.setSelectionRange(cursorPosition, cursorPosition);
-      }
-    });
+    const chip = doc.createElement("span");
+    chip.setAttribute(MENTION_ATTR, collaborator.id || "");
+    chip.setAttribute("data-label", label);
+    chip.setAttribute("contenteditable", "false");
+    chip.className = "mx-0.5 inline-flex items-center gap-1 rounded-md bg-blue-100 px-1.5 py-0.5 align-baseline text-xs font-medium text-blue-700";
+    const at = doc.createElement("span");
+    at.className = "text-blue-400";
+    at.textContent = "@";
+    chip.appendChild(at);
+    const name = doc.createElement("span");
+    name.textContent = label;
+    chip.appendChild(name);
+    if (collaborator.email && collaborator.full_name) {
+      const email = doc.createElement("span");
+      email.className = "text-blue-400";
+      email.textContent = collaborator.email;
+      chip.appendChild(email);
+    }
+    return chip;
+  };
+  const insertMention = (collaborator) => {
+    const editor = editorRef.current;
+    const info = mentionInfoRef.current;
+    if (!editor || !info) return;
+    const doc = editor.ownerDocument;
+    const { node, atIndex, offset } = info;
+    const text = node.nodeValue || "";
+    node.nodeValue = text.slice(0, atIndex);
+    const afterNode = doc.createTextNode(text.slice(offset));
+    const chip = buildMentionChip(collaborator, doc);
+    const spacer = doc.createTextNode("\xA0");
+    const parent = node.parentNode;
+    if (!parent) return;
+    const anchor = node.nextSibling;
+    parent.insertBefore(chip, anchor);
+    parent.insertBefore(spacer, anchor);
+    parent.insertBefore(afterNode, anchor);
+    const sel = doc.getSelection();
+    if (sel) {
+      const range = doc.createRange();
+      range.setStart(spacer, spacer.length);
+      range.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+    editor.focus();
+    setNewMessage(getEditorText(editor));
+    closeMention();
   };
   const loadMessages = (0, import_react3.useCallback)(
     async (reportId, { silent } = { silent: false }) => {
@@ -1659,19 +1778,13 @@ function DevNotesDiscussion({ report }) {
     setEditingMessageId(null);
     setEditDraft("");
   };
-  const handleMentionCursorUpdate = (0, import_react3.useCallback)(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    const cursor = textarea.selectionStart ?? textarea.value.length;
-    updateMentionTracking(textarea.value, cursor);
-  }, [updateMentionTracking]);
-  const handleMessageChange = (e) => {
-    const value = e.target.value;
-    setNewMessage(value);
-    const cursor = e.target.selectionStart ?? value.length;
-    updateMentionTracking(value, cursor);
+  const handleEditorInput = () => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    setNewMessage(getEditorText(editor));
+    updateMentionTracking();
   };
-  const handleTextareaKeyDown = (e) => {
+  const handleEditorKeyDown = (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
       e.preventDefault();
       handleSendMessage();
@@ -1696,9 +1809,7 @@ function DevNotesDiscussion({ report }) {
     }
     if (mentionRange && e.key === "Escape") {
       e.preventDefault();
-      setMentionRange(null);
-      setMentionQuery("");
-      setMentionHighlight(0);
+      closeMention();
     }
   };
   const handleSendMessage = async () => {
@@ -1714,8 +1825,8 @@ function DevNotesDiscussion({ report }) {
         return next;
       });
       setNewMessage("");
-      setMentionRange(null);
-      setMentionQuery("");
+      if (editorRef.current) editorRef.current.innerHTML = "";
+      closeMention();
       if (onNotify) {
         try {
           const commenterName = data.author?.full_name || "Someone";
@@ -1730,6 +1841,10 @@ function DevNotesDiscussion({ report }) {
             if (msg.author_id !== user.id && msg.author?.email) {
               recipientEmails.add(msg.author.email);
             }
+          }
+          const selfEmail = user.email || data.author?.email || null;
+          if (copySelf && selfEmail) {
+            recipientEmails.add(selfEmail);
           }
           for (const email of recipientEmails) {
             onNotify({
@@ -1813,6 +1928,50 @@ Dev Notes`,
       ] })
     ] }) });
   }
+  const mentionLabels = (0, import_react3.useMemo)(
+    () => mentionCandidates.map((c) => ({ collaborator: c, label: (c.full_name || c.email || "").trim() })).filter((x) => x.label).sort((a, b) => b.label.length - a.label.length),
+    [mentionCandidates]
+  );
+  const renderMessageBody = (body) => {
+    if (!mentionLabels.length || !body.includes("@")) return body;
+    const nodes = [];
+    let buffer = "";
+    let i = 0;
+    while (i < body.length) {
+      if (body[i] === "@") {
+        const rest = body.slice(i + 1);
+        const match = mentionLabels.find((x) => rest.startsWith(x.label));
+        if (match) {
+          if (buffer) {
+            nodes.push(buffer);
+            buffer = "";
+          }
+          const { full_name, email } = match.collaborator;
+          nodes.push(
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
+              "span",
+              {
+                title: email || void 0,
+                className: "mx-0.5 inline-flex items-center gap-1 rounded-md bg-blue-50 px-1.5 py-0.5 align-baseline text-xs font-medium text-blue-700",
+                children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_fi.FiAtSign, { size: 10, className: "shrink-0 text-blue-400" }),
+                  /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: full_name || email }),
+                  full_name && email && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "text-blue-400", children: email })
+                ]
+              },
+              i
+            )
+          );
+          i += 1 + match.label.length;
+          continue;
+        }
+      }
+      buffer += body[i];
+      i++;
+    }
+    if (buffer) nodes.push(buffer);
+    return nodes;
+  };
   const getInitials = (name) => {
     const parts = name.trim().split(/\s+/);
     if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
@@ -1910,55 +2069,95 @@ Dev Notes`,
                   }
                 )
               ] })
-            ] }) : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { className: "whitespace-pre-wrap text-sm text-slate-700", children: message.body })
+            ] }) : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { className: "whitespace-pre-wrap text-sm text-slate-700", children: renderMessageBody(message.body) })
           ]
         },
         message.id
       );
     }) }) }),
     /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "rounded-2xl border border-slate-200 bg-white p-3 shadow-sm", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "relative", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "relative rounded-xl border border-slate-300 bg-slate-50 transition focus-within:border-slate-900 focus-within:ring-1 focus-within:ring-slate-900/20", children: [
+        !newMessage && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "pointer-events-none absolute left-3 top-3 text-sm text-slate-400", children: "Add a reply or request more info..." }),
         /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
-          "textarea",
+          "div",
           {
-            ref: textareaRef,
-            placeholder: "Add a reply or request more info...",
-            value: newMessage,
-            onChange: handleMessageChange,
-            onKeyDown: handleTextareaKeyDown,
-            onKeyUp: handleMentionCursorUpdate,
-            onClick: handleMentionCursorUpdate,
-            rows: 4,
-            className: "w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-900 focus:ring-1 focus:ring-slate-900/20"
+            ref: editorRef,
+            role: "textbox",
+            "aria-multiline": "true",
+            "aria-label": "Add a reply or request more info",
+            contentEditable: true,
+            suppressContentEditableWarning: true,
+            onInput: handleEditorInput,
+            onKeyDown: handleEditorKeyDown,
+            onKeyUp: updateMentionTracking,
+            onClick: updateMentionTracking,
+            className: "min-h-[6.5rem] max-h-[240px] w-full overflow-y-auto whitespace-pre-wrap break-words px-3 py-3 font-sans text-sm leading-5 text-slate-900 outline-none"
           }
         ),
-        mentionRange && /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "absolute bottom-3 left-3 z-[2] min-w-[260px] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "flex items-center gap-2 border-b border-slate-100 px-3 py-2 text-xs font-medium text-slate-500", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_fi.FiAtSign, { size: 12 }),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: "Mentions" }),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "ml-auto", children: "Type to filter, Enter to select" })
-          ] }),
-          hasNoMentionResults ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "px-3 py-3", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("p", { className: "text-sm text-slate-500", children: [
-            'No collaborators match "',
-            mentionQuery,
-            '"'
-          ] }) }) : mentionOptions.map((collaborator, index) => /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
+        mentionRange && (() => {
+          const caret = mentionCaret ?? { top: 0, left: 0, height: 20 };
+          const editor = editorRef.current;
+          const fieldHeight = editor?.clientHeight ?? 0;
+          const showAbove = fieldHeight > 0 && caret.top + caret.height + 200 > fieldHeight;
+          const posStyle = showAbove ? { left: caret.left, bottom: Math.max(fieldHeight - caret.top + 4, 0) } : { left: caret.left, top: caret.top + caret.height + 4 };
+          return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
             "div",
             {
-              className: `cursor-pointer px-3 py-2 transition hover:bg-slate-50 ${mentionHighlight === index ? "bg-slate-100" : ""}`,
-              onMouseDown: (e) => {
-                e.preventDefault();
-                insertMention(collaborator);
-                setMentionHighlight(index);
-              },
+              className: "absolute z-[2] max-h-[220px] min-w-[260px] max-w-[320px] overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg",
+              style: posStyle,
               children: [
-                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { className: "text-sm font-medium text-slate-900", children: collaborator.full_name || collaborator.email || "Unknown" }),
-                collaborator.email && collaborator.full_name && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { className: "text-xs text-slate-500", children: collaborator.email })
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "sticky top-0 flex items-center gap-2 border-b border-slate-100 bg-white px-3 py-2 text-xs font-medium text-slate-500", children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_fi.FiAtSign, { size: 12 }),
+                  /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: "Mentions" }),
+                  /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "ml-auto", children: "Type to filter, Enter to select" })
+                ] }),
+                hasNoMentionResults ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "px-3 py-3", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("p", { className: "text-sm text-slate-500", children: [
+                  'No collaborators match "',
+                  mentionQuery,
+                  '"'
+                ] }) }) : mentionOptions.map((collaborator, index) => {
+                  const isFav = favoriteIds.has(collaborator.id || "");
+                  return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
+                    "div",
+                    {
+                      ref: (el) => {
+                        optionRefs.current[index] = el;
+                      },
+                      className: `flex cursor-pointer items-center gap-2 px-3 py-2 transition hover:bg-slate-50 ${mentionHighlight === index ? "bg-slate-100" : ""}`,
+                      onMouseDown: (e) => {
+                        e.preventDefault();
+                        insertMention(collaborator);
+                        setMentionHighlight(index);
+                      },
+                      children: [
+                        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "min-w-0 flex-1", children: [
+                          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { className: "truncate text-sm font-medium text-slate-900", children: collaborator.full_name || collaborator.email || "Unknown" }),
+                          collaborator.email && collaborator.full_name && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { className: "truncate text-xs text-slate-500", children: collaborator.email })
+                        ] }),
+                        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+                          "button",
+                          {
+                            type: "button",
+                            className: `shrink-0 rounded-md p-1 transition hover:bg-slate-200 ${isFav ? "text-amber-500" : "text-slate-300 hover:text-slate-500"}`,
+                            "aria-label": isFav ? "Unfavorite teammate" : "Favorite teammate",
+                            title: isFav ? "Unfavorite (stops surfacing first)" : "Favorite (surfaces first next time)",
+                            onMouseDown: (e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              toggleFavorite(collaborator.id || "");
+                            },
+                            children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_fi.FiStar, { size: 14, fill: isFav ? "currentColor" : "none" })
+                          }
+                        )
+                      ]
+                    },
+                    collaborator.id
+                  );
+                })
               ]
-            },
-            collaborator.id
-          ))
-        ] })
+            }
+          );
+        })()
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "mt-2 flex flex-wrap items-center justify-between gap-3", children: [
         /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("span", { className: "inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-600", children: [
@@ -1970,20 +2169,41 @@ Dev Notes`,
             " to mention a teammate."
           ] })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
-          "button",
-          {
-            type: "button",
-            className: "inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:opacity-50",
-            onClick: handleSendMessage,
-            disabled: !newMessage.trim() || sending,
-            title: "Send note",
-            children: [
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_fi.FiSend, { size: 14 }),
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: sending ? "Sending..." : "Send" })
-            ]
-          }
-        )
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "flex items-center gap-3", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
+            "label",
+            {
+              className: "inline-flex cursor-pointer select-none items-center gap-1.5 text-xs text-slate-600",
+              title: "Send yourself a copy of the notification so you can confirm it was delivered",
+              children: [
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+                  "input",
+                  {
+                    type: "checkbox",
+                    className: "h-3.5 w-3.5 rounded border-slate-300 text-slate-900 focus:ring-slate-900/20",
+                    checked: copySelf,
+                    onChange: (e) => setCopySelf(e.target.checked)
+                  }
+                ),
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: "CC/BCC me" })
+              ]
+            }
+          ),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
+            "button",
+            {
+              type: "button",
+              className: "inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:opacity-50",
+              onClick: handleSendMessage,
+              disabled: !newMessage.trim() || sending,
+              title: "Send note",
+              children: [
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_fi.FiSend, { size: 14 }),
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: sending ? "Sending..." : "Send" })
+              ]
+            }
+          )
+        ] })
       ] })
     ] })
   ] });
@@ -2532,7 +2752,7 @@ function formatAiFixPayloadForCopy(payload) {
 }
 
 // src/version.ts
-var DEVNOTES_VERSION = "0.6.5";
+var DEVNOTES_VERSION = "0.6.15";
 
 // src/internal/formState.ts
 function getInitialTaskStatus(existingStatus) {
@@ -2699,10 +2919,10 @@ var COMPACT_BEHAVIOR_HEIGHT = 56;
 var EXPANDED_BEHAVIOR_MIN_HEIGHT = 92;
 var FIELD_SURFACE_CLASS = "rounded-2xl border border-slate-200 bg-white/95 shadow-sm shadow-slate-900/5 transition-colors focus-within:border-slate-400 focus-within:ring-1 focus-within:ring-slate-200";
 var CONTROL_INPUT_CLASS = "w-full border-0 bg-transparent px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none";
-var CONTROL_TEXTAREA_CLASS = "w-full resize-none border-0 bg-transparent px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-[height] duration-200";
+var CONTROL_TEXTAREA_CLASS = "w-full resize-y border-0 bg-transparent px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-[height] duration-200";
 var SECTION_CARD_CLASS = "rounded-2xl border border-slate-200 bg-slate-50/80 p-4 shadow-sm shadow-slate-900/5";
 var ACTION_ICON_BUTTON_CLASS = "inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm shadow-slate-900/5 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50";
-var floatingLabelClass = (isSuperscript) => isSuperscript ? "absolute -top-2.5 left-3 z-[2] rounded-full border border-slate-200 bg-white px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 pointer-events-none" : "mb-2 block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500";
+var floatingLabelClass = (isSuperscript) => isSuperscript ? "absolute -top-3.5 left-3 z-[2] rounded-full border border-slate-200 bg-white px-1.5 py-0 text-[9px] leading-tight font-semibold uppercase tracking-[0.14em] text-slate-500 pointer-events-none" : "mb-2 block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500";
 function SearchableSingleSelect({
   label,
   options,
@@ -3865,30 +4085,17 @@ function DevNotesForm({
             isSuperscript: isSuperscriptLabels
           }
         ),
-        isAdmin && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: isSuperscriptLabels ? "relative" : "", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "space-y-3", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
-            SearchableSingleSelect,
-            {
-              label: "Assignee",
-              options: [{ id: "", label: "Unassigned" }, ...collaboratorOptions],
-              value: assignedTo ?? "",
-              onChange: (value) => setAssignedTo(value || null),
-              placeholder: "Search assignee...",
-              isSuperscript: isSuperscriptLabels
-            }
-          ),
-          existingReport && (statusValue === "Closed" || statusValue === "Resolved") && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
-            SearchableSingleSelect,
-            {
-              label: "Resolved By",
-              options: [{ id: "", label: "Not Set" }, ...collaboratorOptions],
-              value: resolvedBy ?? "",
-              onChange: (value) => setResolvedBy(value || null),
-              placeholder: "Search resolver...",
-              isSuperscript: isSuperscriptLabels
-            }
-          )
-        ] }) }),
+        isAdmin && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: isSuperscriptLabels ? "relative" : "", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "space-y-3", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+          SearchableSingleSelect,
+          {
+            label: "Assignee",
+            options: [{ id: "", label: "Unassigned" }, ...collaboratorOptions],
+            value: assignedTo ?? "",
+            onChange: (value) => setAssignedTo(value || null),
+            placeholder: "Search assignee...",
+            isSuperscript: isSuperscriptLabels
+          }
+        ) }) }),
         /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: isSuperscriptLabels ? "relative" : "", children: [
           /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("label", { className: floatingLabelClass(isSuperscriptLabels), children: "Task List" }),
           /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "relative", children: [
@@ -3991,32 +4198,48 @@ function DevNotesForm({
             ] }) })
           ] })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: isSuperscriptLabels ? "relative" : "", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("label", { className: floatingLabelClass(isSuperscriptLabels), children: "Page URL" }),
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: FIELD_SURFACE_CLASS, children: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "relative flex items-center", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
-              "input",
+        (() => {
+          const showResolvedBy = Boolean(existingReport) && (statusValue === "Closed" || statusValue === "Resolved") && isAdmin;
+          return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "grid grid-cols-1 gap-4 md:grid-cols-2", children: [
+            showResolvedBy && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+              SearchableSingleSelect,
               {
-                type: "text",
-                className: `w-full border-0 bg-transparent py-2 pl-3 pr-10 text-sm text-slate-900 outline-none placeholder:text-slate-400 ${!existingReport ? "cursor-not-allowed text-slate-500" : ""}`,
-                value: reportPageUrl,
-                onChange: (e) => setReportPageUrl(e.target.value),
-                readOnly: !existingReport
+                label: "Resolved By",
+                options: [{ id: "", label: "Not Set" }, ...collaboratorOptions],
+                value: resolvedBy ?? "",
+                onChange: (value) => setResolvedBy(value || null),
+                placeholder: "Search resolver...",
+                isSuperscript: isSuperscriptLabels
               }
             ),
-            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
-              "a",
-              {
-                href: composePageUrlWithTab(reportPageUrl),
-                target: "_blank",
-                rel: "noreferrer",
-                className: "absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700",
-                title: "Open in new tab",
-                children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_fi4.FiExternalLink, { size: 14 })
-              }
-            )
-          ] }) })
-        ] })
+            /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: `${isSuperscriptLabels ? "relative" : ""} ${showResolvedBy ? "" : "md:col-span-2"}`, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("label", { className: floatingLabelClass(isSuperscriptLabels), children: "Page URL" }),
+              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: FIELD_SURFACE_CLASS, children: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "relative flex items-center", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+                  "input",
+                  {
+                    type: "text",
+                    className: `w-full border-0 bg-transparent py-2 pl-3 pr-10 text-sm text-slate-900 outline-none placeholder:text-slate-400 ${!existingReport ? "cursor-not-allowed text-slate-500" : ""}`,
+                    value: reportPageUrl,
+                    onChange: (e) => setReportPageUrl(e.target.value),
+                    readOnly: !existingReport
+                  }
+                ),
+                /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+                  "a",
+                  {
+                    href: composePageUrlWithTab(reportPageUrl),
+                    target: "_blank",
+                    rel: "noreferrer",
+                    className: "absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700",
+                    title: "Open in new tab",
+                    children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_fi4.FiExternalLink, { size: 14 })
+                  }
+                )
+              ] }) })
+            ] })
+          ] });
+        })()
       ] }) }),
       existingReport && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(DevNotesDiscussion, { report: existingReport }) }),
       /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "flex flex-col-reverse gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between", children: [
@@ -4406,6 +4629,63 @@ function DevNotesTaskListModal({
     if (!baseUrl || !projectId) return null;
     return `${baseUrl.replace(/\/+$/, "")}/projects/${encodeURIComponent(projectId)}`;
   })();
+  const panelRef = (0, import_react8.useRef)(null);
+  const dragStateRef = (0, import_react8.useRef)(null);
+  const [pos, setPos] = (0, import_react8.useState)(null);
+  const [minimized, setMinimized] = (0, import_react8.useState)(false);
+  const clampPos = (0, import_react8.useCallback)((p) => {
+    if (typeof window === "undefined") return p;
+    const w = panelRef.current?.offsetWidth ?? 0;
+    const h = panelRef.current?.offsetHeight ?? 0;
+    return {
+      x: Math.min(Math.max(p.x, 8), Math.max(8, window.innerWidth - w - 8)),
+      y: Math.min(Math.max(p.y, 8), Math.max(8, window.innerHeight - h - 8))
+    };
+  }, []);
+  const onBarPointerDown = (0, import_react8.useCallback)((e) => {
+    if (e.button !== 0) return;
+    if (e.target.closest("button, a")) return;
+    const rect = panelRef.current?.getBoundingClientRect();
+    dragStateRef.current = {
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      originX: rect?.left ?? 0,
+      originY: rect?.top ?? 0
+    };
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+    }
+    e.preventDefault();
+  }, []);
+  const onBarPointerMove = (0, import_react8.useCallback)(
+    (e) => {
+      const st = dragStateRef.current;
+      if (!st || e.pointerId !== st.pointerId) return;
+      setPos(
+        clampPos({
+          x: st.originX + (e.clientX - st.startX),
+          y: st.originY + (e.clientY - st.startY)
+        })
+      );
+    },
+    [clampPos]
+  );
+  const onBarPointerEnd = (0, import_react8.useCallback)((e) => {
+    const st = dragStateRef.current;
+    if (!st || e.pointerId !== st.pointerId) return;
+    try {
+      e.currentTarget.releasePointerCapture(st.pointerId);
+    } catch {
+    }
+    dragStateRef.current = null;
+  }, []);
+  (0, import_react8.useEffect)(() => {
+    if (open) {
+      setMinimized(false);
+    }
+  }, [open]);
   (0, import_react8.useEffect)(() => {
     if (!open) return void 0;
     const onKeyDown = (e) => {
@@ -4481,56 +4761,33 @@ function DevNotesTaskListModal({
       ) });
     }
     return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { style: { display: "flex", flexDirection: "column", gap: 16 }, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between" }, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("h2", { style: { fontSize: 18, fontWeight: 600, color: "#111827", margin: 0 }, children: title }),
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { style: { display: "flex", alignItems: "center", gap: 8 }, children: [
-          forgeProjectUrl && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
-            "a",
-            {
-              href: forgeProjectUrl,
-              target: "_blank",
-              rel: "noreferrer",
-              title: "Open project in Forge",
-              style: {
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "5px 10px",
-                borderRadius: 9999,
-                border: "1px solid #e2e8f0",
-                background: "#f8fafc",
-                color: "#334155",
-                fontSize: 12,
-                fontWeight: 500,
-                textDecoration: "none",
-                whiteSpace: "nowrap"
-              },
-              children: [
-                /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_fi6.FiExternalLink, { size: 12, style: { color: "#94a3b8" } }),
-                "View in Forge"
-              ]
-            }
-          ),
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
-            "button",
-            {
-              type: "button",
-              onClick: onClose,
-              "aria-label": "Close",
-              style: {
-                padding: 4,
-                borderRadius: 6,
-                border: "none",
-                background: "transparent",
-                color: "#6b7280",
-                cursor: "pointer",
-                display: "inline-flex"
-              },
-              children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_fi6.FiX, { size: 18 })
-            }
-          )
-        ] })
-      ] }),
+      forgeProjectUrl && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { style: { display: "flex", alignItems: "center", justifyContent: "flex-end" }, children: forgeProjectUrl && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
+        "a",
+        {
+          href: forgeProjectUrl,
+          target: "_blank",
+          rel: "noreferrer",
+          title: "Open project in Forge",
+          style: {
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "5px 10px",
+            borderRadius: 9999,
+            border: "1px solid #e2e8f0",
+            background: "#f8fafc",
+            color: "#334155",
+            fontSize: 12,
+            fontWeight: 500,
+            textDecoration: "none",
+            whiteSpace: "nowrap"
+          },
+          children: [
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_fi6.FiExternalLink, { size: 12, style: { color: "#94a3b8" } }),
+            "View in Forge"
+          ]
+        }
+      ) }),
       /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
         "div",
         {
@@ -4807,11 +5064,80 @@ function DevNotesTaskListModal({
       ] }) })
     ] });
   };
+  const windowButtonStyle = {
+    padding: 6,
+    borderRadius: 6,
+    border: "none",
+    background: "transparent",
+    color: "#6b7280",
+    cursor: "pointer",
+    display: "inline-flex",
+    alignItems: "center"
+  };
+  const titleBar = /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
+    "div",
+    {
+      onPointerDown: onBarPointerDown,
+      onPointerMove: onBarPointerMove,
+      onPointerUp: onBarPointerEnd,
+      onPointerCancel: onBarPointerEnd,
+      style: {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 8,
+        padding: "10px 12px 10px 16px",
+        borderBottom: minimized ? "none" : "1px solid #f3f4f6",
+        cursor: "move",
+        userSelect: "none",
+        touchAction: "none",
+        background: "#f9fafb",
+        borderRadius: minimized ? 12 : "12px 12px 0 0"
+      },
+      children: [
+        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("h2", { style: { fontSize: 15, fontWeight: 600, color: "#111827", margin: 0, whiteSpace: "nowrap" }, children: title }),
+        /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { style: { display: "flex", alignItems: "center", gap: 2 }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+            "button",
+            {
+              type: "button",
+              onClick: () => setMinimized((v) => !v),
+              "aria-label": minimized ? "Restore" : "Minimize",
+              title: minimized ? "Restore" : "Minimize",
+              style: windowButtonStyle,
+              children: minimized ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_fi6.FiSquare, { size: 14 }) : /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_fi6.FiMinus, { size: 16 })
+            }
+          ),
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("button", { type: "button", onClick: onClose, "aria-label": "Close", title: "Close", style: windowButtonStyle, children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_fi6.FiX, { size: 18 }) })
+        ] })
+      ]
+    }
+  );
+  if (minimized) {
+    return /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+      "div",
+      {
+        role: "dialog",
+        style: {
+          position: "fixed",
+          ...pos ? { left: pos.x, top: pos.y } : { right: 16, bottom: 16 },
+          zIndex: 9998,
+          width: 280,
+          borderRadius: 12,
+          background: "#ffffff",
+          boxShadow: "0 10px 25px -5px rgba(0,0,0,0.25)",
+          pointerEvents: "auto",
+          overflow: "hidden"
+        },
+        children: titleBar
+      }
+    );
+  }
   return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
     "div",
     {
       style: {
-        position: "absolute",
+        position: "fixed",
         inset: 0,
         zIndex: 9998,
         display: "flex",
@@ -4832,23 +5158,26 @@ function DevNotesTaskListModal({
         /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
           "div",
           {
+            ref: panelRef,
             role: "dialog",
             "aria-modal": "true",
             style: {
-              position: "relative",
-              width: "100%",
-              maxWidth: 1024,
+              ...pos ? { position: "fixed", left: pos.x, top: pos.y, width: "min(1024px, calc(100vw - 32px))" } : { position: "relative", width: "100%", maxWidth: 1024 },
               maxHeight: "calc(100vh - 32px)",
-              overflowY: "auto",
+              display: "flex",
+              flexDirection: "column",
               borderRadius: 12,
               background: "#ffffff",
-              padding: 24,
               boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
-              boxSizing: "border-box"
+              boxSizing: "border-box",
+              overflow: "hidden"
             },
             children: [
-              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(DevNotesForgeBanner, { style: { marginBottom: 16 } }),
-              renderBody()
+              titleBar,
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { style: { padding: 24, overflowY: "auto" }, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(DevNotesForgeBanner, { style: { marginBottom: 16 } }),
+                renderBody()
+              ] })
             ]
           }
         )
@@ -4878,6 +5207,62 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
     forgeStatus
   } = useDevNotes();
   const forgeDisconnected = forgeStatus?.connected === false;
+  const rowStyle = {
+    position: "relative",
+    display: "flex",
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    padding: "8px 12px",
+    margin: 0,
+    fontSize: 14,
+    lineHeight: "20px",
+    textAlign: "left",
+    color: "#1f2937",
+    background: "transparent",
+    border: "none",
+    cursor: "pointer"
+  };
+  const rowLabelStyle = {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
+    whiteSpace: "nowrap"
+  };
+  const hoverOn = (e) => {
+    e.currentTarget.style.background = "#f9fafb";
+  };
+  const hoverOff = (e) => {
+    e.currentTarget.style.background = "transparent";
+  };
+  const dividerStyle = {
+    height: 1,
+    margin: "4px 0",
+    background: "#e5e7eb"
+  };
+  const switchStyle = (on, onColor = "#22c55e") => ({
+    position: "relative",
+    display: "inline-flex",
+    height: 20,
+    width: 36,
+    flexShrink: 0,
+    borderRadius: 9999,
+    cursor: "pointer",
+    background: on ? onColor : "#d1d5db",
+    transition: "background-color 200ms"
+  });
+  const knobStyle = (on) => ({
+    display: "inline-block",
+    height: 16,
+    width: 16,
+    marginTop: 2,
+    borderRadius: 9999,
+    background: "#ffffff",
+    boxShadow: "0 1px 2px 0 rgba(0,0,0,0.05)",
+    transform: on ? "translateX(18px)" : "translateX(2px)",
+    transition: "transform 200ms"
+  });
   const [open, setOpen] = (0, import_react9.useState)(false);
   const [showTaskModal, setShowTaskModal] = (0, import_react9.useState)(false);
   const menuRef = (0, import_react9.useRef)(null);
@@ -4909,8 +5294,7 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
     {
       ref: menuRef,
       "data-bug-menu": true,
-      className: "relative",
-      style: { zIndex: open ? 9995 : "auto" },
+      style: { position: "relative", zIndex: open ? 9995 : "auto" },
       children: [
         /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
           "button",
@@ -4918,19 +5302,66 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
             type: "button",
             "aria-label": isEnabled ? "Click to disable task creation" : "Task menu",
             onClick: handleIconClick,
-            className: "inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-700 transition hover:text-emerald-600",
+            style: {
+              display: "inline-flex",
+              height: 32,
+              width: 32,
+              alignItems: "center",
+              justifyContent: "center",
+              borderRadius: 6,
+              padding: 0,
+              border: "none",
+              background: "transparent",
+              color: "#374151",
+              cursor: "pointer"
+            },
             title: "Tasks",
-            children: /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { className: "relative", children: [
+            children: /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { style: { position: "relative", display: "inline-flex" }, children: [
               IconComponent ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(IconComponent, { size: 20, color: isEnabled ? "#E53E3E" : void 0 }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(import_fi7.FiAlertTriangle, { size: 20, color: isEnabled ? "#E53E3E" : void 0 }),
               forgeDisconnected ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
                 "span",
                 {
                   title: "Forge is disconnected",
-                  className: "absolute -right-2 -top-1 inline-flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white",
-                  style: { boxShadow: "0 0 0 2px #ffffff" },
+                  style: {
+                    position: "absolute",
+                    right: -8,
+                    top: -4,
+                    display: "inline-flex",
+                    height: 16,
+                    minWidth: 16,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: 9999,
+                    background: "#dc2626",
+                    padding: "0 4px",
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: "#ffffff",
+                    boxShadow: "0 0 0 2px #ffffff"
+                  },
                   children: "!"
                 }
-              ) : openBugCount > 0 && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "absolute -right-2 -top-1 inline-flex min-w-[16px] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white", children: openBugCount })
+              ) : openBugCount > 0 && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+                "span",
+                {
+                  style: {
+                    position: "absolute",
+                    right: -8,
+                    top: -4,
+                    display: "inline-flex",
+                    minWidth: 16,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: 9999,
+                    background: "#dc2626",
+                    padding: "0 4px",
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: "#ffffff"
+                  },
+                  children: openBugCount
+                }
+              )
             ] })
           }
         ),
@@ -4951,9 +5382,9 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
               boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)"
             },
             children: [
-              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "px-3 py-2", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { className: "text-xs font-semibold text-gray-500", children: "DEV NOTES" }) }),
+              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { style: { padding: "8px 12px" }, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { style: { margin: 0, fontSize: 12, fontWeight: 600, color: "#6b7280" }, children: "DEV NOTES" }) }),
               forgeDisconnected && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { style: { padding: "0 12px 8px" }, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(DevNotesForgeBanner, {}) }),
-              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "my-1 border-t border-gray-200" }),
+              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { style: dividerStyle }),
               /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
                 "button",
                 {
@@ -4963,26 +5394,15 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                     setIsEnabled(!isEnabled);
                     setOpen(false);
                   },
-                  className: "flex w-full items-center justify-between gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50",
+                  style: rowStyle,
+                  onMouseEnter: hoverOn,
+                  onMouseLeave: hoverOff,
                   children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
-                      isEnabled ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(import_fi7.FiToggleRight, { className: "text-green-600" }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(import_fi7.FiToggleLeft, {}),
+                    /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { style: rowLabelStyle, children: [
+                      isEnabled ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(import_fi7.FiToggleRight, { color: "#16a34a", style: { flexShrink: 0 } }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(import_fi7.FiToggleLeft, { style: { flexShrink: 0 } }),
                       isEnabled ? "Stop Creating Tasks" : "Create Task"
                     ] }),
-                    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
-                      "span",
-                      {
-                        role: "switch",
-                        "aria-checked": isEnabled,
-                        className: `relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ${isEnabled ? "bg-green-500" : "bg-gray-300"}`,
-                        children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
-                          "span",
-                          {
-                            className: `inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${isEnabled ? "translate-x-4" : "translate-x-0.5"} mt-0.5`
-                          }
-                        )
-                      }
-                    )
+                    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { role: "switch", "aria-checked": isEnabled, style: switchStyle(isEnabled), children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { style: knobStyle(isEnabled) }) })
                   ]
                 }
               ),
@@ -4992,26 +5412,15 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                   type: "button",
                   "data-menu-item": true,
                   onClick: () => setShowTasksAlways(!showTasksAlways),
-                  className: "flex w-full items-center justify-between gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50",
+                  style: rowStyle,
+                  onMouseEnter: hoverOn,
+                  onMouseLeave: hoverOff,
                   children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
-                      showTasksAlways ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(import_fi7.FiEye, { className: "text-blue-600" }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(import_fi7.FiEyeOff, {}),
+                    /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { style: rowLabelStyle, children: [
+                      showTasksAlways ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(import_fi7.FiEye, { color: "#2563eb", style: { flexShrink: 0 } }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(import_fi7.FiEyeOff, { style: { flexShrink: 0 } }),
                       "Show Tasks Always"
                     ] }),
-                    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
-                      "span",
-                      {
-                        role: "switch",
-                        "aria-checked": showTasksAlways,
-                        className: `relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ${showTasksAlways ? "bg-green-500" : "bg-gray-300"}`,
-                        children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
-                          "span",
-                          {
-                            className: `inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${showTasksAlways ? "translate-x-4" : "translate-x-0.5"} mt-0.5`
-                          }
-                        )
-                      }
-                    )
+                    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { role: "switch", "aria-checked": showTasksAlways, style: switchStyle(showTasksAlways), children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { style: knobStyle(showTasksAlways) }) })
                   ]
                 }
               ),
@@ -5021,31 +5430,21 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                   type: "button",
                   "data-menu-item": true,
                   onClick: () => setHideResolvedClosed(!hideResolvedClosed),
-                  className: "flex w-full items-center justify-between gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50",
+                  style: rowStyle,
+                  onMouseEnter: hoverOn,
+                  onMouseLeave: hoverOff,
                   children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { style: rowLabelStyle, children: [
                       /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
                         import_fi7.FiFilter,
                         {
-                          className: hideResolvedClosed ? "text-green-600" : "text-gray-500"
+                          color: hideResolvedClosed ? "#16a34a" : "#6b7280",
+                          style: { flexShrink: 0 }
                         }
                       ),
                       "Hide Resolved/Closed"
                     ] }),
-                    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
-                      "span",
-                      {
-                        role: "switch",
-                        "aria-checked": hideResolvedClosed,
-                        className: `relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ${hideResolvedClosed ? "bg-green-500" : "bg-gray-300"}`,
-                        children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
-                          "span",
-                          {
-                            className: `inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${hideResolvedClosed ? "translate-x-4" : "translate-x-0.5"} mt-0.5`
-                          }
-                        )
-                      }
-                    )
+                    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { role: "switch", "aria-checked": hideResolvedClosed, style: switchStyle(hideResolvedClosed), children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { style: knobStyle(hideResolvedClosed) }) })
                   ]
                 }
               ),
@@ -5055,31 +5454,26 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                   type: "button",
                   "data-menu-item": true,
                   onClick: () => setShowStepDots(!showStepDots),
-                  className: "flex w-full items-center justify-between gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50",
+                  style: rowStyle,
+                  onMouseEnter: hoverOn,
+                  onMouseLeave: hoverOff,
                   children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
-                      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(import_fi7.FiMapPin, { className: showStepDots ? "text-blue-600" : "text-gray-500" }),
+                    /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { style: rowLabelStyle, children: [
+                      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+                        import_fi7.FiMapPin,
+                        {
+                          color: showStepDots ? "#2563eb" : "#6b7280",
+                          style: { flexShrink: 0 }
+                        }
+                      ),
                       "Show Step Dots"
                     ] }),
-                    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
-                      "span",
-                      {
-                        role: "switch",
-                        "aria-checked": showStepDots,
-                        className: `relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ${showStepDots ? "bg-blue-500" : "bg-gray-300"}`,
-                        children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
-                          "span",
-                          {
-                            className: `inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${showStepDots ? "translate-x-4" : "translate-x-0.5"} mt-0.5`
-                          }
-                        )
-                      }
-                    )
+                    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { role: "switch", "aria-checked": showStepDots, style: switchStyle(showStepDots, "#3b82f6"), children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { style: knobStyle(showStepDots) }) })
                   ]
                 }
               ),
               canRecordUserStory && /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
-                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "my-1 border-t border-gray-200" }),
+                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { style: dividerStyle }),
                 /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
                   "button",
                   {
@@ -5093,15 +5487,17 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                         startUserStoryRecording();
                       }
                     },
-                    className: "flex w-full items-center gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50",
-                    children: /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
-                      isRecordingStory ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(import_fi7.FiSquare, { className: "text-red-600" }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(import_fi7.FiVideo, { className: "text-blue-600" }),
+                    style: { ...rowStyle, justifyContent: "flex-start" },
+                    onMouseEnter: hoverOn,
+                    onMouseLeave: hoverOff,
+                    children: /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { style: rowLabelStyle, children: [
+                      isRecordingStory ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(import_fi7.FiSquare, { color: "#dc2626", style: { flexShrink: 0 } }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(import_fi7.FiVideo, { color: "#2563eb", style: { flexShrink: 0 } }),
                       isRecordingStory ? "Stop Recording Test Case" : "Record User Story (Test Case)"
                     ] })
                   }
                 )
               ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "my-1 border-t border-gray-200" }),
+              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { style: dividerStyle }),
               /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
                 "button",
                 {
@@ -5115,27 +5511,11 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                       setShowTaskModal(true);
                     }
                   },
-                  style: {
-                    display: "flex",
-                    width: "100%",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 12,
-                    padding: "8px 12px",
-                    fontSize: 14,
-                    color: "#1f2937",
-                    background: "transparent",
-                    border: "none",
-                    cursor: "pointer"
-                  },
-                  onMouseEnter: (e) => {
-                    e.currentTarget.style.background = "#f9fafb";
-                  },
-                  onMouseLeave: (e) => {
-                    e.currentTarget.style.background = "transparent";
-                  },
+                  style: rowStyle,
+                  onMouseEnter: hoverOn,
+                  onMouseLeave: hoverOff,
                   children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { style: { display: "inline-flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" }, children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { style: rowLabelStyle, children: [
                       /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(import_fi7.FiList, { style: { flexShrink: 0 } }),
                       "View All Tasks"
                     ] }),
@@ -5169,9 +5549,11 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                     setOpen(false);
                     onSettings();
                   },
-                  className: "flex w-full items-center gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50",
-                  children: /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(import_fi7.FiSettings, { className: "flex-shrink-0" }),
+                  style: { ...rowStyle, justifyContent: "flex-start" },
+                  onMouseEnter: hoverOn,
+                  onMouseLeave: hoverOff,
+                  children: /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { style: rowLabelStyle, children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(import_fi7.FiSettings, { style: { flexShrink: 0 } }),
                     "Settings"
                   ] })
                 }
@@ -5581,9 +5963,10 @@ function resolvePosition(dot) {
   }
   return resolveStoredCoordinates(dot.x_position, dot.y_position);
 }
-function DevNotesStepDot({ dot }) {
+function DevNotesStepDot({ dot, onOpenStory }) {
   const { compensate } = useDevNotes();
   const [showTooltip, setShowTooltip] = (0, import_react12.useState)(false);
+  const clickable = Boolean(onOpenStory);
   const position = resolvePosition(dot);
   if (!position) return null;
   const compensated = compensate(position.x, position.y);
@@ -5602,6 +5985,7 @@ function DevNotesStepDot({ dot }) {
       },
       onMouseEnter: () => setShowTooltip(true),
       onMouseLeave: () => setShowTooltip(false),
+      onClick: clickable ? () => onOpenStory?.(dot) : void 0,
       children: [
         /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
           "div",
@@ -5613,8 +5997,9 @@ function DevNotesStepDot({ dot }) {
               backgroundColor: color,
               fontSize: 11,
               boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
-              cursor: "default"
+              cursor: clickable ? "pointer" : "default"
             },
+            title: clickable ? `Open story: ${dot.storyTitle}` : void 0,
             children: dot.index
           }
         ),
@@ -6144,7 +6529,19 @@ function DevNotesOverlay({
   const sharedLayer = /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(import_jsx_runtime12.Fragment, { children: [
     /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(DevNotesStoryRecorder, {}),
     showStepDots && dotContainer && (0, import_react_dom.createPortal)(
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(import_jsx_runtime12.Fragment, { children: currentPageStepDots.map((dot) => /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(DevNotesStepDot, { dot }, dot.id)) }),
+      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(import_jsx_runtime12.Fragment, { children: currentPageStepDots.map((dot) => /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
+        DevNotesStepDot,
+        {
+          dot,
+          onOpenStory: (d) => {
+            const parent = tasks.find(
+              (t) => t.title === d.storyTitle || t.id === d.storySlug
+            );
+            if (parent) setOpenedReport(parent);
+          }
+        },
+        dot.id
+      )) }),
       dotContainer
     )
   ] });
