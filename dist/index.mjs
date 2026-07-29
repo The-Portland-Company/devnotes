@@ -2747,7 +2747,7 @@ function formatAiFixPayloadForCopy(payload) {
 }
 
 // src/version.ts
-var DEVNOTES_VERSION = "0.6.14";
+var DEVNOTES_VERSION = "0.6.15";
 
 // src/internal/formState.ts
 function getInitialTaskStatus(existingStatus) {
@@ -5202,6 +5202,62 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
     forgeStatus
   } = useDevNotes();
   const forgeDisconnected = forgeStatus?.connected === false;
+  const rowStyle = {
+    position: "relative",
+    display: "flex",
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    padding: "8px 12px",
+    margin: 0,
+    fontSize: 14,
+    lineHeight: "20px",
+    textAlign: "left",
+    color: "#1f2937",
+    background: "transparent",
+    border: "none",
+    cursor: "pointer"
+  };
+  const rowLabelStyle = {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
+    whiteSpace: "nowrap"
+  };
+  const hoverOn = (e) => {
+    e.currentTarget.style.background = "#f9fafb";
+  };
+  const hoverOff = (e) => {
+    e.currentTarget.style.background = "transparent";
+  };
+  const dividerStyle = {
+    height: 1,
+    margin: "4px 0",
+    background: "#e5e7eb"
+  };
+  const switchStyle = (on, onColor = "#22c55e") => ({
+    position: "relative",
+    display: "inline-flex",
+    height: 20,
+    width: 36,
+    flexShrink: 0,
+    borderRadius: 9999,
+    cursor: "pointer",
+    background: on ? onColor : "#d1d5db",
+    transition: "background-color 200ms"
+  });
+  const knobStyle = (on) => ({
+    display: "inline-block",
+    height: 16,
+    width: 16,
+    marginTop: 2,
+    borderRadius: 9999,
+    background: "#ffffff",
+    boxShadow: "0 1px 2px 0 rgba(0,0,0,0.05)",
+    transform: on ? "translateX(18px)" : "translateX(2px)",
+    transition: "transform 200ms"
+  });
   const [open, setOpen] = useState9(false);
   const [showTaskModal, setShowTaskModal] = useState9(false);
   const menuRef = useRef7(null);
@@ -5233,8 +5289,7 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
     {
       ref: menuRef,
       "data-bug-menu": true,
-      className: "relative",
-      style: { zIndex: open ? 9995 : "auto" },
+      style: { position: "relative", zIndex: open ? 9995 : "auto" },
       children: [
         /* @__PURE__ */ jsx8(
           "button",
@@ -5242,19 +5297,66 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
             type: "button",
             "aria-label": isEnabled ? "Click to disable task creation" : "Task menu",
             onClick: handleIconClick,
-            className: "inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-700 transition hover:text-emerald-600",
+            style: {
+              display: "inline-flex",
+              height: 32,
+              width: 32,
+              alignItems: "center",
+              justifyContent: "center",
+              borderRadius: 6,
+              padding: 0,
+              border: "none",
+              background: "transparent",
+              color: "#374151",
+              cursor: "pointer"
+            },
             title: "Tasks",
-            children: /* @__PURE__ */ jsxs7("span", { className: "relative", children: [
+            children: /* @__PURE__ */ jsxs7("span", { style: { position: "relative", display: "inline-flex" }, children: [
               IconComponent ? /* @__PURE__ */ jsx8(IconComponent, { size: 20, color: isEnabled ? "#E53E3E" : void 0 }) : /* @__PURE__ */ jsx8(FiAlertTriangle3, { size: 20, color: isEnabled ? "#E53E3E" : void 0 }),
               forgeDisconnected ? /* @__PURE__ */ jsx8(
                 "span",
                 {
                   title: "Forge is disconnected",
-                  className: "absolute -right-2 -top-1 inline-flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white",
-                  style: { boxShadow: "0 0 0 2px #ffffff" },
+                  style: {
+                    position: "absolute",
+                    right: -8,
+                    top: -4,
+                    display: "inline-flex",
+                    height: 16,
+                    minWidth: 16,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: 9999,
+                    background: "#dc2626",
+                    padding: "0 4px",
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: "#ffffff",
+                    boxShadow: "0 0 0 2px #ffffff"
+                  },
                   children: "!"
                 }
-              ) : openBugCount > 0 && /* @__PURE__ */ jsx8("span", { className: "absolute -right-2 -top-1 inline-flex min-w-[16px] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white", children: openBugCount })
+              ) : openBugCount > 0 && /* @__PURE__ */ jsx8(
+                "span",
+                {
+                  style: {
+                    position: "absolute",
+                    right: -8,
+                    top: -4,
+                    display: "inline-flex",
+                    minWidth: 16,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: 9999,
+                    background: "#dc2626",
+                    padding: "0 4px",
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: "#ffffff"
+                  },
+                  children: openBugCount
+                }
+              )
             ] })
           }
         ),
@@ -5275,9 +5377,9 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
               boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)"
             },
             children: [
-              /* @__PURE__ */ jsx8("div", { className: "px-3 py-2", children: /* @__PURE__ */ jsx8("p", { className: "text-xs font-semibold text-gray-500", children: "DEV NOTES" }) }),
+              /* @__PURE__ */ jsx8("div", { style: { padding: "8px 12px" }, children: /* @__PURE__ */ jsx8("p", { style: { margin: 0, fontSize: 12, fontWeight: 600, color: "#6b7280" }, children: "DEV NOTES" }) }),
               forgeDisconnected && /* @__PURE__ */ jsx8("div", { style: { padding: "0 12px 8px" }, children: /* @__PURE__ */ jsx8(DevNotesForgeBanner, {}) }),
-              /* @__PURE__ */ jsx8("div", { className: "my-1 border-t border-gray-200" }),
+              /* @__PURE__ */ jsx8("div", { style: dividerStyle }),
               /* @__PURE__ */ jsxs7(
                 "button",
                 {
@@ -5287,26 +5389,15 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                     setIsEnabled(!isEnabled);
                     setOpen(false);
                   },
-                  className: "flex w-full items-center justify-between gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50",
+                  style: rowStyle,
+                  onMouseEnter: hoverOn,
+                  onMouseLeave: hoverOff,
                   children: [
-                    /* @__PURE__ */ jsxs7("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
-                      isEnabled ? /* @__PURE__ */ jsx8(FiToggleRight, { className: "text-green-600" }) : /* @__PURE__ */ jsx8(FiToggleLeft, {}),
+                    /* @__PURE__ */ jsxs7("span", { style: rowLabelStyle, children: [
+                      isEnabled ? /* @__PURE__ */ jsx8(FiToggleRight, { color: "#16a34a", style: { flexShrink: 0 } }) : /* @__PURE__ */ jsx8(FiToggleLeft, { style: { flexShrink: 0 } }),
                       isEnabled ? "Stop Creating Tasks" : "Create Task"
                     ] }),
-                    /* @__PURE__ */ jsx8(
-                      "span",
-                      {
-                        role: "switch",
-                        "aria-checked": isEnabled,
-                        className: `relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ${isEnabled ? "bg-green-500" : "bg-gray-300"}`,
-                        children: /* @__PURE__ */ jsx8(
-                          "span",
-                          {
-                            className: `inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${isEnabled ? "translate-x-4" : "translate-x-0.5"} mt-0.5`
-                          }
-                        )
-                      }
-                    )
+                    /* @__PURE__ */ jsx8("span", { role: "switch", "aria-checked": isEnabled, style: switchStyle(isEnabled), children: /* @__PURE__ */ jsx8("span", { style: knobStyle(isEnabled) }) })
                   ]
                 }
               ),
@@ -5316,26 +5407,15 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                   type: "button",
                   "data-menu-item": true,
                   onClick: () => setShowTasksAlways(!showTasksAlways),
-                  className: "flex w-full items-center justify-between gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50",
+                  style: rowStyle,
+                  onMouseEnter: hoverOn,
+                  onMouseLeave: hoverOff,
                   children: [
-                    /* @__PURE__ */ jsxs7("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
-                      showTasksAlways ? /* @__PURE__ */ jsx8(FiEye2, { className: "text-blue-600" }) : /* @__PURE__ */ jsx8(FiEyeOff, {}),
+                    /* @__PURE__ */ jsxs7("span", { style: rowLabelStyle, children: [
+                      showTasksAlways ? /* @__PURE__ */ jsx8(FiEye2, { color: "#2563eb", style: { flexShrink: 0 } }) : /* @__PURE__ */ jsx8(FiEyeOff, { style: { flexShrink: 0 } }),
                       "Show Tasks Always"
                     ] }),
-                    /* @__PURE__ */ jsx8(
-                      "span",
-                      {
-                        role: "switch",
-                        "aria-checked": showTasksAlways,
-                        className: `relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ${showTasksAlways ? "bg-green-500" : "bg-gray-300"}`,
-                        children: /* @__PURE__ */ jsx8(
-                          "span",
-                          {
-                            className: `inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${showTasksAlways ? "translate-x-4" : "translate-x-0.5"} mt-0.5`
-                          }
-                        )
-                      }
-                    )
+                    /* @__PURE__ */ jsx8("span", { role: "switch", "aria-checked": showTasksAlways, style: switchStyle(showTasksAlways), children: /* @__PURE__ */ jsx8("span", { style: knobStyle(showTasksAlways) }) })
                   ]
                 }
               ),
@@ -5345,31 +5425,21 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                   type: "button",
                   "data-menu-item": true,
                   onClick: () => setHideResolvedClosed(!hideResolvedClosed),
-                  className: "flex w-full items-center justify-between gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50",
+                  style: rowStyle,
+                  onMouseEnter: hoverOn,
+                  onMouseLeave: hoverOff,
                   children: [
-                    /* @__PURE__ */ jsxs7("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
+                    /* @__PURE__ */ jsxs7("span", { style: rowLabelStyle, children: [
                       /* @__PURE__ */ jsx8(
                         FiFilter,
                         {
-                          className: hideResolvedClosed ? "text-green-600" : "text-gray-500"
+                          color: hideResolvedClosed ? "#16a34a" : "#6b7280",
+                          style: { flexShrink: 0 }
                         }
                       ),
                       "Hide Resolved/Closed"
                     ] }),
-                    /* @__PURE__ */ jsx8(
-                      "span",
-                      {
-                        role: "switch",
-                        "aria-checked": hideResolvedClosed,
-                        className: `relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ${hideResolvedClosed ? "bg-green-500" : "bg-gray-300"}`,
-                        children: /* @__PURE__ */ jsx8(
-                          "span",
-                          {
-                            className: `inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${hideResolvedClosed ? "translate-x-4" : "translate-x-0.5"} mt-0.5`
-                          }
-                        )
-                      }
-                    )
+                    /* @__PURE__ */ jsx8("span", { role: "switch", "aria-checked": hideResolvedClosed, style: switchStyle(hideResolvedClosed), children: /* @__PURE__ */ jsx8("span", { style: knobStyle(hideResolvedClosed) }) })
                   ]
                 }
               ),
@@ -5379,31 +5449,26 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                   type: "button",
                   "data-menu-item": true,
                   onClick: () => setShowStepDots(!showStepDots),
-                  className: "flex w-full items-center justify-between gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50",
+                  style: rowStyle,
+                  onMouseEnter: hoverOn,
+                  onMouseLeave: hoverOff,
                   children: [
-                    /* @__PURE__ */ jsxs7("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
-                      /* @__PURE__ */ jsx8(FiMapPin, { className: showStepDots ? "text-blue-600" : "text-gray-500" }),
+                    /* @__PURE__ */ jsxs7("span", { style: rowLabelStyle, children: [
+                      /* @__PURE__ */ jsx8(
+                        FiMapPin,
+                        {
+                          color: showStepDots ? "#2563eb" : "#6b7280",
+                          style: { flexShrink: 0 }
+                        }
+                      ),
                       "Show Step Dots"
                     ] }),
-                    /* @__PURE__ */ jsx8(
-                      "span",
-                      {
-                        role: "switch",
-                        "aria-checked": showStepDots,
-                        className: `relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ${showStepDots ? "bg-blue-500" : "bg-gray-300"}`,
-                        children: /* @__PURE__ */ jsx8(
-                          "span",
-                          {
-                            className: `inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${showStepDots ? "translate-x-4" : "translate-x-0.5"} mt-0.5`
-                          }
-                        )
-                      }
-                    )
+                    /* @__PURE__ */ jsx8("span", { role: "switch", "aria-checked": showStepDots, style: switchStyle(showStepDots, "#3b82f6"), children: /* @__PURE__ */ jsx8("span", { style: knobStyle(showStepDots) }) })
                   ]
                 }
               ),
               canRecordUserStory && /* @__PURE__ */ jsxs7(Fragment3, { children: [
-                /* @__PURE__ */ jsx8("div", { className: "my-1 border-t border-gray-200" }),
+                /* @__PURE__ */ jsx8("div", { style: dividerStyle }),
                 /* @__PURE__ */ jsx8(
                   "button",
                   {
@@ -5417,15 +5482,17 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                         startUserStoryRecording();
                       }
                     },
-                    className: "flex w-full items-center gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50",
-                    children: /* @__PURE__ */ jsxs7("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
-                      isRecordingStory ? /* @__PURE__ */ jsx8(FiSquare3, { className: "text-red-600" }) : /* @__PURE__ */ jsx8(FiVideo2, { className: "text-blue-600" }),
+                    style: { ...rowStyle, justifyContent: "flex-start" },
+                    onMouseEnter: hoverOn,
+                    onMouseLeave: hoverOff,
+                    children: /* @__PURE__ */ jsxs7("span", { style: rowLabelStyle, children: [
+                      isRecordingStory ? /* @__PURE__ */ jsx8(FiSquare3, { color: "#dc2626", style: { flexShrink: 0 } }) : /* @__PURE__ */ jsx8(FiVideo2, { color: "#2563eb", style: { flexShrink: 0 } }),
                       isRecordingStory ? "Stop Recording Test Case" : "Record User Story (Test Case)"
                     ] })
                   }
                 )
               ] }),
-              /* @__PURE__ */ jsx8("div", { className: "my-1 border-t border-gray-200" }),
+              /* @__PURE__ */ jsx8("div", { style: dividerStyle }),
               /* @__PURE__ */ jsxs7(
                 "button",
                 {
@@ -5439,27 +5506,11 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                       setShowTaskModal(true);
                     }
                   },
-                  style: {
-                    display: "flex",
-                    width: "100%",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 12,
-                    padding: "8px 12px",
-                    fontSize: 14,
-                    color: "#1f2937",
-                    background: "transparent",
-                    border: "none",
-                    cursor: "pointer"
-                  },
-                  onMouseEnter: (e) => {
-                    e.currentTarget.style.background = "#f9fafb";
-                  },
-                  onMouseLeave: (e) => {
-                    e.currentTarget.style.background = "transparent";
-                  },
+                  style: rowStyle,
+                  onMouseEnter: hoverOn,
+                  onMouseLeave: hoverOff,
                   children: [
-                    /* @__PURE__ */ jsxs7("span", { style: { display: "inline-flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" }, children: [
+                    /* @__PURE__ */ jsxs7("span", { style: rowLabelStyle, children: [
                       /* @__PURE__ */ jsx8(FiList, { style: { flexShrink: 0 } }),
                       "View All Tasks"
                     ] }),
@@ -5493,9 +5544,11 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                     setOpen(false);
                     onSettings();
                   },
-                  className: "flex w-full items-center gap-3 px-3 py-2 text-sm text-gray-800 transition hover:bg-gray-50",
-                  children: /* @__PURE__ */ jsxs7("span", { className: "inline-flex items-center gap-2 whitespace-nowrap", children: [
-                    /* @__PURE__ */ jsx8(FiSettings, { className: "flex-shrink-0" }),
+                  style: { ...rowStyle, justifyContent: "flex-start" },
+                  onMouseEnter: hoverOn,
+                  onMouseLeave: hoverOff,
+                  children: /* @__PURE__ */ jsxs7("span", { style: rowLabelStyle, children: [
+                    /* @__PURE__ */ jsx8(FiSettings, { style: { flexShrink: 0 } }),
                     "Settings"
                   ] })
                 }
