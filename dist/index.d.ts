@@ -1,7 +1,8 @@
 import * as react_jsx_runtime from 'react/jsx-runtime';
+import * as react from 'react';
 import { ReactNode, CSSProperties } from 'react';
-import { D as DevNotesClientAdapter, a as DevNotesUser, b as DevNotesConfig, U as UserStoryDraft, c as UserStoryCreateResult, d as UserStoryStepDot, B as BugReport, e as BugReportType, T as TaskList, f as BugReportCreator, N as NotifyEvent, A as AiProvider, g as DevNotesRole, h as Task, i as TaskCaptureContext } from './types-BDgU98Uq.js';
-export { j as AiAssistResult, k as AiConversationMessage, l as AiProviderOption, m as BugCaptureContext, n as BugReportCreateData, o as BugReportMessage, p as TaskCreateData, q as TaskCreator, r as TaskMessage, s as TaskType, t as USER_STORY_TYPE_NAME, u as UserStoryStepInput, v as UserStoryWithSteps } from './types-BDgU98Uq.js';
+import { U as UserStoryDraft, a as UserStoryCreateResult, b as UserStoryStepDot, B as BugReport, c as BugReportType, T as TaskList, d as BugReportCreator, D as DevNotesUser, e as DevNotesClientAdapter, N as NotifyEvent, A as AiProvider, f as DevNotesRole, g as DevNotesConfig, h as Task, i as TaskCaptureContext } from './types-CfvwsPKU.js';
+export { j as AiAssistResult, k as AiConversationMessage, l as AiProviderOption, m as BugCaptureContext, n as BugReportCreateData, o as BugReportMessage, p as TaskCreateData, q as TaskCreator, r as TaskMessage, s as TaskType, t as USER_STORY_TYPE_NAME, u as UserStoryStepInput, v as UserStoryWithSteps } from './types-CfvwsPKU.js';
 import { D as DevNotesCapabilities, a as DevNotesAppLinkStatus, F as ForgeStatus, b as ForgeError, c as DevNotesClientOptions } from './types-2MAsdo6u.js';
 export { d as DevNotesLinkAppInput } from './types-2MAsdo6u.js';
 
@@ -104,6 +105,7 @@ type DevNotesContextValue = {
     showBugsAlways: boolean;
     setShowBugsAlways: (show: boolean) => void;
 };
+declare const DevNotesContext: react.Context<DevNotesContextValue | null>;
 type DevNotesProviderProps = {
     adapter: DevNotesClientAdapter;
     user: DevNotesUser;
@@ -112,6 +114,22 @@ type DevNotesProviderProps = {
 };
 declare function DevNotesProvider({ adapter, user, config, children }: DevNotesProviderProps): react_jsx_runtime.JSX.Element;
 declare function useDevNotes(): DevNotesContextValue;
+
+/** Host sheets outrank Tailwind; these inline + !important CSS rules cannot. */
+declare const menuPanelStyle: CSSProperties;
+declare const menuRowStyle: CSSProperties;
+type MenuRowBox = {
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+};
+/**
+ * Layout boxes for N menu rows using the shipped panel/row styles.
+ * Column flex stacks rows on distinct Y; anything else piles them at y=0 (overlap).
+ */
+declare function computeMenuRowBoxes(rowCount: number, panelWidth?: number): MenuRowBox[];
+declare function boxesOverlap(a: MenuRowBox, b: MenuRowBox): boolean;
 
 type DevNotesButtonProps = {
     /** Position of the floating button */
@@ -160,8 +178,10 @@ type DevNotesMenuProps = {
     dropdownDirection?: 'up' | 'down';
     /** Forwarded to the built-in modal: navigate to the page a report was filed on */
     onNavigateToPage?: (pageUrl: string, reportId: string) => void;
+    /** Open the dropdown on first paint (tests / storybook). */
+    defaultOpen?: boolean;
 };
-declare function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position, dropdownDirection, onNavigateToPage }: DevNotesMenuProps): react_jsx_runtime.JSX.Element | null;
+declare function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position, dropdownDirection, onNavigateToPage, defaultOpen }: DevNotesMenuProps): react_jsx_runtime.JSX.Element | null;
 
 type DevNotesFormProps = {
     pageUrl: string;
@@ -405,4 +425,4 @@ declare const useBugReportPosition: (report: Task | null) => {
     y: number;
 } | null;
 
-export { type AiFixPayload, AiProvider, BugReport, BugReportCreator, BugReportType, type BuildAiFixPayloadParams, DevNotesAppLinkStatus, DevNotesButton, DevNotesCapabilities, DevNotesClientOptions, DevNotesConfig, DevNotesDiscussion, DevNotesDot, DevNotesForgeBanner, DevNotesForm, DevNotesMenu, DevNotesOverlay, DevNotesProvider, DevNotesRequestError, DevNotesRole, DevNotesStepDot, DevNotesStoryRecorder, DevNotesStoryStepsBuilder, DevNotesTaskList, DevNotesTaskListModal, DevNotesUser, ForgeError, ForgeStatus, type NarrativeTab, NotifyEvent, type RecordedStep, type StoryBuilderStep, type StoryStepAction, Task, TaskCaptureContext, TaskList, UserStoryCreateResult, UserStoryDraft, UserStoryStepDot, buildAiFixPayload, buildCaptureContext, buildForgeDebugPrompt, calculateBugPositionFromPoint, createDevNotesClient, deriveRouteLabelFromUrl, detectBrowserName, formatAiFixPayloadForCopy, getInitialNarrativeTab, getInitialTaskStatus, normalizePageUrl, resolveBugReportCoordinates, shouldRequireExplicitStatusSelection, useBugReportPosition, useDevNotes };
+export { type AiFixPayload, AiProvider, BugReport, BugReportCreator, BugReportType, type BuildAiFixPayloadParams, DevNotesAppLinkStatus, DevNotesButton, DevNotesCapabilities, DevNotesClientOptions, DevNotesConfig, DevNotesContext, DevNotesDiscussion, DevNotesDot, DevNotesForgeBanner, DevNotesForm, DevNotesMenu, DevNotesOverlay, DevNotesProvider, DevNotesRequestError, DevNotesRole, DevNotesStepDot, DevNotesStoryRecorder, DevNotesStoryStepsBuilder, DevNotesTaskList, DevNotesTaskListModal, DevNotesUser, ForgeError, ForgeStatus, type NarrativeTab, NotifyEvent, type RecordedStep, type StoryBuilderStep, type StoryStepAction, Task, TaskCaptureContext, TaskList, UserStoryCreateResult, UserStoryDraft, UserStoryStepDot, boxesOverlap, buildAiFixPayload, buildCaptureContext, buildForgeDebugPrompt, calculateBugPositionFromPoint, computeMenuRowBoxes, createDevNotesClient, deriveRouteLabelFromUrl, detectBrowserName, formatAiFixPayloadForCopy, getInitialNarrativeTab, getInitialTaskStatus, menuPanelStyle, menuRowStyle, normalizePageUrl, resolveBugReportCoordinates, shouldRequireExplicitStatusSelection, useBugReportPosition, useDevNotes };

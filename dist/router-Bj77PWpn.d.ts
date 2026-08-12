@@ -1,5 +1,5 @@
 import { D as DevNotesCapabilities, a as DevNotesAppLinkStatus, d as DevNotesLinkAppInput } from './types-2MAsdo6u.js';
-import { h as Task, p as TaskCreateData, s as TaskType, T as TaskList, r as TaskMessage, q as TaskCreator, k as AiConversationMessage, i as TaskCaptureContext, j as AiAssistResult } from './types-BDgU98Uq.js';
+import { h as Task, p as TaskCreateData, s as TaskType, T as TaskList, r as TaskMessage, q as TaskCreator, k as AiConversationMessage, i as TaskCaptureContext, j as AiAssistResult } from './types-CfvwsPKU.js';
 
 type DevNotesProxyRequest = {
     method: string;
