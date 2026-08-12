@@ -15,6 +15,14 @@ import {
 import { useDevNotes } from './DevNotesProvider';
 import DevNotesTaskListModal from './DevNotesTaskListModal';
 import DevNotesForgeBanner from './DevNotesForgeBanner';
+import {
+  menuDividerStyle,
+  menuKnobStyle,
+  menuPanelStyle,
+  menuRowLabelStyle,
+  menuRowStyle,
+  menuSwitchStyle,
+} from './menuLayout';
 
 type DevNotesMenuProps = {
   /**
@@ -33,9 +41,11 @@ type DevNotesMenuProps = {
   dropdownDirection?: 'up' | 'down';
   /** Forwarded to the built-in modal: navigate to the page a report was filed on */
   onNavigateToPage?: (pageUrl: string, reportId: string) => void;
+  /** Open the dropdown on first paint (tests / storybook). */
+  defaultOpen?: boolean;
 };
 
-export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position = 'bottom-right', dropdownDirection = 'down', onNavigateToPage }: DevNotesMenuProps) {
+export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position = 'bottom-right', dropdownDirection = 'down', onNavigateToPage, defaultOpen = false }: DevNotesMenuProps) {
   const {
     isEnabled,
     setIsEnabled,
@@ -54,67 +64,13 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
     forgeStatus,
   } = useDevNotes();
   const forgeDisconnected = forgeStatus?.connected === false;
-  // Host apps ship CSS that outranks our utility classes (see the note in
-  // styles.css) — on app.politogyvrm.com it flattened every classed row so they
-  // painted on top of each other. Inline styles can't be outranked, so every
-  // menu row is styled the same way the "View All Tasks" row already was.
-  const rowStyle: React.CSSProperties = {
-    position: 'relative',
-    display: 'flex',
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-    padding: '8px 12px',
-    margin: 0,
-    fontSize: 14,
-    lineHeight: '20px',
-    textAlign: 'left',
-    color: '#1f2937',
-    background: 'transparent',
-    border: 'none',
-    cursor: 'pointer',
-  };
-  const rowLabelStyle: React.CSSProperties = {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 8,
-    whiteSpace: 'nowrap',
-  };
   const hoverOn = (e: React.MouseEvent) => {
     (e.currentTarget as HTMLElement).style.background = '#f9fafb';
   };
   const hoverOff = (e: React.MouseEvent) => {
     (e.currentTarget as HTMLElement).style.background = 'transparent';
   };
-  const dividerStyle: React.CSSProperties = {
-    height: 1,
-    margin: '4px 0',
-    background: '#e5e7eb',
-  };
-  const switchStyle = (on: boolean, onColor = '#22c55e'): React.CSSProperties => ({
-    position: 'relative',
-    display: 'inline-flex',
-    height: 20,
-    width: 36,
-    flexShrink: 0,
-    borderRadius: 9999,
-    cursor: 'pointer',
-    background: on ? onColor : '#d1d5db',
-    transition: 'background-color 200ms',
-  });
-  const knobStyle = (on: boolean): React.CSSProperties => ({
-    display: 'inline-block',
-    height: 16,
-    width: 16,
-    marginTop: 2,
-    borderRadius: 9999,
-    background: '#ffffff',
-    boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)',
-    transform: on ? 'translateX(18px)' : 'translateX(2px)',
-    transition: 'transform 200ms',
-  });
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [showTaskModal, setShowTaskModal] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -228,18 +184,11 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
 
       {open && (
         <div
+          data-devnotes-menu-panel
           style={{
-            position: 'absolute',
+            ...menuPanelStyle,
             ...(position?.includes('left') ? { left: 0 } : { right: 0 }),
             ...(dropdownDirection === 'up' ? { bottom: '100%', marginBottom: 8 } : { top: '100%', marginTop: 8 }),
-            width: 320,
-            zIndex: 50,
-            borderRadius: 8,
-            border: '1px solid #e5e7eb',
-            backgroundColor: '#ffffff',
-            paddingTop: 8,
-            paddingBottom: 8,
-            boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)',
           }}
         >
           <div style={{ padding: '8px 12px' }}>
@@ -252,7 +201,7 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
             </div>
           )}
 
-          <div style={dividerStyle} />
+          <div style={menuDividerStyle} />
 
           <button
             type="button"
@@ -261,11 +210,11 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
               setIsEnabled(!isEnabled);
               setOpen(false);
             }}
-            style={rowStyle}
+            style={menuRowStyle}
             onMouseEnter={hoverOn}
             onMouseLeave={hoverOff}
           >
-            <span style={rowLabelStyle}>
+            <span style={menuRowLabelStyle}>
               {isEnabled ? (
                 <FiToggleRight color="#16a34a" style={{ flexShrink: 0 }} />
               ) : (
@@ -273,8 +222,8 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
               )}
               {isEnabled ? 'Stop Creating Tasks' : 'Create Task'}
             </span>
-            <span role="switch" aria-checked={isEnabled} style={switchStyle(isEnabled)}>
-              <span style={knobStyle(isEnabled)} />
+            <span role="switch" aria-checked={isEnabled} style={menuSwitchStyle(isEnabled)}>
+              <span style={menuKnobStyle(isEnabled)} />
             </span>
           </button>
 
@@ -282,11 +231,11 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
             type="button"
             data-menu-item
             onClick={() => setShowTasksAlways(!showTasksAlways)}
-            style={rowStyle}
+            style={menuRowStyle}
             onMouseEnter={hoverOn}
             onMouseLeave={hoverOff}
           >
-            <span style={rowLabelStyle}>
+            <span style={menuRowLabelStyle}>
               {showTasksAlways ? (
                 <FiEye color="#2563eb" style={{ flexShrink: 0 }} />
               ) : (
@@ -294,8 +243,8 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
               )}
               Show Tasks Always
             </span>
-            <span role="switch" aria-checked={showTasksAlways} style={switchStyle(showTasksAlways)}>
-              <span style={knobStyle(showTasksAlways)} />
+            <span role="switch" aria-checked={showTasksAlways} style={menuSwitchStyle(showTasksAlways)}>
+              <span style={menuKnobStyle(showTasksAlways)} />
             </span>
           </button>
 
@@ -303,19 +252,19 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
             type="button"
             data-menu-item
             onClick={() => setHideResolvedClosed(!hideResolvedClosed)}
-            style={rowStyle}
+            style={menuRowStyle}
             onMouseEnter={hoverOn}
             onMouseLeave={hoverOff}
           >
-            <span style={rowLabelStyle}>
+            <span style={menuRowLabelStyle}>
               <FiFilter
                 color={hideResolvedClosed ? '#16a34a' : '#6b7280'}
                 style={{ flexShrink: 0 }}
               />
               Hide Resolved/Closed
             </span>
-            <span role="switch" aria-checked={hideResolvedClosed} style={switchStyle(hideResolvedClosed)}>
-              <span style={knobStyle(hideResolvedClosed)} />
+            <span role="switch" aria-checked={hideResolvedClosed} style={menuSwitchStyle(hideResolvedClosed)}>
+              <span style={menuKnobStyle(hideResolvedClosed)} />
             </span>
           </button>
 
@@ -323,25 +272,25 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
             type="button"
             data-menu-item
             onClick={() => setShowStepDots(!showStepDots)}
-            style={rowStyle}
+            style={menuRowStyle}
             onMouseEnter={hoverOn}
             onMouseLeave={hoverOff}
           >
-            <span style={rowLabelStyle}>
+            <span style={menuRowLabelStyle}>
               <FiMapPin
                 color={showStepDots ? '#2563eb' : '#6b7280'}
                 style={{ flexShrink: 0 }}
               />
               Show Step Dots
             </span>
-            <span role="switch" aria-checked={showStepDots} style={switchStyle(showStepDots, '#3b82f6')}>
-              <span style={knobStyle(showStepDots)} />
+            <span role="switch" aria-checked={showStepDots} style={menuSwitchStyle(showStepDots, '#3b82f6')}>
+              <span style={menuKnobStyle(showStepDots)} />
             </span>
           </button>
 
           {canRecordUserStory && (
             <>
-              <div style={dividerStyle} />
+              <div style={menuDividerStyle} />
               <button
                 type="button"
                 data-menu-item
@@ -353,11 +302,11 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
                     startUserStoryRecording();
                   }
                 }}
-                style={{ ...rowStyle, justifyContent: 'flex-start' }}
+                style={{ ...menuRowStyle, justifyContent: 'flex-start' }}
                 onMouseEnter={hoverOn}
                 onMouseLeave={hoverOff}
               >
-                <span style={rowLabelStyle}>
+                <span style={menuRowLabelStyle}>
                   {isRecordingStory ? (
                     <FiSquare color="#dc2626" style={{ flexShrink: 0 }} />
                   ) : (
@@ -371,7 +320,7 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
             </>
           )}
 
-          <div style={dividerStyle} />
+          <div style={menuDividerStyle} />
 
           {/* Always-on, inline-styled trigger for the built-in self-contained task modal */}
           <button
@@ -385,11 +334,11 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
                 setShowTaskModal(true);
               }
             }}
-            style={rowStyle}
+            style={menuRowStyle}
             onMouseEnter={hoverOn}
             onMouseLeave={hoverOff}
           >
-            <span style={rowLabelStyle}>
+            <span style={menuRowLabelStyle}>
               <FiList style={{ flexShrink: 0 }} />
               View All Tasks
             </span>
@@ -421,11 +370,11 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
                 setOpen(false);
                 onSettings();
               }}
-              style={{ ...rowStyle, justifyContent: 'flex-start' }}
+              style={{ ...menuRowStyle, justifyContent: 'flex-start' }}
               onMouseEnter={hoverOn}
               onMouseLeave={hoverOff}
             >
-              <span style={rowLabelStyle}>
+              <span style={menuRowLabelStyle}>
                 <FiSettings style={{ flexShrink: 0 }} />
                 Settings
               </span>

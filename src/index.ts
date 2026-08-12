@@ -1,5 +1,12 @@
 // Provider
 export { DevNotesProvider, useDevNotes } from './DevNotesProvider';
+export { default as DevNotesContext } from './DevNotesProvider';
+export {
+  menuPanelStyle,
+  menuRowStyle,
+  computeMenuRowBoxes,
+  boxesOverlap,
+} from './menuLayout';
 export { default as DevNotesButton } from './DevNotesButton';
 
 // Individual components (for custom layouts)

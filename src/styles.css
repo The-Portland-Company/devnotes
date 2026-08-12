@@ -25,3 +25,29 @@ input.dn-flat-input:not([type='checkbox']):not([type='radio']):not([type='file']
 [data-bug-form] {
   background-color: #ffffff;
 }
+
+/* Menu rows must stay a column even when the host sets `button { display:inline
+   !important }` or `div { display:flex }`. Inline styles lose to !important;
+   these scoped rules do not. */
+[data-bug-menu] [data-devnotes-menu-panel] {
+  display: flex !important;
+  flex-direction: column !important;
+  flex-wrap: nowrap !important;
+  align-items: stretch !important;
+  box-sizing: border-box !important;
+}
+
+[data-bug-menu] [data-menu-item] {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  flex: 0 0 auto !important;
+  align-self: stretch !important;
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: 100% !important;
+  float: none !important;
+  clear: both !important;
+  box-sizing: border-box !important;
+  position: relative !important;
+}
