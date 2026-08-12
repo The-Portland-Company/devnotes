@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { menuPalette, type MenuScheme } from './menuTheme';
 
 /** Host sheets outrank Tailwind; these inline + !important CSS rules cannot. */
 
@@ -18,6 +19,55 @@ export const menuPanelStyle: CSSProperties = {
   boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)',
   boxSizing: 'border-box',
 };
+
+export function menuPanelStyleFor(scheme: MenuScheme): CSSProperties {
+  const p = menuPalette[scheme];
+  return {
+    ...menuPanelStyle,
+    backgroundColor: p.panelBg,
+    border: `1px solid ${p.panelBorder}`,
+    color: p.text,
+    boxShadow: p.shadow,
+    colorScheme: scheme,
+  };
+}
+
+export function menuRowStyleFor(scheme: MenuScheme): CSSProperties {
+  const p = menuPalette[scheme];
+  return {
+    ...menuRowStyle,
+    color: p.text,
+    background: 'transparent',
+    border: 'none',
+    borderRadius: 0,
+    boxShadow: 'none',
+    appearance: 'none',
+  };
+}
+
+export function menuDividerStyleFor(scheme: MenuScheme): CSSProperties {
+  return {
+    ...menuDividerStyle,
+    background: menuPalette[scheme].divider,
+  };
+}
+
+export function menuHeadingStyleFor(scheme: MenuScheme): CSSProperties {
+  return {
+    margin: 0,
+    fontSize: 12,
+    fontWeight: 600,
+    color: menuPalette[scheme].muted,
+    letterSpacing: '0.04em',
+  };
+}
+
+export function menuSwitchStyleFor(scheme: MenuScheme, on: boolean, onColor = '#22c55e'): CSSProperties {
+  return {
+    ...menuSwitchStyle(on, onColor),
+    background: on ? onColor : menuPalette[scheme].switchOff,
+  };
+}
 
 export const menuRowStyle: CSSProperties = {
   position: 'relative',
