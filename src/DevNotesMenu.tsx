@@ -16,13 +16,15 @@ import { useDevNotes } from './DevNotesProvider';
 import DevNotesTaskListModal from './DevNotesTaskListModal';
 import DevNotesForgeBanner from './DevNotesForgeBanner';
 import {
-  menuDividerStyle,
+  menuDividerStyleFor,
+  menuHeadingStyleFor,
   menuKnobStyle,
-  menuPanelStyle,
+  menuPanelStyleFor,
   menuRowLabelStyle,
-  menuRowStyle,
-  menuSwitchStyle,
+  menuRowStyleFor,
+  menuSwitchStyleFor,
 } from './menuLayout';
+import { menuPalette, readDocumentMenuScheme, type MenuScheme } from './menuTheme';
 
 type DevNotesMenuProps = {
   /**
@@ -64,8 +66,11 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
     forgeStatus,
   } = useDevNotes();
   const forgeDisconnected = forgeStatus?.connected === false;
+  const [scheme, setScheme] = useState<MenuScheme>('light');
+  const palette = menuPalette[scheme];
+  const rowStyle = menuRowStyleFor(scheme);
   const hoverOn = (e: React.MouseEvent) => {
-    (e.currentTarget as HTMLElement).style.background = '#f9fafb';
+    (e.currentTarget as HTMLElement).style.background = palette.hover;
   };
   const hoverOff = (e: React.MouseEvent) => {
     (e.currentTarget as HTMLElement).style.background = 'transparent';
@@ -73,6 +78,20 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
   const [open, setOpen] = useState(defaultOpen);
   const [showTaskModal, setShowTaskModal] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const sync = () => setScheme(readDocumentMenuScheme());
+    sync();
+    if (typeof document === 'undefined' || typeof MutationObserver === 'undefined') return undefined;
+    const observer = new MutationObserver(sync);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-theme', 'data-color-mode'] });
+    const mq = typeof window !== 'undefined' ? window.matchMedia?.('(prefers-color-scheme: dark)') : null;
+    mq?.addEventListener?.('change', sync);
+    return () => {
+      observer.disconnect();
+      mq?.removeEventListener?.('change', sync);
+    };
+  }, []);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -106,6 +125,7 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
     <div
       ref={menuRef}
       data-bug-menu
+      data-dn-scheme={scheme}
       style={{ position: 'relative', zIndex: open ? 9995 : 'auto' }}
     >
       <button
@@ -122,7 +142,7 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
           padding: 0,
           border: 'none',
           background: 'transparent',
-          color: '#374151',
+          color: palette.trigger,
           cursor: 'pointer',
         }}
         title="Tasks"
@@ -186,13 +206,15 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
         <div
           data-devnotes-menu-panel
           style={{
-            ...menuPanelStyle,
+            ...menuPanelStyleFor(scheme),
             ...(position?.includes('left') ? { left: 0 } : { right: 0 }),
             ...(dropdownDirection === 'up' ? { bottom: '100%', marginBottom: 8 } : { top: '100%', marginTop: 8 }),
           }}
         >
           <div style={{ padding: '8px 12px' }}>
-            <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: '#6b7280' }}>DEV NOTES</p>
+            <p data-devnotes-menu-heading style={menuHeadingStyleFor(scheme)}>
+              DEV NOTES
+            </p>
           </div>
 
           {forgeDisconnected && (
@@ -201,7 +223,7 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
             </div>
           )}
 
-          <div style={menuDividerStyle} />
+          <div style={menuDividerStyleFor(scheme)} />
 
           <button
             type="button"
@@ -210,7 +232,7 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
               setIsEnabled(!isEnabled);
               setOpen(false);
             }}
-            style={menuRowStyle}
+            style={rowStyle}
             onMouseEnter={hoverOn}
             onMouseLeave={hoverOff}
           >
@@ -222,7 +244,7 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
               )}
               {isEnabled ? 'Stop Creating Tasks' : 'Create Task'}
             </span>
-            <span role="switch" aria-checked={isEnabled} style={menuSwitchStyle(isEnabled)}>
+            <span role="switch" aria-checked={isEnabled} style={menuSwitchStyleFor(scheme, isEnabled)}>
               <span style={menuKnobStyle(isEnabled)} />
             </span>
           </button>
@@ -231,7 +253,7 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
             type="button"
             data-menu-item
             onClick={() => setShowTasksAlways(!showTasksAlways)}
-            style={menuRowStyle}
+            style={rowStyle}
             onMouseEnter={hoverOn}
             onMouseLeave={hoverOff}
           >
@@ -243,7 +265,7 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
               )}
               Show Tasks Always
             </span>
-            <span role="switch" aria-checked={showTasksAlways} style={menuSwitchStyle(showTasksAlways)}>
+            <span role="switch" aria-checked={showTasksAlways} style={menuSwitchStyleFor(scheme, showTasksAlways)}>
               <span style={menuKnobStyle(showTasksAlways)} />
             </span>
           </button>
@@ -252,18 +274,18 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
             type="button"
             data-menu-item
             onClick={() => setHideResolvedClosed(!hideResolvedClosed)}
-            style={menuRowStyle}
+            style={rowStyle}
             onMouseEnter={hoverOn}
             onMouseLeave={hoverOff}
           >
             <span style={menuRowLabelStyle}>
               <FiFilter
-                color={hideResolvedClosed ? '#16a34a' : '#6b7280'}
+                color={hideResolvedClosed ? '#16a34a' : palette.muted}
                 style={{ flexShrink: 0 }}
               />
               Hide Resolved/Closed
             </span>
-            <span role="switch" aria-checked={hideResolvedClosed} style={menuSwitchStyle(hideResolvedClosed)}>
+            <span role="switch" aria-checked={hideResolvedClosed} style={menuSwitchStyleFor(scheme, hideResolvedClosed)}>
               <span style={menuKnobStyle(hideResolvedClosed)} />
             </span>
           </button>
@@ -272,25 +294,25 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
             type="button"
             data-menu-item
             onClick={() => setShowStepDots(!showStepDots)}
-            style={menuRowStyle}
+            style={rowStyle}
             onMouseEnter={hoverOn}
             onMouseLeave={hoverOff}
           >
             <span style={menuRowLabelStyle}>
               <FiMapPin
-                color={showStepDots ? '#2563eb' : '#6b7280'}
+                color={showStepDots ? '#2563eb' : palette.muted}
                 style={{ flexShrink: 0 }}
               />
               Show Step Dots
             </span>
-            <span role="switch" aria-checked={showStepDots} style={menuSwitchStyle(showStepDots, '#3b82f6')}>
+            <span role="switch" aria-checked={showStepDots} style={menuSwitchStyleFor(scheme, showStepDots, '#3b82f6')}>
               <span style={menuKnobStyle(showStepDots)} />
             </span>
           </button>
 
           {canRecordUserStory && (
             <>
-              <div style={menuDividerStyle} />
+              <div style={menuDividerStyleFor(scheme)} />
               <button
                 type="button"
                 data-menu-item
@@ -302,7 +324,7 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
                     startUserStoryRecording();
                   }
                 }}
-                style={{ ...menuRowStyle, justifyContent: 'flex-start' }}
+                style={{ ...rowStyle, justifyContent: 'flex-start' }}
                 onMouseEnter={hoverOn}
                 onMouseLeave={hoverOff}
               >
@@ -320,7 +342,7 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
             </>
           )}
 
-          <div style={menuDividerStyle} />
+          <div style={menuDividerStyleFor(scheme)} />
 
           {/* Always-on, inline-styled trigger for the built-in self-contained task modal */}
           <button
@@ -334,7 +356,7 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
                 setShowTaskModal(true);
               }
             }}
-            style={menuRowStyle}
+            style={rowStyle}
             onMouseEnter={hoverOn}
             onMouseLeave={hoverOff}
           >
@@ -350,11 +372,11 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
                   alignItems: 'center',
                   justifyContent: 'center',
                   borderRadius: 9999,
-                  background: '#fee2e2',
+                  background: palette.badgeBg,
                   padding: '2px 8px',
                   fontSize: 12,
                   fontWeight: 600,
-                  color: '#b91c1c',
+                  color: palette.badgeText,
                 }}
               >
                 {openBugCount}
@@ -370,7 +392,7 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
                 setOpen(false);
                 onSettings();
               }}
-              style={{ ...menuRowStyle, justifyContent: 'flex-start' }}
+              style={{ ...rowStyle, justifyContent: 'flex-start' }}
               onMouseEnter={hoverOn}
               onMouseLeave={hoverOff}
             >

@@ -15,6 +15,9 @@ const {
   boxesOverlap,
   menuPanelStyle,
   menuRowStyle,
+  menuPanelStyleFor,
+  resolveMenuScheme,
+  menuPalette,
 } = require('../dist/index.js');
 
 const EXPECTED_LABELS = [
@@ -164,6 +167,35 @@ test('shipped menu render lists each action once and stacks non-overlapping row 
   }
 });
 
+test('menu scheme follows html.dark, data-theme, then prefers-color-scheme', () => {
+  const darkHtml = { classList: { contains: (c) => c === 'dark' }, getAttribute: () => null };
+  const lightHtml = { classList: { contains: (c) => c === 'light' }, getAttribute: () => null };
+  const themed = { classList: { contains: () => false }, getAttribute: (n) => (n === 'data-theme' ? 'dark' : null) };
+  const empty = { classList: { contains: () => false }, getAttribute: () => null };
+  assert.equal(resolveMenuScheme(darkHtml, false), 'dark');
+  assert.equal(resolveMenuScheme(lightHtml, true), 'light');
+  assert.equal(resolveMenuScheme(themed, false), 'dark');
+  assert.equal(resolveMenuScheme(empty, true), 'dark');
+  assert.equal(resolveMenuScheme(empty, false), 'light');
+});
+
+test('themed panel surfaces are distinct and readable for light vs dark', () => {
+  const light = menuPanelStyleFor('light');
+  const dark = menuPanelStyleFor('dark');
+  assert.equal(light.backgroundColor, menuPalette.light.panelBg);
+  assert.equal(dark.backgroundColor, menuPalette.dark.panelBg);
+  assert.notEqual(light.backgroundColor, dark.backgroundColor);
+  assert.equal(light.color, menuPalette.light.text);
+  assert.equal(dark.color, menuPalette.dark.text);
+  assert.match(String(dark.border), /#333333/);
+});
+
+test('shipped menu markup carries a scheme hook for host-proof CSS', () => {
+  const html = decode(renderMenu());
+  assert.match(html, /data-dn-scheme="/);
+  assert.match(html, /data-devnotes-menu-heading/);
+});
+
 test('host-proof menu CSS uses !important column + full-width rows', () => {
   const cssPath = join(dirname(fileURLToPath(import.meta.url)), '../dist/styles.css');
   const css = readFileSync(cssPath, 'utf8');
@@ -171,4 +203,8 @@ test('host-proof menu CSS uses !important column + full-width rows', () => {
   assert.match(css, /flex-direction:column!important|flex-direction:\s*column\s*!important/);
   assert.match(css, /\[data-menu-item\]/);
   assert.match(css, /width:100%!important|width:\s*100%\s*!important/);
+  assert.match(css, /data-dn-scheme/);
+  assert.match(css, /html\.dark/);
+  assert.match(css, /#161616/);
+  assert.match(css, /appearance:none!important|-webkit-appearance:none!important/);
 });

@@ -115,8 +115,52 @@ type DevNotesProviderProps = {
 declare function DevNotesProvider({ adapter, user, config, children }: DevNotesProviderProps): react_jsx_runtime.JSX.Element;
 declare function useDevNotes(): DevNotesContextValue;
 
+type MenuScheme = 'light' | 'dark';
+type MenuSchemeRoot = {
+    classList: {
+        contains: (token: string) => boolean;
+    };
+    getAttribute: (name: string) => string | null;
+};
+declare const menuPalette: {
+    readonly light: {
+        readonly panelBg: "#ffffff";
+        readonly panelBorder: "#e5e7eb";
+        readonly text: "#1f2937";
+        readonly muted: "#6b7280";
+        readonly hover: "#f3f4f6";
+        readonly divider: "#e5e7eb";
+        readonly switchOff: "#d1d5db";
+        readonly trigger: "#374151";
+        readonly shadow: "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)";
+        readonly badgeBg: "#fee2e2";
+        readonly badgeText: "#b91c1c";
+    };
+    readonly dark: {
+        readonly panelBg: "#161616";
+        readonly panelBorder: "#333333";
+        readonly text: "#e5e5e5";
+        readonly muted: "#a3a3a3";
+        readonly hover: "#1f1f1f";
+        readonly divider: "#333333";
+        readonly switchOff: "#404040";
+        readonly trigger: "#e5e5e5";
+        readonly shadow: "0 16px 32px -8px rgba(0,0,0,0.55)";
+        readonly badgeBg: "#3f1d1d";
+        readonly badgeText: "#fca5a5";
+    };
+};
+/**
+ * Host theme source: `html.dark` (Politogy), then data-theme / data-color-mode,
+ * then prefers-color-scheme. Explicit `.light` wins over the media query.
+ */
+declare function resolveMenuScheme(root?: MenuSchemeRoot | null, prefersDark?: boolean): MenuScheme;
+declare function readDocumentMenuScheme(): MenuScheme;
+
 /** Host sheets outrank Tailwind; these inline + !important CSS rules cannot. */
 declare const menuPanelStyle: CSSProperties;
+declare function menuPanelStyleFor(scheme: MenuScheme): CSSProperties;
+declare function menuRowStyleFor(scheme: MenuScheme): CSSProperties;
 declare const menuRowStyle: CSSProperties;
 type MenuRowBox = {
     top: number;
@@ -425,4 +469,4 @@ declare const useBugReportPosition: (report: Task | null) => {
     y: number;
 } | null;
 
-export { type AiFixPayload, AiProvider, BugReport, BugReportCreator, BugReportType, type BuildAiFixPayloadParams, DevNotesAppLinkStatus, DevNotesButton, DevNotesCapabilities, DevNotesClientOptions, DevNotesConfig, DevNotesContext, DevNotesDiscussion, DevNotesDot, DevNotesForgeBanner, DevNotesForm, DevNotesMenu, DevNotesOverlay, DevNotesProvider, DevNotesRequestError, DevNotesRole, DevNotesStepDot, DevNotesStoryRecorder, DevNotesStoryStepsBuilder, DevNotesTaskList, DevNotesTaskListModal, DevNotesUser, ForgeError, ForgeStatus, type NarrativeTab, NotifyEvent, type RecordedStep, type StoryBuilderStep, type StoryStepAction, Task, TaskCaptureContext, TaskList, UserStoryCreateResult, UserStoryDraft, UserStoryStepDot, boxesOverlap, buildAiFixPayload, buildCaptureContext, buildForgeDebugPrompt, calculateBugPositionFromPoint, computeMenuRowBoxes, createDevNotesClient, deriveRouteLabelFromUrl, detectBrowserName, formatAiFixPayloadForCopy, getInitialNarrativeTab, getInitialTaskStatus, menuPanelStyle, menuRowStyle, normalizePageUrl, resolveBugReportCoordinates, shouldRequireExplicitStatusSelection, useBugReportPosition, useDevNotes };
+export { type AiFixPayload, AiProvider, BugReport, BugReportCreator, BugReportType, type BuildAiFixPayloadParams, DevNotesAppLinkStatus, DevNotesButton, DevNotesCapabilities, DevNotesClientOptions, DevNotesConfig, DevNotesContext, DevNotesDiscussion, DevNotesDot, DevNotesForgeBanner, DevNotesForm, DevNotesMenu, DevNotesOverlay, DevNotesProvider, DevNotesRequestError, DevNotesRole, DevNotesStepDot, DevNotesStoryRecorder, DevNotesStoryStepsBuilder, DevNotesTaskList, DevNotesTaskListModal, DevNotesUser, ForgeError, ForgeStatus, type MenuScheme, type NarrativeTab, NotifyEvent, type RecordedStep, type StoryBuilderStep, type StoryStepAction, Task, TaskCaptureContext, TaskList, UserStoryCreateResult, UserStoryDraft, UserStoryStepDot, boxesOverlap, buildAiFixPayload, buildCaptureContext, buildForgeDebugPrompt, calculateBugPositionFromPoint, computeMenuRowBoxes, createDevNotesClient, deriveRouteLabelFromUrl, detectBrowserName, formatAiFixPayloadForCopy, getInitialNarrativeTab, getInitialTaskStatus, menuPalette, menuPanelStyle, menuPanelStyleFor, menuRowStyle, menuRowStyleFor, normalizePageUrl, readDocumentMenuScheme, resolveBugReportCoordinates, resolveMenuScheme, shouldRequireExplicitStatusSelection, useBugReportPosition, useDevNotes };

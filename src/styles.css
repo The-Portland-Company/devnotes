@@ -29,12 +29,41 @@ input.dn-flat-input:not([type='checkbox']):not([type='radio']):not([type='file']
 /* Menu rows must stay a column even when the host sets `button { display:inline
    !important }` or `div { display:flex }`. Inline styles lose to !important;
    these scoped rules do not. */
+[data-bug-menu] {
+  --dn-menu-bg: #ffffff;
+  --dn-menu-border: #e5e7eb;
+  --dn-menu-text: #1f2937;
+  --dn-menu-muted: #6b7280;
+  --dn-menu-hover: #f3f4f6;
+  --dn-menu-divider: #e5e7eb;
+  color-scheme: light;
+}
+
+html.dark [data-bug-menu],
+[data-theme='dark'] [data-bug-menu],
+[data-bug-menu][data-dn-scheme='dark'] {
+  --dn-menu-bg: #161616;
+  --dn-menu-border: #333333;
+  --dn-menu-text: #e5e5e5;
+  --dn-menu-muted: #a3a3a3;
+  --dn-menu-hover: #1f1f1f;
+  --dn-menu-divider: #333333;
+  color-scheme: dark;
+}
+
 [data-bug-menu] [data-devnotes-menu-panel] {
   display: flex !important;
   flex-direction: column !important;
   flex-wrap: nowrap !important;
   align-items: stretch !important;
   box-sizing: border-box !important;
+  background-color: var(--dn-menu-bg) !important;
+  border: 1px solid var(--dn-menu-border) !important;
+  color: var(--dn-menu-text) !important;
+}
+
+[data-bug-menu] [data-devnotes-menu-heading] {
+  color: var(--dn-menu-muted) !important;
 }
 
 [data-bug-menu] [data-menu-item] {
@@ -50,4 +79,17 @@ input.dn-flat-input:not([type='checkbox']):not([type='radio']):not([type='file']
   clear: both !important;
   box-sizing: border-box !important;
   position: relative !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  background-color: transparent !important;
+  color: var(--dn-menu-text) !important;
+}
+
+[data-bug-menu] [data-menu-item]:hover,
+[data-bug-menu] [data-menu-item]:focus-visible {
+  background-color: var(--dn-menu-hover) !important;
 }

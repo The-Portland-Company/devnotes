@@ -4,9 +4,13 @@ export { default as DevNotesContext } from './DevNotesProvider';
 export {
   menuPanelStyle,
   menuRowStyle,
+  menuPanelStyleFor,
+  menuRowStyleFor,
   computeMenuRowBoxes,
   boxesOverlap,
 } from './menuLayout';
+export { resolveMenuScheme, menuPalette, readDocumentMenuScheme } from './menuTheme';
+export type { MenuScheme } from './menuTheme';
 export { default as DevNotesButton } from './DevNotesButton';
 
 // Individual components (for custom layouts)
