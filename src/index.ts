@@ -8,6 +8,7 @@ export {
   menuRowStyleFor,
   computeMenuRowBoxes,
   boxesOverlap,
+  menuKnobStyle,
 } from './menuLayout';
 export { resolveMenuScheme, menuPalette, readDocumentMenuScheme } from './menuTheme';
 export type { MenuScheme } from './menuTheme';
