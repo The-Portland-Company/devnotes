@@ -1485,7 +1485,9 @@ function menuRowStyleFor(scheme) {
     border: "none",
     borderRadius: 0,
     boxShadow: "none",
-    appearance: "none"
+    appearance: "none",
+    justifyContent: "space-between",
+    textAlign: "left"
   };
 }
 function menuDividerStyleFor(scheme) {
@@ -1520,7 +1522,7 @@ var menuRowStyle = {
   minWidth: "100%",
   maxWidth: "100%",
   alignItems: "center",
-  justifyContent: "space-between",
+  justifyContent: "flex-start",
   gap: 12,
   padding: "8px 12px",
   margin: 0,
@@ -1551,27 +1553,38 @@ var menuDividerStyle = {
 function menuSwitchStyle(on, onColor = "#22c55e") {
   return {
     position: "relative",
-    display: "inline-flex",
+    display: "inline-block",
     height: 20,
     width: 36,
+    minWidth: 36,
+    minHeight: 20,
     flexShrink: 0,
     borderRadius: 9999,
     cursor: "pointer",
     background: on ? onColor : "#d1d5db",
+    overflow: "visible",
+    boxSizing: "border-box",
     transition: "background-color 200ms"
   };
 }
 function menuKnobStyle(on) {
   return {
-    display: "inline-block",
+    position: "absolute",
+    top: 2,
+    left: on ? 18 : 2,
+    display: "block",
     height: 16,
     width: 16,
-    marginTop: 2,
+    minWidth: 16,
+    minHeight: 16,
+    maxWidth: 16,
+    margin: 0,
     borderRadius: 9999,
     background: "#ffffff",
-    boxShadow: "0 1px 2px 0 rgba(0,0,0,0.05)",
-    transform: on ? "translateX(18px)" : "translateX(2px)",
-    transition: "transform 200ms"
+    boxShadow: "0 1px 3px rgba(0,0,0,0.35)",
+    transform: "none",
+    pointerEvents: "none",
+    transition: "left 200ms"
   };
 }
 function parsePxPair(padding) {
@@ -2951,7 +2964,7 @@ function formatAiFixPayloadForCopy(payload) {
 }
 
 // src/version.ts
-var DEVNOTES_VERSION = "0.6.17";
+var DEVNOTES_VERSION = "0.6.18";
 
 // src/internal/formState.ts
 function getInitialTaskStatus(existingStatus) {
@@ -5387,7 +5400,7 @@ function DevNotesTaskListModal({
 
 // src/DevNotesMenu.tsx
 import { Fragment as Fragment3, jsx as jsx8, jsxs as jsxs7 } from "react/jsx-runtime";
-function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position = "bottom-right", dropdownDirection = "down", onNavigateToPage, defaultOpen = false }) {
+function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position = "bottom-right", dropdownDirection = "down", dropdownAlign = "start", onNavigateToPage, defaultOpen = false }) {
   const {
     isEnabled,
     setIsEnabled,
@@ -5535,9 +5548,10 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
           "div",
           {
             "data-devnotes-menu-panel": true,
+            "data-dn-align": dropdownAlign,
             style: {
               ...menuPanelStyleFor(scheme),
-              ...position?.includes("left") ? { left: 0 } : { right: 0 },
+              ...dropdownAlign === "end" ? { right: 0, left: "auto" } : { left: 0, right: "auto" },
               ...dropdownDirection === "up" ? { bottom: "100%", marginBottom: 8 } : { top: "100%", marginTop: 8 }
             },
             children: [
@@ -5557,11 +5571,11 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                   onMouseEnter: hoverOn,
                   onMouseLeave: hoverOff,
                   children: [
-                    /* @__PURE__ */ jsxs7("span", { style: menuRowLabelStyle, children: [
+                    /* @__PURE__ */ jsxs7("span", { "data-menu-label": true, style: menuRowLabelStyle, children: [
                       isEnabled ? /* @__PURE__ */ jsx8(FiToggleRight, { color: "#16a34a", style: { flexShrink: 0 } }) : /* @__PURE__ */ jsx8(FiToggleLeft, { style: { flexShrink: 0 } }),
                       isEnabled ? "Stop Creating Tasks" : "Create Task"
                     ] }),
-                    /* @__PURE__ */ jsx8("span", { role: "switch", "aria-checked": isEnabled, style: menuSwitchStyleFor(scheme, isEnabled), children: /* @__PURE__ */ jsx8("span", { style: menuKnobStyle(isEnabled) }) })
+                    /* @__PURE__ */ jsx8("span", { role: "switch", "aria-checked": isEnabled, "data-menu-switch": true, style: menuSwitchStyleFor(scheme, isEnabled), children: /* @__PURE__ */ jsx8("span", { "data-menu-knob": true, style: menuKnobStyle(isEnabled) }) })
                   ]
                 }
               ),
@@ -5575,11 +5589,11 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                   onMouseEnter: hoverOn,
                   onMouseLeave: hoverOff,
                   children: [
-                    /* @__PURE__ */ jsxs7("span", { style: menuRowLabelStyle, children: [
+                    /* @__PURE__ */ jsxs7("span", { "data-menu-label": true, style: menuRowLabelStyle, children: [
                       showTasksAlways ? /* @__PURE__ */ jsx8(FiEye2, { color: "#2563eb", style: { flexShrink: 0 } }) : /* @__PURE__ */ jsx8(FiEyeOff, { style: { flexShrink: 0 } }),
                       "Show Tasks Always"
                     ] }),
-                    /* @__PURE__ */ jsx8("span", { role: "switch", "aria-checked": showTasksAlways, style: menuSwitchStyleFor(scheme, showTasksAlways), children: /* @__PURE__ */ jsx8("span", { style: menuKnobStyle(showTasksAlways) }) })
+                    /* @__PURE__ */ jsx8("span", { role: "switch", "aria-checked": showTasksAlways, "data-menu-switch": true, style: menuSwitchStyleFor(scheme, showTasksAlways), children: /* @__PURE__ */ jsx8("span", { "data-menu-knob": true, style: menuKnobStyle(showTasksAlways) }) })
                   ]
                 }
               ),
@@ -5593,7 +5607,7 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                   onMouseEnter: hoverOn,
                   onMouseLeave: hoverOff,
                   children: [
-                    /* @__PURE__ */ jsxs7("span", { style: menuRowLabelStyle, children: [
+                    /* @__PURE__ */ jsxs7("span", { "data-menu-label": true, style: menuRowLabelStyle, children: [
                       /* @__PURE__ */ jsx8(
                         FiFilter,
                         {
@@ -5603,7 +5617,7 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                       ),
                       "Hide Resolved/Closed"
                     ] }),
-                    /* @__PURE__ */ jsx8("span", { role: "switch", "aria-checked": hideResolvedClosed, style: menuSwitchStyleFor(scheme, hideResolvedClosed), children: /* @__PURE__ */ jsx8("span", { style: menuKnobStyle(hideResolvedClosed) }) })
+                    /* @__PURE__ */ jsx8("span", { role: "switch", "aria-checked": hideResolvedClosed, "data-menu-switch": true, style: menuSwitchStyleFor(scheme, hideResolvedClosed), children: /* @__PURE__ */ jsx8("span", { "data-menu-knob": true, style: menuKnobStyle(hideResolvedClosed) }) })
                   ]
                 }
               ),
@@ -5617,7 +5631,7 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                   onMouseEnter: hoverOn,
                   onMouseLeave: hoverOff,
                   children: [
-                    /* @__PURE__ */ jsxs7("span", { style: menuRowLabelStyle, children: [
+                    /* @__PURE__ */ jsxs7("span", { "data-menu-label": true, style: menuRowLabelStyle, children: [
                       /* @__PURE__ */ jsx8(
                         FiMapPin,
                         {
@@ -5627,7 +5641,7 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                       ),
                       "Show Step Dots"
                     ] }),
-                    /* @__PURE__ */ jsx8("span", { role: "switch", "aria-checked": showStepDots, style: menuSwitchStyleFor(scheme, showStepDots, "#3b82f6"), children: /* @__PURE__ */ jsx8("span", { style: menuKnobStyle(showStepDots) }) })
+                    /* @__PURE__ */ jsx8("span", { role: "switch", "aria-checked": showStepDots, "data-menu-switch": true, style: menuSwitchStyleFor(scheme, showStepDots, "#3b82f6"), children: /* @__PURE__ */ jsx8("span", { "data-menu-knob": true, style: menuKnobStyle(showStepDots) }) })
                   ]
                 }
               ),
@@ -5649,7 +5663,7 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                     style: { ...rowStyle, justifyContent: "flex-start" },
                     onMouseEnter: hoverOn,
                     onMouseLeave: hoverOff,
-                    children: /* @__PURE__ */ jsxs7("span", { style: menuRowLabelStyle, children: [
+                    children: /* @__PURE__ */ jsxs7("span", { "data-menu-label": true, style: menuRowLabelStyle, children: [
                       isRecordingStory ? /* @__PURE__ */ jsx8(FiSquare3, { color: "#dc2626", style: { flexShrink: 0 } }) : /* @__PURE__ */ jsx8(FiVideo2, { color: "#2563eb", style: { flexShrink: 0 } }),
                       isRecordingStory ? "Stop Recording Test Case" : "Record User Story (Test Case)"
                     ] })
@@ -5674,7 +5688,7 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                   onMouseEnter: hoverOn,
                   onMouseLeave: hoverOff,
                   children: [
-                    /* @__PURE__ */ jsxs7("span", { style: menuRowLabelStyle, children: [
+                    /* @__PURE__ */ jsxs7("span", { "data-menu-label": true, style: menuRowLabelStyle, children: [
                       /* @__PURE__ */ jsx8(FiList, { style: { flexShrink: 0 } }),
                       "View All Tasks"
                     ] }),
@@ -5711,7 +5725,7 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
                   style: { ...rowStyle, justifyContent: "flex-start" },
                   onMouseEnter: hoverOn,
                   onMouseLeave: hoverOff,
-                  children: /* @__PURE__ */ jsxs7("span", { style: menuRowLabelStyle, children: [
+                  children: /* @__PURE__ */ jsxs7("span", { "data-menu-label": true, style: menuRowLabelStyle, children: [
                     /* @__PURE__ */ jsx8(FiSettings, { style: { flexShrink: 0 } }),
                     "Settings"
                   ] })
@@ -6854,7 +6868,8 @@ function DevNotesButton({
             onSettings: handleSettings,
             icon,
             position,
-            dropdownDirection: position?.includes("bottom") ? "up" : "down"
+            dropdownDirection: position?.includes("bottom") ? "up" : "down",
+            dropdownAlign: position?.includes("left") ? "start" : "end"
           }
         )
       }
@@ -7403,6 +7418,7 @@ export {
   formatAiFixPayloadForCopy,
   getInitialNarrativeTab,
   getInitialTaskStatus,
+  menuKnobStyle,
   menuPalette,
   menuPanelStyle,
   menuPanelStyleFor,

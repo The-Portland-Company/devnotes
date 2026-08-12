@@ -42,6 +42,8 @@ export function menuRowStyleFor(scheme: MenuScheme): CSSProperties {
     borderRadius: 0,
     boxShadow: 'none',
     appearance: 'none',
+    justifyContent: 'space-between',
+    textAlign: 'left',
   };
 }
 
@@ -80,7 +82,7 @@ export const menuRowStyle: CSSProperties = {
   minWidth: '100%',
   maxWidth: '100%',
   alignItems: 'center',
-  justifyContent: 'space-between',
+  justifyContent: 'flex-start',
   gap: 12,
   padding: '8px 12px',
   margin: 0,
@@ -114,28 +116,39 @@ export const menuDividerStyle: CSSProperties = {
 export function menuSwitchStyle(on: boolean, onColor = '#22c55e'): CSSProperties {
   return {
     position: 'relative',
-    display: 'inline-flex',
+    display: 'inline-block',
     height: 20,
     width: 36,
+    minWidth: 36,
+    minHeight: 20,
     flexShrink: 0,
     borderRadius: 9999,
     cursor: 'pointer',
     background: on ? onColor : '#d1d5db',
+    overflow: 'visible',
+    boxSizing: 'border-box',
     transition: 'background-color 200ms',
   };
 }
 
 export function menuKnobStyle(on: boolean): CSSProperties {
   return {
-    display: 'inline-block',
+    position: 'absolute',
+    top: 2,
+    left: on ? 18 : 2,
+    display: 'block',
     height: 16,
     width: 16,
-    marginTop: 2,
+    minWidth: 16,
+    minHeight: 16,
+    maxWidth: 16,
+    margin: 0,
     borderRadius: 9999,
     background: '#ffffff',
-    boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)',
-    transform: on ? 'translateX(18px)' : 'translateX(2px)',
-    transition: 'transform 200ms',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.35)',
+    transform: 'none',
+    pointerEvents: 'none',
+    transition: 'left 200ms',
   };
 }
 

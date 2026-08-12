@@ -16,6 +16,7 @@ const {
   menuPanelStyle,
   menuRowStyle,
   menuPanelStyleFor,
+  menuKnobStyle,
   resolveMenuScheme,
   menuPalette,
 } = require('../dist/index.js');
@@ -196,6 +197,20 @@ test('shipped menu markup carries a scheme hook for host-proof CSS', () => {
   assert.match(html, /data-devnotes-menu-heading/);
 });
 
+test('dropdown hangs from the trigger left edge and rows keep a real switch knob', () => {
+  const html = decode(renderMenu());
+  assert.match(html, /data-dn-align="start"/);
+  assert.match(html, /left:0/);
+  assert.doesNotMatch(html, /data-dn-align="end"/);
+  const switches = [...html.matchAll(/data-menu-switch/g)];
+  const knobs = [...html.matchAll(/data-menu-knob/g)];
+  assert.equal(switches.length, 4);
+  assert.equal(knobs.length, 4);
+  assert.equal(menuKnobStyle(false).left, 2);
+  assert.equal(menuKnobStyle(true).left, 18);
+  assert.equal(menuKnobStyle(true).background, '#ffffff');
+});
+
 test('host-proof menu CSS uses !important column + full-width rows', () => {
   const cssPath = join(dirname(fileURLToPath(import.meta.url)), '../dist/styles.css');
   const css = readFileSync(cssPath, 'utf8');
@@ -207,4 +222,8 @@ test('host-proof menu CSS uses !important column + full-width rows', () => {
   assert.match(css, /html\.dark/);
   assert.match(css, /#161616/);
   assert.match(css, /appearance:none!important|-webkit-appearance:none!important/);
+  assert.match(css, /justify-content:space-between!important|justify-content:\s*space-between\s*!important/);
+  assert.match(css, /data-menu-knob/);
+  assert.match(css, /left:18px!important|left:\s*18px\s*!important/);
+  assert.match(css, /data-dn-align/);
 });

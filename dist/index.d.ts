@@ -162,6 +162,7 @@ declare const menuPanelStyle: CSSProperties;
 declare function menuPanelStyleFor(scheme: MenuScheme): CSSProperties;
 declare function menuRowStyleFor(scheme: MenuScheme): CSSProperties;
 declare const menuRowStyle: CSSProperties;
+declare function menuKnobStyle(on: boolean): CSSProperties;
 type MenuRowBox = {
     top: number;
     left: number;
@@ -220,12 +221,14 @@ type DevNotesMenuProps = {
     position?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
     /** Direction the dropdown opens — default 'down' */
     dropdownDirection?: 'up' | 'down';
+    /** Horizontal hang of the panel relative to the trigger. Default start (left). */
+    dropdownAlign?: 'start' | 'end';
     /** Forwarded to the built-in modal: navigate to the page a report was filed on */
     onNavigateToPage?: (pageUrl: string, reportId: string) => void;
     /** Open the dropdown on first paint (tests / storybook). */
     defaultOpen?: boolean;
 };
-declare function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position, dropdownDirection, onNavigateToPage, defaultOpen }: DevNotesMenuProps): react_jsx_runtime.JSX.Element | null;
+declare function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position, dropdownDirection, dropdownAlign, onNavigateToPage, defaultOpen }: DevNotesMenuProps): react_jsx_runtime.JSX.Element | null;
 
 type DevNotesFormProps = {
     pageUrl: string;
@@ -469,4 +472,4 @@ declare const useBugReportPosition: (report: Task | null) => {
     y: number;
 } | null;
 
-export { type AiFixPayload, AiProvider, BugReport, BugReportCreator, BugReportType, type BuildAiFixPayloadParams, DevNotesAppLinkStatus, DevNotesButton, DevNotesCapabilities, DevNotesClientOptions, DevNotesConfig, DevNotesContext, DevNotesDiscussion, DevNotesDot, DevNotesForgeBanner, DevNotesForm, DevNotesMenu, DevNotesOverlay, DevNotesProvider, DevNotesRequestError, DevNotesRole, DevNotesStepDot, DevNotesStoryRecorder, DevNotesStoryStepsBuilder, DevNotesTaskList, DevNotesTaskListModal, DevNotesUser, ForgeError, ForgeStatus, type MenuScheme, type NarrativeTab, NotifyEvent, type RecordedStep, type StoryBuilderStep, type StoryStepAction, Task, TaskCaptureContext, TaskList, UserStoryCreateResult, UserStoryDraft, UserStoryStepDot, boxesOverlap, buildAiFixPayload, buildCaptureContext, buildForgeDebugPrompt, calculateBugPositionFromPoint, computeMenuRowBoxes, createDevNotesClient, deriveRouteLabelFromUrl, detectBrowserName, formatAiFixPayloadForCopy, getInitialNarrativeTab, getInitialTaskStatus, menuPalette, menuPanelStyle, menuPanelStyleFor, menuRowStyle, menuRowStyleFor, normalizePageUrl, readDocumentMenuScheme, resolveBugReportCoordinates, resolveMenuScheme, shouldRequireExplicitStatusSelection, useBugReportPosition, useDevNotes };
+export { type AiFixPayload, AiProvider, BugReport, BugReportCreator, BugReportType, type BuildAiFixPayloadParams, DevNotesAppLinkStatus, DevNotesButton, DevNotesCapabilities, DevNotesClientOptions, DevNotesConfig, DevNotesContext, DevNotesDiscussion, DevNotesDot, DevNotesForgeBanner, DevNotesForm, DevNotesMenu, DevNotesOverlay, DevNotesProvider, DevNotesRequestError, DevNotesRole, DevNotesStepDot, DevNotesStoryRecorder, DevNotesStoryStepsBuilder, DevNotesTaskList, DevNotesTaskListModal, DevNotesUser, ForgeError, ForgeStatus, type MenuScheme, type NarrativeTab, NotifyEvent, type RecordedStep, type StoryBuilderStep, type StoryStepAction, Task, TaskCaptureContext, TaskList, UserStoryCreateResult, UserStoryDraft, UserStoryStepDot, boxesOverlap, buildAiFixPayload, buildCaptureContext, buildForgeDebugPrompt, calculateBugPositionFromPoint, computeMenuRowBoxes, createDevNotesClient, deriveRouteLabelFromUrl, detectBrowserName, formatAiFixPayloadForCopy, getInitialNarrativeTab, getInitialTaskStatus, menuKnobStyle, menuPalette, menuPanelStyle, menuPanelStyleFor, menuRowStyle, menuRowStyleFor, normalizePageUrl, readDocumentMenuScheme, resolveBugReportCoordinates, resolveMenuScheme, shouldRequireExplicitStatusSelection, useBugReportPosition, useDevNotes };

@@ -61,6 +61,7 @@ export default function DevNotesButton({
           icon={icon}
           position={position}
           dropdownDirection={position?.includes('bottom') ? 'up' : 'down'}
+          dropdownAlign={position?.includes('left') ? 'start' : 'end'}
         />
       </div>
 
