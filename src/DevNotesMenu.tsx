@@ -214,14 +214,14 @@ export default function DevNotesMenu({ onViewTasks, onSettings, icon: IconCompon
             ...(dropdownDirection === 'up' ? { bottom: '100%', marginBottom: 8 } : { top: '100%', marginTop: 8 }),
           }}
         >
-          <div style={{ padding: '8px 12px' }}>
+          <div style={{ padding: '8px 16px' }}>
             <p data-devnotes-menu-heading style={menuHeadingStyleFor(scheme)}>
               DEV NOTES
             </p>
           </div>
 
           {forgeDisconnected && (
-            <div style={{ padding: '0 12px 8px' }}>
+            <div style={{ padding: '0 16px 8px' }}>
               <DevNotesForgeBanner />
             </div>
           )}

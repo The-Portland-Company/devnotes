@@ -96,6 +96,8 @@ html.dark [data-bug-menu],
   color: var(--dn-menu-text) !important;
   justify-content: space-between !important;
   text-align: left !important;
+  padding-left: 16px !important;
+  padding-right: 16px !important;
 }
 
 [data-bug-menu] [data-menu-label] {
