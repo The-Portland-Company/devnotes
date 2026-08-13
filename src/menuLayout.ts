@@ -84,7 +84,7 @@ export const menuRowStyle: CSSProperties = {
   alignItems: 'center',
   justifyContent: 'flex-start',
   gap: 12,
-  padding: '8px 12px',
+  padding: '8px 16px',
   margin: 0,
   fontSize: 14,
   lineHeight: '20px',

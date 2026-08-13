@@ -1582,7 +1582,7 @@ var menuRowStyle = {
   alignItems: "center",
   justifyContent: "flex-start",
   gap: 12,
-  padding: "8px 12px",
+  padding: "8px 16px",
   margin: 0,
   fontSize: 14,
   lineHeight: "20px",
@@ -2980,7 +2980,7 @@ function formatAiFixPayloadForCopy(payload) {
 }
 
 // src/version.ts
-var DEVNOTES_VERSION = "0.6.18";
+var DEVNOTES_VERSION = "0.6.19";
 
 // src/internal/formState.ts
 function getInitialTaskStatus(existingStatus) {
@@ -5571,8 +5571,8 @@ function DevNotesMenu({ onViewTasks, onSettings, icon: IconComponent, position =
               ...dropdownDirection === "up" ? { bottom: "100%", marginBottom: 8 } : { top: "100%", marginTop: 8 }
             },
             children: [
-              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { style: { padding: "8px 12px" }, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { "data-devnotes-menu-heading": true, style: menuHeadingStyleFor(scheme), children: "DEV NOTES" }) }),
-              forgeDisconnected && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { style: { padding: "0 12px 8px" }, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(DevNotesForgeBanner, {}) }),
+              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { style: { padding: "8px 16px" }, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { "data-devnotes-menu-heading": true, style: menuHeadingStyleFor(scheme), children: "DEV NOTES" }) }),
+              forgeDisconnected && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { style: { padding: "0 16px 8px" }, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(DevNotesForgeBanner, {}) }),
               /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { style: menuDividerStyleFor(scheme) }),
               /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
                 "button",

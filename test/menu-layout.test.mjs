@@ -226,4 +226,17 @@ test('host-proof menu CSS uses !important column + full-width rows', () => {
   assert.match(css, /data-menu-knob/);
   assert.match(css, /left:18px!important|left:\s*18px\s*!important/);
   assert.match(css, /data-dn-align/);
+  assert.match(css, /padding-left:16px!important|padding-left:\s*16px\s*!important/);
+  assert.match(css, /padding-right:16px!important|padding-right:\s*16px\s*!important/);
+});
+
+test('menu rows keep 16px side padding so labels, toggles, and the count sit off the edges', () => {
+  assert.equal(menuRowStyle.padding, '8px 16px');
+  const html = decode(renderMenu());
+  const rowChunks = html.split('data-menu-item').slice(1);
+  for (const chunk of rowChunks) {
+    const styleMatch = chunk.match(/style="([^"]+)"/);
+    assert.ok(styleMatch, 'each menu item has an inline style');
+    assert.match(styleMatch[1], /padding:8px 16px/);
+  }
 });
