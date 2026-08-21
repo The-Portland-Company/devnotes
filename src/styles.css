@@ -26,6 +26,61 @@ input.dn-flat-input:not([type='checkbox']):not([type='radio']):not([type='file']
   background-color: #ffffff;
 }
 
+/* Dark theme for the report/task form modal. DevNotesForm is authored in fixed
+   LIGHT Tailwind literals (bg-white, bg-slate-50, text-slate-900, the
+   from-white -> slate-100 gradient) with no dark variant — and this package's
+   Tailwind uses the media strategy, so `dark:` here would not track a host's
+   `.dark` class anyway. Remap the modal's neutral surfaces, borders and text
+   under a dark ancestor, scoped to the [data-bug-form] panel hook — the same
+   scoped-override approach used for [data-bug-menu] above. Colored status
+   accents (violet/amber/rose/blue/emerald) are left intact. Neutral ramp:
+   surface #161616, raised #1f1f1f, border #333, text #e5e5e5 / muted #a3a3a3. */
+html.dark [data-bug-form],
+[data-theme='dark'] [data-bug-form],
+[data-bug-form][data-dn-scheme='dark'] {
+  --dnf-surface: #161616;
+  --dnf-raised: #1f1f1f;
+  --dnf-border: #333333;
+  --dnf-text: #e5e5e5;
+  --dnf-text-body: #d4d4d4;
+  --dnf-muted: #a3a3a3;
+  background-color: var(--dnf-surface) !important;
+  color-scheme: dark;
+}
+:is(html.dark, [data-theme='dark']) [data-bug-form] :is(.bg-white, .bg-white\/95),
+[data-bug-form][data-dn-scheme='dark'] :is(.bg-white, .bg-white\/95) {
+  background-color: var(--dnf-surface) !important;
+}
+:is(html.dark, [data-theme='dark']) [data-bug-form] :is(.bg-slate-50, .bg-slate-50\/80, .bg-slate-100, .bg-gray-100),
+[data-bug-form][data-dn-scheme='dark'] :is(.bg-slate-50, .bg-slate-50\/80, .bg-slate-100, .bg-gray-100) {
+  background-color: var(--dnf-raised) !important;
+}
+:is(html.dark, [data-theme='dark']) [data-bug-form] .bg-gradient-to-b,
+[data-bug-form][data-dn-scheme='dark'] .bg-gradient-to-b {
+  background-image: none !important;
+  background-color: var(--dnf-surface) !important;
+}
+:is(html.dark, [data-theme='dark']) [data-bug-form] :is(.border-slate-100, .border-slate-200, .border-slate-300, .border-slate-400),
+[data-bug-form][data-dn-scheme='dark'] :is(.border-slate-100, .border-slate-200, .border-slate-300, .border-slate-400) {
+  border-color: var(--dnf-border) !important;
+}
+:is(html.dark, [data-theme='dark']) [data-bug-form] :is(.text-slate-900, .text-slate-800),
+[data-bug-form][data-dn-scheme='dark'] :is(.text-slate-900, .text-slate-800) {
+  color: var(--dnf-text) !important;
+}
+:is(html.dark, [data-theme='dark']) [data-bug-form] :is(.text-slate-700, .text-slate-600),
+[data-bug-form][data-dn-scheme='dark'] :is(.text-slate-700, .text-slate-600) {
+  color: var(--dnf-text-body) !important;
+}
+:is(html.dark, [data-theme='dark']) [data-bug-form] :is(.text-slate-500, .text-slate-400),
+[data-bug-form][data-dn-scheme='dark'] :is(.text-slate-500, .text-slate-400) {
+  color: var(--dnf-muted) !important;
+}
+:is(html.dark, [data-theme='dark']) [data-bug-form] .placeholder\:text-slate-400::placeholder,
+[data-bug-form][data-dn-scheme='dark'] .placeholder\:text-slate-400::placeholder {
+  color: var(--dnf-muted) !important;
+}
+
 /* Menu rows must stay a column even when the host sets `button { display:inline
    !important }` or `div { display:flex }`. Inline styles lose to !important;
    these scoped rules do not. */
