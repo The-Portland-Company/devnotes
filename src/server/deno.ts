@@ -4,3 +4,8 @@ import { createDevNotesServerHandler } from './forge';
 export function createDenoDevNotesHandler(options: DevNotesServerOptions) {
   return createDevNotesServerHandler(options);
 }
+
+export {
+  createForgeProofUploadHandler,
+  type ForgeProofUploadOptions,
+} from './proofUpload';
