@@ -61,7 +61,11 @@ test('shared handler routes capabilities through the Next helper', async () => {
 
   const response = await handler(new Request('https://app.example.com/api/devnotes/capabilities'));
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { ai: false, appLink: true });
+  assert.deepEqual(await response.json(), {
+    ai: false,
+    appLink: true,
+    attachments: false,
+  });
 });
 
 test('Next helper accepts canonical /tasks routes', async () => {
