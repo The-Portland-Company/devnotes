@@ -5,6 +5,7 @@ export type {
   TaskMessage,
   TaskList,
   TaskCaptureContext,
+  DevNotesAttachment,
   DevNotesUser,
   DevNotesConfig,
   DevNotesRole,
@@ -25,10 +26,13 @@ export type {
   UserStoryWithSteps,
 } from './internal/core-types';
 export { USER_STORY_TYPE_NAME } from './internal/core-types';
+import type { DevNotesAttachment } from './internal/core-types';
 
 export type DevNotesCapabilities = {
   ai: boolean;
   appLink: boolean;
+  /** True when the server proxy has a proof-media upload handler configured. */
+  attachments?: boolean;
 };
 
 /** Structured Forge connection error surfaced by every `/api/devnotes/*` response. */
@@ -124,6 +128,24 @@ export type DevNotesServerNotifications = {
   taskCreatedEmail?: DevNotesTaskCreatedEmailOptions | null;
 };
 
+/** Context passed to a proof-media upload handler. */
+export type DevNotesUploadContext = {
+  user: DevNotesServerUser;
+  request: Request;
+};
+
+/**
+ * Host-provided proof-media upload handler. Receives the raw multipart request
+ * (a `file` field, plus optional `pageUrl` / `taskId`) and stores it however
+ * the host wants — e.g. forwarding to Focus Forge's /api/proof/upload, which
+ * routes to the organization's own storage account. Returning a
+ * DevNotesAttachment enables the capture UI (advertised via the `attachments`
+ * capability); omitting it leaves proof capture off.
+ */
+export type DevNotesUploadHandler = (
+  ctx: DevNotesUploadContext,
+) => Promise<DevNotesAttachment>;
+
 export type DevNotesServerOptions = {
   basePath?: string;
   getCurrentUser: (request: Request) => Promise<DevNotesServerUser | null> | DevNotesServerUser | null;
@@ -132,6 +154,8 @@ export type DevNotesServerOptions = {
   fetch?: typeof globalThis.fetch;
   corsHeaders?: DevNotesCorsHeaders;
   notifications?: DevNotesServerNotifications;
+  /** Enables proof-media capture + upload (see DevNotesUploadHandler). */
+  uploadAttachment?: DevNotesUploadHandler;
 };
 
 export type DevNotesClientOptions = {

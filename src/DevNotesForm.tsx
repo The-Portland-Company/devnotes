@@ -14,8 +14,19 @@ import {
   FiArchive,
   FiCheck,
   FiClock,
+  FiCamera,
+  FiVideo,
+  FiSquare,
 } from 'react-icons/fi';
 import { useDevNotes } from './DevNotesProvider';
+import type { DevNotesAttachment } from './types';
+import {
+  captureScreenshot,
+  startRecording,
+  isProofCaptureSupported,
+  isRecordingSupported,
+  type ProofRecorder,
+} from './internal/proofCapture';
 import DevNotesDiscussion from './DevNotesDiscussion';
 import AiDescriptionChat from './AiDescriptionChat';
 import { normalizePageUrl } from './utils/bugAnchors';
@@ -226,6 +237,8 @@ export default function DevNotesForm({
     startUserStoryRecording,
     stopUserStoryRecording,
     createUserStory,
+    adapter,
+    capabilities,
   } = useDevNotes();
 
   const isAdmin = role === 'admin' || role === 'contributor';
@@ -374,6 +387,81 @@ export default function DevNotesForm({
   );
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [pendingDestructiveAction, setPendingDestructiveAction] = useState<'delete' | 'archive' | null>(null);
+
+  // Proof capture (screenshots / screen recordings) — enabled only when the
+  // server proxy advertises the attachments capability and the browser supports
+  // screen capture.
+  const [attachments, setAttachments] = useState<DevNotesAttachment[]>(
+    existingReport?.attachments || [],
+  );
+  const [captureBusy, setCaptureBusy] = useState<'screenshot' | 'upload' | null>(
+    null,
+  );
+  const [recorder, setRecorder] = useState<ProofRecorder | null>(null);
+  const [captureError, setCaptureError] = useState<string | null>(null);
+  const proofCaptureEnabled =
+    !!capabilities?.attachments &&
+    typeof adapter.uploadAttachment === 'function' &&
+    isProofCaptureSupported();
+
+  const uploadProof = async (blob: Blob, filename: string) => {
+    if (typeof adapter.uploadAttachment !== 'function') return;
+    setCaptureBusy('upload');
+    setCaptureError(null);
+    try {
+      const stored = await adapter.uploadAttachment(blob, filename, {
+        pageUrl: reportPageUrl,
+        taskId: existingReport?.id,
+      });
+      setAttachments((prev) => [...prev, stored]);
+    } catch (err: any) {
+      setCaptureError(err?.message || 'Failed to upload proof.');
+    } finally {
+      setCaptureBusy(null);
+    }
+  };
+
+  const handleScreenshot = async () => {
+    setCaptureError(null);
+    setCaptureBusy('screenshot');
+    try {
+      const shot = await captureScreenshot();
+      await uploadProof(shot.blob, shot.filename);
+    } catch (err: any) {
+      // A user cancelling the picker is not an error worth surfacing loudly.
+      if (err?.name !== 'NotAllowedError' && err?.name !== 'AbortError') {
+        setCaptureError(err?.message || 'Screenshot failed.');
+      }
+      setCaptureBusy(null);
+    }
+  };
+
+  const handleToggleRecording = async () => {
+    setCaptureError(null);
+    if (recorder) {
+      const rec = recorder;
+      setRecorder(null);
+      try {
+        const result = await rec.stop();
+        await uploadProof(result.blob, result.filename);
+      } catch (err: any) {
+        setCaptureError(err?.message || 'Recording failed.');
+      }
+      return;
+    }
+    try {
+      const rec = await startRecording();
+      setRecorder(rec);
+    } catch (err: any) {
+      if (err?.name !== 'NotAllowedError' && err?.name !== 'AbortError') {
+        setCaptureError(err?.message || 'Could not start recording.');
+      }
+    }
+  };
+
+  const removeAttachment = (url: string) => {
+    setAttachments((prev) => prev.filter((a) => a.url !== url));
+  };
   const capturedContext = useMemo(
     () => existingReport?.capture_context || buildCaptureContext(reportPageUrl),
     [existingReport?.capture_context, reportPageUrl]
@@ -760,6 +848,7 @@ export default function DevNotesForm({
       approved: existingReport?.approved || false,
       ai_ready: overrides?.aiReady ?? aiReady,
       ai_description: overrides?.aiDescription ?? aiDescription,
+      attachments: attachments.length ? attachments : null,
     };
 
     let result: BugReport | null = null;
@@ -1684,6 +1773,83 @@ export default function DevNotesForm({
             {renderStatusSaveActions('footer')}
           </div>
         </div>
+        {proofCaptureEnabled && (
+          <div className="mt-3 border-t border-slate-200 pt-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-medium text-slate-500">Proof</span>
+              <button
+                type="button"
+                onClick={handleScreenshot}
+                disabled={captureBusy !== null || recorder !== null}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded border border-slate-300 text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Capture a screenshot of a screen, window, or tab"
+              >
+                {captureBusy === 'screenshot' ? (
+                  <FiLoader size={13} className="animate-spin" />
+                ) : (
+                  <FiCamera size={13} />
+                )}
+                Screenshot
+              </button>
+              {isRecordingSupported() && (
+                <button
+                  type="button"
+                  onClick={handleToggleRecording}
+                  disabled={captureBusy !== null}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded border text-xs disabled:opacity-50 disabled:cursor-not-allowed ${
+                    recorder
+                      ? 'border-red-300 text-red-700 hover:bg-red-50'
+                      : 'border-slate-300 text-slate-700 hover:bg-slate-50'
+                  }`}
+                  title={
+                    recorder
+                      ? 'Stop recording and attach'
+                      : 'Record your screen and attach'
+                  }
+                >
+                  {recorder ? <FiSquare size={13} /> : <FiVideo size={13} />}
+                  {recorder ? 'Stop recording' : 'Record'}
+                </button>
+              )}
+              {captureBusy === 'upload' && (
+                <span className="inline-flex items-center gap-1 text-xs text-slate-500">
+                  <FiLoader size={12} className="animate-spin" /> Uploading…
+                </span>
+              )}
+            </div>
+            {captureError && (
+              <p className="mt-1 text-xs text-red-600">{captureError}</p>
+            )}
+            {attachments.length > 0 && (
+              <ul className="mt-2 space-y-1">
+                {attachments.map((a) => (
+                  <li
+                    key={a.url}
+                    className="flex items-center justify-between gap-2 text-xs text-slate-600 bg-slate-50 rounded px-2 py-1"
+                  >
+                    <a
+                      href={a.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="truncate hover:underline"
+                    >
+                      {a.name}
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => removeAttachment(a.url)}
+                      className="text-slate-400 hover:text-red-600 shrink-0"
+                      aria-label={`Remove ${a.name}`}
+                      title="Remove"
+                    >
+                      <FiX size={13} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
         {renderSaveError()}
         <div className="mt-2 text-right text-[10px] font-medium tracking-wide text-slate-400">
           DevNotes v{DEVNOTES_VERSION}

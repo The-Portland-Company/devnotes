@@ -49,3 +49,8 @@ export function createNextDevNotesProxy(
   }
   return createNextDevNotesHandler(backendOrOptions);
 }
+
+export {
+  createForgeProofUploadHandler,
+  type ForgeProofUploadOptions,
+} from './proofUpload';

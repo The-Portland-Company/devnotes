@@ -30,6 +30,21 @@ export type TaskCaptureContext = {
   timezone: string | null;
 };
 
+/**
+ * A stored proof file (screenshot / screen recording) pinned to a note. The
+ * DevNotes overlay captures the media, uploads it via the adapter's
+ * `uploadAttachment`, and carries the returned refs on the created note. Only
+ * `name` and `url` are required — the host storage backend fills the rest.
+ */
+export type DevNotesAttachment = {
+  name: string;
+  url: string;
+  type?: string | null;
+  mime_type?: string | null;
+  size_bytes?: number | null;
+  storage_provider?: string | null;
+};
+
 export type Task = {
   id: string;
   task_list_id: string;
@@ -48,6 +63,7 @@ export type Task = {
   expected_behavior?: string | null;
   actual_behavior?: string | null;
   capture_context?: TaskCaptureContext | null;
+  attachments?: DevNotesAttachment[] | null;
   response: string | null;
   status: 'Open' | 'In Progress' | 'Needs Review' | 'Resolved' | 'Closed';
   created_by: string;

@@ -67,3 +67,8 @@ export function createExpressDevNotesProxy(
   }
   return createExpressDevNotesHandler(backendOrOptions);
 }
+
+export {
+  createForgeProofUploadHandler,
+  type ForgeProofUploadOptions,
+} from './proofUpload';
