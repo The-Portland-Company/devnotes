@@ -7,8 +7,17 @@ import type {
   DevNotesAppLinkStatus,
   DevNotesLinkAppInput,
   DevNotesCapabilities,
+  DevNotesAttachment,
   ForgeStatus,
 } from '../types';
+
+/** Optional metadata sent alongside a proof-media upload. */
+export type UploadAttachmentMeta = {
+  /** The page the proof was captured on. */
+  pageUrl?: string;
+  /** A note/task id when attaching to an existing note. */
+  taskId?: string;
+};
 
 export type TaskCreateData = Omit<
   Task,
@@ -20,6 +29,17 @@ export interface DevNotesClientAdapter {
   getForgeStatus(): ForgeStatus | null;
   fetchTasks(): Promise<Task[]>;
   createTask(data: TaskCreateData): Promise<Task>;
+  /**
+   * Upload a captured proof file (screenshot / screen recording) and get back a
+   * stored attachment ref to pin onto a note. Optional: present only when the
+   * host proxy exposes an attachments upload route; the capture UI hides itself
+   * when this is absent.
+   */
+  uploadAttachment?(
+    file: Blob,
+    filename: string,
+    meta?: UploadAttachmentMeta,
+  ): Promise<DevNotesAttachment>;
   updateTask(id: string, data: Partial<Task>): Promise<Task>;
   deleteTask(id: string): Promise<void>;
   fetchTaskTypes(): Promise<TaskType[]>;

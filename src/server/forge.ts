@@ -1462,8 +1462,14 @@ async function ensureDevNotesProjectDefaults(
   return parsed;
 }
 
-function buildCapabilities(): DevNotesCapabilities {
-  return { ai: false, appLink: true };
+function buildCapabilities(
+  options?: Pick<DevNotesServerOptions, 'uploadAttachment'>,
+): DevNotesCapabilities {
+  return {
+    ai: false,
+    appLink: true,
+    attachments: typeof options?.uploadAttachment === 'function',
+  };
 }
 
 function buildAppLinkStatus(
@@ -1546,6 +1552,34 @@ export function createDevNotesServerHandler(options: DevNotesServerOptions) {
     }
 
     const method = request.method.toUpperCase();
+
+    // Proof-media upload is multipart, so it must be handled BEFORE readJsonBody
+    // consumes the request body. The host's uploadAttachment handler parses the
+    // multipart request and stores the file (e.g. to the org's storage account).
+    if (slug[0] === 'attachments' && method === 'POST') {
+      if (typeof options.uploadAttachment !== 'function') {
+        return await jsonResponse(
+          request,
+          options.corsHeaders,
+          { error: 'Attachments are not enabled.' },
+          501,
+        );
+      }
+      try {
+        const attachment = await options.uploadAttachment({ user, request });
+        return await jsonResponse(request, options.corsHeaders, { attachment });
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Attachment upload failed.';
+        return await jsonResponse(
+          request,
+          options.corsHeaders,
+          { error: message },
+          502,
+        );
+      }
+    }
+
     const body = (await readJsonBody(request)) || {};
     const [resource, resourceId, nested] = slug;
     const rawProjectName =
@@ -1565,7 +1599,7 @@ export function createDevNotesServerHandler(options: DevNotesServerOptions) {
     };
 
     if (resource === 'capabilities' && method === 'GET') {
-      return await jsonResponse(request, options.corsHeaders, buildCapabilities());
+      return await jsonResponse(request, options.corsHeaders, buildCapabilities(options));
     }
 
     if (!forgeContext.pat && resource === 'app-link' && method === 'GET') {

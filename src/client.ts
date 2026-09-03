@@ -10,8 +10,13 @@ import type {
   TaskList,
   ForgeStatus,
   ForgeError,
+  DevNotesAttachment,
 } from './types';
-import type { TaskCreateData, DevNotesClientAdapter } from './adapters/types';
+import type {
+  TaskCreateData,
+  DevNotesClientAdapter,
+  UploadAttachmentMeta,
+} from './adapters/types';
 
 const DEFAULT_BASE_PATH = '/api/devnotes';
 
@@ -94,7 +99,11 @@ export function createDevNotesClient(options: DevNotesClientOptions): DevNotesCl
     const token = await options.getAuthToken();
     const headers = new Headers(init.headers || {});
     headers.set('Authorization', `Bearer ${token}`);
-    if (!headers.has('Content-Type') && init.body) {
+    const isFormData =
+      typeof FormData !== 'undefined' && init.body instanceof FormData;
+    // FormData must keep the browser-generated multipart boundary — never force
+    // application/json onto it.
+    if (!headers.has('Content-Type') && init.body && !isFormData) {
       headers.set('Content-Type', 'application/json');
     }
 
@@ -170,6 +179,25 @@ export function createDevNotesClient(options: DevNotesClientOptions): DevNotesCl
   const deleteTask = async (id: string) => {
       await request<void>(`/tasks/${encodeURIComponent(id)}`, { method: 'DELETE' });
     };
+  const uploadAttachment = async (
+    file: Blob,
+    filename: string,
+    meta?: UploadAttachmentMeta,
+  ): Promise<DevNotesAttachment> => {
+      const form = new FormData();
+      form.append('file', file, filename);
+      if (meta?.pageUrl) form.append('pageUrl', meta.pageUrl);
+      if (meta?.taskId) form.append('taskId', meta.taskId);
+      const payload = await request<any>('/attachments', {
+        method: 'POST',
+        body: form,
+      });
+      const attachment =
+        payload && typeof payload === 'object' && payload.attachment
+          ? payload.attachment
+          : payload;
+      return attachment as DevNotesAttachment;
+    };
   const fetchTaskTypes = async () => await request<TaskType[]>('/task-types');
   const createTaskType = async (name: string) =>
       await request<TaskType>('/task-types', {
@@ -197,6 +225,7 @@ export function createDevNotesClient(options: DevNotesClientOptions): DevNotesCl
     getForgeStatus: () => latestForgeStatus,
     fetchTasks,
     createTask,
+    uploadAttachment,
     updateTask,
     deleteTask,
     fetchTaskTypes,

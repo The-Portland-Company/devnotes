@@ -41,6 +41,7 @@ export type {
   TaskMessage,
   TaskList,
   TaskCaptureContext,
+  DevNotesAttachment,
   DevNotesUser,
   DevNotesConfig,
   DevNotesRole,
@@ -88,6 +89,18 @@ export {
   getInitialNarrativeTab,
 } from './internal/formState';
 export type { NarrativeTab } from './internal/formState';
+export {
+  captureScreenshot,
+  startRecording,
+  isProofCaptureSupported,
+  isRecordingSupported,
+} from './internal/proofCapture';
+export type {
+  ProofCaptureResult,
+  ProofCaptureKind,
+  ProofRecorder,
+} from './internal/proofCapture';
+export type { UploadAttachmentMeta } from './adapters/types';
 
 // Hooks
 export { useBugReportPosition } from './hooks/useBugReportPosition';
