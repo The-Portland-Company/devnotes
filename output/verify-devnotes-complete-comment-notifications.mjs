@@ -9,7 +9,7 @@ const SUPABASE_PROJECT_REF =
 const TEST_USER_ID =
   process.env.TEST_USER_ID || 'ca3fa9af-f6f1-45af-8f83-ce0388c7ad15';
 const TEST_USER_EMAIL =
-  process.env.TEST_USER_EMAIL || 'agency@theportlandcompany.com';
+  process.env.TEST_USER_EMAIL || 'spencerhill@theportlandcompany.com';
 const FOCUS_FORGE_BASE_URL = process.env.FOCUS_FORGE_BASE_URL || 'https://focusforge.theportlandcompany.com';
 const FOCUS_FORGE_PAT = process.env.FOCUS_FORGE_PAT;
 const FOCUS_FORGE_PROJECT_NAME = process.env.FOCUS_FORGE_PROJECT_NAME || 'Politogy: VRM';
@@ -282,13 +282,13 @@ async function main() {
     messagesAfterComment,
     completedTask,
     expectedRecipients: [
-      'agency@theportlandcompany.com',
+      'spencerhill@theportlandcompany.com',
       'spencerdhill@protonmail.com',
       'spencerhill@theportlandcompany.com',
     ],
     expectedSubjects: {
-      comment: 'agency@theportlandcompany.com has commented on a Task on Politogy: VRM',
-      completed: 'agency@theportlandcompany.com has completed a Task on Politogy: VRM',
+      comment: 'spencerhill@theportlandcompany.com has commented on a Task on Politogy: VRM',
+      completed: 'spencerhill@theportlandcompany.com has completed a Task on Politogy: VRM',
     },
   };
 

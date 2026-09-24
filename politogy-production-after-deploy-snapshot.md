@@ -43,7 +43,7 @@
           - paragraph [ref=e150]: Roadmap
         - generic [ref=e151]:
           - generic [ref=e152]
-          - button "Spencer Hill Spencer Hill agency@theportlandcompany.com" [ref=e182] [cursor=pointer]
+          - button "Spencer Hill Spencer Hill spencerhill@theportlandcompany.com" [ref=e182] [cursor=pointer]
       - main [ref=e185]:
         - generic [ref=e187]:
           - tablist [ref=e190]
